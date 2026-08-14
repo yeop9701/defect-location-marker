@@ -35,10 +35,12 @@
     --shadow-modal:0 12px 40px rgba(11,11,11,0.35);
     color-scheme:light;
   }
-  /* 다크 모드: OS/브라우저 설정을 그대로 따른다. 색 토큰만 바꿔치면 나머지 스타일은 전부
-     var(--...)로 되어 있어 자동으로 맞춰진다 — 아래 두 블록 외에는 하드코딩된 색을 쓰지 않는다. */
+  /* 다크 모드: 기본은 OS/브라우저 설정(prefers-color-scheme)을 따르되, 우측 상단 "라이트/다크" 버튼으로
+     사용자가 직접 강제 전환할 수 있다(선택값은 <html data-theme="light|dark">에 반영 + localStorage 저장).
+     색 토큰만 바꿔치면 나머지 스타일은 전부 var(--...)로 되어 있어 자동으로 맞춰진다 — 아래 블록들
+     외에는 하드코딩된 색을 쓰지 않는다. */
   @media (prefers-color-scheme: dark){
-    :root{
+    :root:not([data-theme="light"]){
       --surface-1:#232322;
       --surface-page:#181817;
       --surface-2:#2c2c2a;
@@ -59,6 +61,28 @@
       --shadow-modal:0 12px 40px rgba(0,0,0,0.55);
       color-scheme:dark;
     }
+  }
+  /* 시스템 설정과 무관하게 사용자가 "다크"를 직접 선택한 경우 — 위 미디어쿼리 블록과 값을 그대로 맞춘다. */
+  :root[data-theme="dark"]{
+    --surface-1:#232322;
+    --surface-page:#181817;
+    --surface-2:#2c2c2a;
+    --surface-3:#282827;
+    --surface-hover:#333331;
+    --text-primary:#f2f1ee;
+    --text-secondary:#c7c5bf;
+    --muted:#8f8d86;
+    --gridline:#3a3a37;
+    --border:rgba(255,255,255,0.12);
+    --accent:#5b9ce8;
+    --accent-hover:#7db0ee;
+    --accent-soft:#1c2c3d;
+    --danger:#e6716a;
+    --mode-select:#b48af0;
+    --mode-move:#3fbf88;
+    --mode-erase:#e6716a;
+    --shadow-modal:0 12px 40px rgba(0,0,0,0.55);
+    color-scheme:dark;
   }
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;height:100%;}
@@ -83,7 +107,8 @@
     font-size:13px;padding:6px 8px;border:1px solid var(--gridline);border-radius:6px;
     min-width:160px;background:var(--surface-1);color:var(--text-primary);
   }
-  .proj-actions{display:flex;gap:6px;flex-wrap:wrap;}
+  .proj-actions{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+  .topbar-left{display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
   button{
     font-family:inherit;font-size:12.5px;padding:7px 11px;border-radius:7px;
     border:1px solid var(--gridline);background:var(--surface-1);color:var(--text-primary);
@@ -109,14 +134,20 @@
   .btn-group{display:flex;align-items:center;gap:6px;padding:3px;border-radius:9px;background:var(--surface-2);flex:0 0 auto;}
   .toolbar-sep{width:1px;align-self:stretch;background:var(--gridline);margin:0 2px;}
   .layout{display:flex;flex:1;min-height:0;gap:0;}
-  .sidebar{width:250px;flex:0 0 250px;background:var(--surface-1);border-right:1px solid var(--gridline);
+  .sidebar{width:210px;flex:0 0 210px;background:var(--surface-1);border-right:1px solid var(--gridline);
     display:flex;flex-direction:column;padding:14px;gap:16px;overflow-y:auto;}
-  .sidebar.right{border-right:none;border-left:1px solid var(--gridline);width:720px;flex:0 0 720px;}
-  /* 창이 좁아지면(노트북 등) 결함 목록 칸이 넓은 채로 버티는 대신 720px→450px로 줄어든다.
-     결함 목록 카드가 2줄로 접히도록 만들어 둔 덕에 이 폭에서도 가로 스크롤 없이 쓸 수 있다. */
+  .sidebar.right{border-right:none;border-left:1px solid var(--gridline);width:720px;flex:0 0 720px;min-width:320px;max-width:80vw;}
+  /* 창이 좁아지면(노트북 등) 결함 목록 칸이 넓은 채로 버티는 대신 720px→450px로 줄어든다. 카드가
+     한 줄이라 이 폭에선 목록 자체에 가로 스크롤이 생기지만(marker-list-wrap), 사이드바 리사이저로
+     사용자가 원하는 폭으로 다시 넓힐 수도 있다. */
   @media (max-width: 1400px){
     .sidebar.right{width:450px;flex:0 0 450px;}
   }
+  /* 우측 사이드바 폭 조절 손잡이 — 마우스로 눌러 드래그하면 #rightSidebarResizer의 JS가 sidebar.right의
+     width/flex-basis를 실시간으로 바꾼다. */
+  .sidebar-resizer{width:6px;flex:0 0 6px;cursor:col-resize;background:transparent;position:relative;}
+  .sidebar-resizer:hover, .sidebar-resizer.dragging{background:var(--accent-soft);}
+  .sidebar-resizer::after{content:'';position:absolute;top:0;bottom:0;left:2px;width:2px;background:var(--gridline);}
   .panel-title{font-size:12px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.03em;margin:0 0 8px;}
   .drawing-tabs{display:flex;flex-direction:column;gap:6px;}
   .drawing-tab{
@@ -147,10 +178,19 @@
   .kbd-hint{flex:0 0 auto;font-size:10px;font-weight:700;color:var(--muted);background:var(--border);
     border-radius:4px;padding:2px 6px;letter-spacing:.02em;}
   .type-btn.active .kbd-hint{color:var(--text-secondary);background:var(--border);}
-  .help-box{font-size:12px;color:var(--text-secondary);line-height:1.6;background:var(--surface-2);border:none;
+  .help-box{font-size:11.5px;color:var(--text-secondary);line-height:1.5;background:var(--surface-2);border:none;
     border-radius:8px;padding:10px 11px;}
   .help-box b{color:var(--text-primary);}
   .help-toggle{font-size:11.5px;color:var(--accent);cursor:pointer;background:none;border:none;padding:0;text-decoration:underline;}
+  /* 사용법을 주제별 섹션으로 나눠 한눈에 훑어볼 수 있게 정리 */
+  .help-sec{margin-bottom:10px;}
+  .help-sec:last-of-type{margin-bottom:0;}
+  .help-sec h5{margin:0 0 4px;font-size:10.5px;font-weight:700;color:var(--text-primary);
+    text-transform:uppercase;letter-spacing:.03em;}
+  .help-box ul{margin:0;padding-left:15px;display:flex;flex-direction:column;gap:3px;}
+  .help-box ul.kbd-list{list-style:none;padding-left:0;}
+  .help-box .kbd-hint{margin-right:2px;}
+  .help-note{margin-top:2px;font-size:10.5px;color:var(--muted);}
   main.canvas-area{flex:1;display:flex;flex-direction:column;min-width:0;min-height:0;background:var(--surface-page);}
   .toolbar2{display:flex;flex-direction:column;gap:6px;padding:10px 16px;background:var(--surface-1);
     border-bottom:1px solid var(--gridline);}
@@ -189,34 +229,33 @@
     background:#1f1f1d;color:#fff;font-size:10px;font-weight:700;flex:0 0 auto;}
   .row-del{background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;padding:2px 4px;}
   .row-del:hover{color:var(--danger);}
-  /* 결함 목록: 카드 하나가 2줄로 접힌다 — 1행은 유형(색상)·부재명·결함명 같은 "무엇/어디"용 넓은 칸,
-     2행은 폭·길이·개수·#·사진·삭제처럼 좁고 고정폭인 "수치+동작" 칸. 이렇게 나누면 우측 사이드바를
-     450px까지 좁혀도 가로 스크롤 없이 다 보인다. 고정 헤더(.marker-list-head)가 카드와 똑같은
-     flex 클래스를 그대로 써서 두 줄 모두 칸이 항상 나란히 맞는다. */
-  .marker-list-wrap{max-height:46vh;overflow-y:auto;margin-top:6px;border:1px solid var(--gridline);border-radius:8px;}
-  .marker-list-head{position:sticky;top:0;z-index:1;display:flex;flex-direction:column;gap:4px;
+  /* 결함 목록: 카드 한 줄에 번호·색상·유형·부재명·결함명·폭·길이·개수·사진번호·사진·삭제가 전부 들어간다.
+     사이드바가 좁아지면 칸을 줄이거나 접는 대신 marker-list-wrap 전체에 가로 스크롤이 생긴다(min-width로
+     최소 폭을 보장). 고정 헤더(.marker-list-head)가 카드와 똑같은 flex 클래스를 그대로 써서 칸이
+     항상 나란히 맞고, 헤더·본문이 같은 컨테이너 안에서 함께 가로 스크롤된다. */
+  .marker-list-wrap{max-height:46vh;overflow:auto;margin-top:6px;border:1px solid var(--gridline);border-radius:8px;}
+  .marker-list-head{position:sticky;top:0;z-index:1;min-width:660px;
     background:var(--surface-2);border-bottom:1px solid var(--gridline);padding:6px 7px;
     font-size:10px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.02em;}
-  .marker-list-head .mc-row{gap:5px;}
   .marker-list-head span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-  .marker-list{display:flex;flex-direction:column;gap:6px;padding:6px;}
-  .marker-card{display:flex;flex-direction:column;gap:4px;background:var(--surface-3);border:1px solid var(--gridline);
+  .marker-list{display:flex;flex-direction:column;gap:6px;padding:6px;min-width:660px;}
+  .marker-card{display:flex;align-items:center;gap:5px;background:var(--surface-3);border:1px solid var(--gridline);
     border-radius:8px;padding:6px 7px;}
   .marker-card.selected{background:var(--accent-soft);border-color:color-mix(in srgb, var(--accent) 40%, transparent);}
-  .mc-row{display:flex;align-items:center;gap:5px;}
+  .mc-row{display:flex;align-items:center;gap:5px;width:100%;}
   .marker-card input,.marker-card select{font-size:11.5px;padding:4px 5px;border-radius:5px;border:1px solid var(--gridline);
     background:var(--surface-1);color:var(--text-primary);}
   .marker-card .mc-num{width:28px;flex:0 0 28px;text-align:center;padding:4px 2px;font-weight:700;}
   .marker-card select.mc-marktype{width:58px;flex:0 0 58px;}
-  .mc-field{display:flex;align-items:center;gap:3px;flex:1 1 70px;min-width:50px;}
+  .mc-field{display:flex;align-items:center;gap:3px;flex:1 1 70px;min-width:56px;}
   .mc-field select{flex:1 1 auto;min-width:46px;width:auto;}
   .mc-field input.mc-custom{flex:1 1 60px;min-width:46px;}
-  .marker-card .mc-num2{width:42px;flex:0 0 42px;text-align:center;}
-  .mc-suffix{display:flex;align-items:center;gap:3px;flex:0 0 auto;}
+  /* 폭/길이/개수/사진번호 — 입력칸 + 단위(mm·개) 또는 접두(#)를 한 칸에 고정폭(66px)으로 묶는다 */
+  .mc-suffix{display:flex;align-items:center;gap:3px;flex:0 0 66px;width:66px;}
+  .mc-suffix input{flex:1 1 auto;min-width:0;width:0;text-align:center;}
   .mc-suffix span{font-size:10.5px;color:var(--muted);flex:0 0 auto;}
-  .marker-card .row-del{flex:0 0 auto;}
-  .mc-photo{background:none;border:none;color:var(--muted);cursor:pointer;padding:2px 4px;position:relative;flex:0 0 auto;
-    margin-left:auto;} /* 폭·길이·개수·# 입력칸과 사진/삭제 버튼 사이를 벌려, 2행 안에서도 "수치 입력 vs 동작"이 구분되어 보이게 */
+  .marker-card .mc-photo,.marker-card .row-del{flex:0 0 auto;}
+  .mc-photo{background:none;border:none;color:var(--muted);cursor:pointer;padding:2px 4px;position:relative;flex:0 0 auto;}
   .mc-photo:hover{color:var(--accent);}
   .mc-photo .photo-count{position:absolute;top:-4px;right:-3px;background:var(--accent);color:#fff;font-size:9px;font-weight:700;
     border-radius:8px;padding:0 4px;line-height:14px;min-width:14px;text-align:center;}
@@ -232,16 +271,22 @@
   .stats-summary .stat-box .l{font-size:11px;color:var(--muted);margin-top:2px;}
   .stats-section{margin-bottom:16px;}
   .stats-section h4{font-size:12px;font-weight:700;color:var(--text-secondary);margin:0 0 6px;}
-  table.stats-table{width:100%;border-collapse:collapse;font-size:12.5px;}
-  table.stats-table th{text-align:left;color:var(--text-secondary);font-weight:600;font-size:10.5px;text-transform:uppercase;
-    letter-spacing:.02em;padding:4px 6px;border-bottom:1px solid var(--gridline);}
-  table.stats-table td{padding:5px 6px;border-bottom:1px solid var(--gridline);}
-  table.stats-table td.n{text-align:right;font-weight:700;width:60px;}
-  table.stats-table .bar{display:inline-block;height:6px;background:var(--accent);border-radius:3px;vertical-align:middle;margin-right:6px;}
+  /* 통계 모달의 순위형 막대그래프. 값(개수) 크기 비교가 목적이라 막대는 기본적으로 accent 단색 하나만
+     쓰고("마킹 유형별"만 실제 마킹 색을 인라인으로 얹는다), 막대 옆에 항상 숫자를 함께 표시해
+     색만으로 값을 읽지 않아도 되게 한다. */
+  .chart-list{display:flex;flex-direction:column;gap:7px;}
+  .chart-row{display:grid;grid-template-columns:112px 1fr 58px;align-items:center;gap:9px;}
+  .chart-label{font-size:12px;color:var(--text-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .chart-bar-track{background:var(--surface-2);border-radius:4px;height:14px;overflow:hidden;}
+  .chart-bar{height:100%;background:var(--accent);border-radius:4px;min-width:4px;}
+  .chart-value{text-align:right;font-size:12.5px;font-weight:700;color:var(--text-primary);white-space:nowrap;}
+  .chart-pct{font-weight:400;color:var(--muted);margin-left:3px;font-size:10.5px;}
   .legend-preview{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;}
   .legend-chip{display:flex;align-items:center;gap:6px;font-size:11.5px;background:var(--surface-2);border:none;
     border-radius:20px;padding:4px 10px 4px 7px;color:var(--text-secondary);}
   .legend-chip img{display:block;width:22px;height:22px;flex:0 0 22px;}
+  /* rptType(유형) 값으로 묶인 범례 그룹은 특정 마킹 색상 하나로 대표할 수 없으므로 중립 점으로 표시 */
+  .legend-dot{display:block;width:8px;height:8px;flex:0 0 8px;border-radius:50%;background:var(--muted);}
   input[type=file]{display:none;}
   .file-label{display:inline-block;}
   hr.sep{border:none;border-top:1px solid var(--gridline);margin:2px 0;}
@@ -274,6 +319,14 @@
   .modal-sub{font-size:11.5px;color:var(--text-secondary);margin-top:4px;line-height:1.5;max-width:820px;}
   .modal-body{padding:14px 18px;overflow:auto;flex:1;}
   .modal-footer{display:flex;align-items:center;gap:8px;padding:12px 18px;border-top:1px solid var(--gridline);}
+  .table-input-layout{display:flex;gap:16px;align-items:flex-start;}
+  .table-input-main{flex:1;min-width:0;}
+  .ti-preview{flex:0 0 240px;position:sticky;top:0;}
+  .ti-preview-title{font-size:11px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;
+    letter-spacing:.03em;margin-bottom:6px;}
+  #tableInputPreviewCanvas{display:block;width:240px;height:180px;border-radius:8px;border:1px solid var(--gridline);
+    background:var(--surface-2);cursor:crosshair;}
+  .ti-preview-hint{font-size:10.5px;color:var(--muted);margin-top:6px;line-height:1.5;}
   table.input-table{border-collapse:collapse;font-size:12px;width:100%;}
   table.input-table th{text-align:left;color:var(--text-secondary);font-weight:600;font-size:10.5px;text-transform:uppercase;
     letter-spacing:.02em;padding:4px 5px;border-bottom:1px solid var(--gridline);position:sticky;top:0;background:var(--surface-1);}
@@ -305,8 +358,10 @@
 <symbol id="i-select" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-dasharray="3.6 3.2"/></symbol>
 <symbol id="i-move" viewBox="0 0 24 24"><path d="M12 3v18M3 12h18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="m9 6 3-3 3 3M9 18l3 3 3-3M6 9 3 12l3 3M18 9l3 3-3 3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
 <symbol id="i-eraser" viewBox="0 0 24 24"><path d="m18.4 12.9-7.5-7.5a1.8 1.8 0 0 0-2.6 0L3.6 10a1.8 1.8 0 0 0 0 2.6L9.7 18.7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M8 20h13M11 18l7-7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
-<symbol id="i-rotate-ccw" viewBox="0 0 24 24"><path d="M3.5 12a8.5 8.5 0 1 1 2.8 6.3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M3 21v-6h6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
-<symbol id="i-rotate-cw" viewBox="0 0 24 24"><path d="M20.5 12a8.5 8.5 0 1 0-2.8 6.3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M21 21v-6h-6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<!-- 좌회전(반시계) 아이콘: 호가 오른쪽에서 시작해 위·왼쪽·아래를 지나 오른쪽 아래로 반시계 방향으로 돌아온다 -->
+<symbol id="i-rotate-ccw" viewBox="0 0 24 24"><path d="M20.5 12a8.5 8.5 0 1 0-2.8 6.3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M21 21v-6h-6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<!-- 우회전(시계) 아이콘: 호가 왼쪽에서 시작해 위·오른쪽·아래를 지나 왼쪽 아래로 시계 방향으로 돌아온다 -->
+<symbol id="i-rotate-cw" viewBox="0 0 24 24"><path d="M3.5 12a8.5 8.5 0 1 1 2.8 6.3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M3 21v-6h6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
 <symbol id="i-crop" viewBox="0 0 24 24"><path d="M6 1.5V17a1.5 1.5 0 0 0 1.5 1.5H22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M18 22.5V7A1.5 1.5 0 0 0 16.5 5.5H2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
 <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7.5" height="7.5" rx="1.2" fill="none" stroke="currentColor" stroke-width="1.8"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="1.2" fill="none" stroke="currentColor" stroke-width="1.8"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="1.2" fill="none" stroke="currentColor" stroke-width="1.8"/><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="1.2" fill="none" stroke="currentColor" stroke-width="1.8"/></symbol>
 <symbol id="i-guide" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 2.5v4M12 17.5v4M2.5 12h4M17.5 12h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
@@ -324,11 +379,50 @@
 <symbol id="i-close" viewBox="0 0 24 24"><path d="M5.5 5.5l13 13M18.5 5.5l-13 13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
 <symbol id="i-edit" viewBox="0 0 24 24"><path d="M4 20l.9-3.9L16.2 4.8a1.6 1.6 0 0 1 2.3 0l.7.7a1.6 1.6 0 0 1 0 2.3L7.9 19.1z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></symbol>
 <symbol id="i-camera" viewBox="0 0 24 24"><path d="M4 8.2h3.1l1.7-2h6.4l1.7 2H20a1 1 0 0 1 1 1V18a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.2a1 1 0 0 1 1-1z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="12" cy="13.5" r="3.3" fill="none" stroke="currentColor" stroke-width="1.8"/></symbol>
+<symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.3" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 2.5v2.4M12 19.1v2.4M21.5 12h-2.4M4.9 12H2.5M18.6 5.4l-1.7 1.7M7.1 16.9l-1.7 1.7M18.6 18.6l-1.7-1.7M7.1 7.1 5.4 5.4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+<symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14.2A8.5 8.5 0 1 1 9.8 4a6.8 6.8 0 0 0 10.2 10.2z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></symbol>
 </defs>
 </svg>
 <div class="app">
 
-  <header class="topbar" style="justify-content:flex-end;">
+  <header class="topbar">
+    <!-- 실행취소가 있는 줄(헤더) 좌측: 전체도면저장 → 현재도면저장 → 형식 → 확대/축소 → 좌회전 → 우회전 순 -->
+    <div class="topbar-left">
+      <button id="btnExportAll" class="primary" title="현재 형식(PNG/PDF)으로 모든 도면을 한 번에 저장합니다. PDF는 도면 수만큼 페이지가 있는 파일 1개로, PNG는 도면별로 순서대로 저장됩니다."><svg class="icon"><use href="#i-archive"/></svg> 전체 도면 저장</button>
+      <button class="primary" id="btnExportPNG" title="현재 도면을 이미지로 저장 (단축키 Ctrl+D)"><svg class="icon"><use href="#i-image"/></svg> 현재 도면 저장</button>
+      <div class="toolbar-sep"></div>
+      <div class="tool-slider">형식
+        <select id="exportFormatSelect">
+          <option value="png" selected>PNG</option>
+          <option value="pdf">PDF</option>
+        </select>
+      </div>
+      <select id="pdfPageSizeSelect" style="display:none;font-size:12.5px;padding:5px 6px;border-radius:6px;border:1px solid var(--gridline);">
+        <option value="original" selected>원본 비율</option>
+        <option value="a4l">A4 가로</option>
+        <option value="a4p">A4 세로</option>
+        <option value="a3l">A3 가로</option>
+        <option value="a3p">A3 세로</option>
+      </select>
+      <div class="toolbar-sep"></div>
+      <div class="zoom-group">
+        확대/축소
+        <select id="zoomSelect">
+          <option value="0.25">25%</option>
+          <option value="0.5">50%</option>
+          <option value="0.75">75%</option>
+          <option value="1" selected>100%</option>
+          <option value="1.5">150%</option>
+          <option value="2">200%</option>
+        </select>
+        <span class="val" id="zoomPctLabel" title="도면 위에서 마우스 휠로 캐드처럼 확대/축소, 휠 버튼을 누른 채 드래그하면 화면 이동">100%</span>
+      </div>
+      <div class="toolbar-sep"></div>
+      <div class="btn-group">
+        <button id="btnRotateCCW" class="tool" title="도면 이미지를 왼쪽으로 90° 회전"><svg class="icon"><use href="#i-rotate-ccw"/></svg> 좌회전</button>
+        <button id="btnRotateCW" class="tool" title="도면 이미지를 오른쪽으로 90° 회전"><svg class="icon"><use href="#i-rotate-cw"/></svg> 우회전</button>
+      </div>
+    </div>
     <div class="proj-actions">
       <button id="btnUndo" class="tool" title="마지막 작업을 취소합니다. 마커 추가/이동/삭제뿐 아니라 자르기·회전·지우개처럼 도면 이미지 자체를 바꾼 작업도 함께 되돌립니다 (Ctrl+Z)"><svg class="icon"><use href="#i-undo"/></svg> 실행취소</button>
       <button id="btnRedo" class="tool" title="되돌린 작업을 다시 실행 (Ctrl+Shift+Z / Ctrl+Y)"><svg class="icon"><use href="#i-redo"/></svg> 다시실행</button>
@@ -336,6 +430,8 @@
       <label class="file-label"><button id="btnLoadProjectVisual" type="button"><svg class="icon"><use href="#i-folder-open"/></svg> 프로젝트 불러오기</button>
         <input type="file" id="loadProjectInput" accept=".json" />
       </label>
+      <div class="toolbar-sep"></div>
+      <button type="button" id="btnThemeToggle" class="tool" title="화이트/다크 모드 전환"><svg class="icon"><use href="#i-moon"/></svg> 다크 모드</button>
     </div>
   </header>
 
@@ -360,23 +456,52 @@
       <div>
         <button class="help-toggle" id="helpToggle">사용법 / 단축키 보기</button>
         <div class="help-box" id="helpBox" style="margin-top:8px;display:none;">
-          <b>1.</b> 왼쪽에서 도면(평면도·입면도) 이미지를 추가합니다.<br/>
-          <b>2.</b> 위치 유형을 고른 뒤(단축키 1~4) 도면을 클릭하면 마커가 찍힙니다. <b>클릭한 지점에서 그대로 드래그</b>하면 방향·인출선 길이를 함께 지정할 수 있습니다(Shift: 수직/수평 고정). "범위" 유형(3·4)은 <b>클릭 3번</b>으로 만듭니다 — ① 사각형 첫 코너 클릭 → ② 반대쪽 코너 클릭 → ③ 번호 배지를 놓을 위치 클릭.<br/>
-          <b>3.</b> 찍힌 마커의 화살표·원 끝을 드래그하면 방향·길이를 다시 조절, 가운데 번호를 드래그하면 위치를 옮길 수 있습니다. 화살표·선·사각형 어디를 클릭해도 그 마커가 선택/이동됩니다.<br/>
-          <b>4.</b> <b>s</b>: <b>선택 모드</b> — 빈 곳을 드래그하면 완전히 안에 들어온 마커만 한 번에 선택(Shift로 추가/해제). <b>m</b>: <b>이동 모드</b> — 마커만 안전하게 옮길 수 있고 빈 곳 클릭으로는 아무 것도 생기지 않습니다.<br/>
-          <b>5.</b> <b>d</b>: <b>지우개 모드</b> — 마커 위를 지나면 마커 삭제, 그 외 도면 위를 드래그하면 브러시처럼 이미지를 흰색으로 지웁니다(굵기 슬라이더로 조절, 이미지 실행취소로 복구 가능).<br/>
-          <b>6.</b> 여러 개를 선택한 채로 드래그하면 함께 이동, Delete로 한꺼번에 삭제, ←/→로 한꺼번에 회전됩니다.<br/>
-          <b>7.</b> 도면 위에서 <b>마우스 휠</b>로 커서 위치를 기준으로 확대/축소됩니다. <b>휠(가운데) 버튼을 누른 채 드래그</b>하면 모드에 상관없이 화면을 이동(패닝)할 수 있습니다. "좌회전/우회전"으로 90°씩 회전, "자르기"로 일부만 남길 수 있습니다.<br/>
-          <b>8.</b> "저장" 형식은 PNG/PDF. 표제란(도곽)을 켜면 A4 가로 비율의 테두리 + 상단 표제란(용역명·구분·조사위치·구조형식)이 함께 인쇄됩니다. "전체 도면 일괄 저장"을 누르면 도면을 하나씩 바꿔가며 저장할 필요 없이 모든 도면을 한 번에 내보냅니다(PDF는 도면 수만큼 페이지가 이어진 파일 1개, PNG는 도면별로 순서대로 저장).<br/>
-          <b>9.</b> CSV로 좌표를 일괄 입력/내보내거나, "프로젝트 저장"으로 전체 작업을 파일로 저장해 이어서 작업할 수 있습니다.<br/>
-          <br/>
-          <b>단축키</b> — 1/2/3/4: 유형 선택 · <b>s</b>: 선택 모드 · <b>m</b>: 이동 모드 · <b>d</b>: 지우개 모드 · <b>c</b>: 자르기 모드 · <b>g</b>: 전체 도면 보기 · <b>q</b>: 좌표 안내 · ←/→: 인출선 회전(Shift 45°) · Delete: 선택 삭제 · Esc: 선택 해제/모드 취소 · Ctrl+Z: 실행취소 · Ctrl+Shift+Z(또는 Ctrl+Y): 다시실행 · Ctrl+A: 전체 선택 · <b>Ctrl+S</b>: 프로젝트 저장<br/>
-          <br/>
-          범위(사각형) 마커를 선택하면 네 모서리·네 변에 손잡이가 나타나 드래그로 크기를 조절할 수 있습니다. 태블릿에서는 손가락 하나로 그리기·이동·선택을, 손가락 두 개로 확대/축소(핀치)를 할 수 있습니다.<br/>
-          <br/>
-          이미지 회전·자르기·지우개(브러시)처럼 도면 이미지 자체를 바꾸는 작업도 <b>Ctrl+Z(실행취소)</b>로 함께 되돌릴 수 있습니다(단, 이미지가 바뀌는 작업은 최근 8회까지만 기록됩니다).<br/>
-          <br/>
-          모든 처리는 브라우저 안에서만 이루어지며 인터넷 연결 없이 사용할 수 있습니다.
+          <div class="help-sec">
+            <h5>시작하기</h5>
+            <ul>
+              <li>도면 이미지 추가 → 위치 유형 선택(1~4) → 도면 클릭으로 마커 생성</li>
+              <li>클릭한 채로 드래그하면 방향·인출선 길이까지 함께 지정(Shift: 수직/수평 고정)</li>
+              <li>"범위" 유형(3·4)은 클릭 3번: ① 첫 코너 → ② 반대 코너 → ③ 번호 배지 위치</li>
+            </ul>
+          </div>
+          <div class="help-sec">
+            <h5>마커 조작</h5>
+            <ul>
+              <li>화살표·원·사각형 어디를 클릭해도 그 마커가 선택/이동됨</li>
+              <li>여러 개 선택 후 드래그로 함께 이동, Delete로 일괄 삭제, ←/→로 일괄 회전</li>
+              <li>범위 마커는 선택 시 모서리·변 손잡이로 크기 조절 가능</li>
+            </ul>
+          </div>
+          <div class="help-sec">
+            <h5>모드 · 단축키</h5>
+            <ul class="kbd-list">
+              <li><span class="kbd-hint">1~4</span>유형 선택</li>
+              <li><span class="kbd-hint">S</span>선택 모드 — 드래그 영역에 완전히 들어온 마커만 선택</li>
+              <li><span class="kbd-hint">M</span>이동 모드 — 마커 이동 전용, 빈 곳 클릭은 무시</li>
+              <li><span class="kbd-hint">D</span>지우개 모드 — 클릭으로 마커 삭제, 드래그로 브러시 지우기</li>
+              <li><span class="kbd-hint">C</span><span class="kbd-hint">G</span><span class="kbd-hint">Q</span>자르기 · 전체 보기 · 좌표 안내</li>
+              <li><span class="kbd-hint">Delete</span><span class="kbd-hint">Esc</span>선택 삭제 · 선택/모드 해제</li>
+              <li><span class="kbd-hint">Ctrl+Z</span><span class="kbd-hint">Ctrl+Shift+Z</span>실행취소 · 다시실행</li>
+              <li><span class="kbd-hint">Ctrl+A</span><span class="kbd-hint">Ctrl+S</span><span class="kbd-hint">Ctrl+D</span>전체선택 · 프로젝트 저장 · 현재 도면 저장</li>
+            </ul>
+          </div>
+          <div class="help-sec">
+            <h5>보기 · 탐색</h5>
+            <ul>
+              <li>마우스 휠: 커서 위치 기준 확대/축소 · 휠(가운데) 버튼 드래그: 화면 이동</li>
+              <li>좌회전/우회전으로 90°씩 회전, 자르기로 일부만 남기기 — 모두 실행취소 가능(이미지 작업은 최근 8회까지)</li>
+              <li>태블릿: 손가락 1개로 그리기·이동·선택, 2개로 핀치 확대/축소</li>
+            </ul>
+          </div>
+          <div class="help-sec">
+            <h5>저장 · 내보내기</h5>
+            <ul>
+              <li>전체 도면 저장 / 현재 도면 저장 — 형식은 PNG 또는 PDF</li>
+              <li>표제란(도곽) 표시를 켜면 A4 틀 + 상단 표제란과 함께 인쇄</li>
+              <li>CSV로 좌표 일괄 입력/내보내기, 프로젝트 저장(Ctrl+S)으로 전체 작업을 파일로 보관</li>
+            </ul>
+          </div>
+          <div class="help-note">모든 처리는 브라우저 안에서만 이루어지며 인터넷 연결 없이도 사용할 수 있습니다.</div>
         </div>
       </div>
     </aside>
@@ -384,23 +509,15 @@
     <!-- CENTER CANVAS -->
     <main class="canvas-area">
       <div class="toolbar2">
+        <!-- 확대/축소가 있던 칸(첫 줄) 자리부터: 전체보기 → 자르기 → 선택 → 이동 → 지우개 → 좌표안내 순 -->
         <div class="toolbar-row">
-          <div class="zoom-group">
-            확대/축소
-            <select id="zoomSelect">
-              <option value="0.25">25%</option>
-              <option value="0.5">50%</option>
-              <option value="0.75">75%</option>
-              <option value="1" selected>100%</option>
-              <option value="1.5">150%</option>
-              <option value="2">200%</option>
-            </select>
-            <span class="val" id="zoomPctLabel" title="도면 위에서 마우스 휠로 캐드처럼 확대/축소, 휠 버튼을 누른 채 드래그하면 화면 이동">100%</span>
-          </div>
-          <div class="tool-slider">아이콘 크기
-            <input type="range" id="sizeSlider" min="0.6" max="2" step="0.1" value="1" />
-            <span class="val" id="sizeVal">100%</span>
-          </div>
+          <button id="btnGridView" class="tool" title="모든 도면을 축소판으로 한 번에 훑어봅니다 (단축키 g)"><svg class="icon"><use href="#i-grid"/></svg> 전체 보기 (G)</button>
+          <div class="toolbar-sep"></div>
+          <button id="btnCropMode" class="tool" title="도면 이미지의 일부만 남기고 잘라냅니다 (단축키 c)"><svg class="icon"><use href="#i-crop"/></svg> 자르기 (C)</button>
+          <span id="cropActions">
+            <button class="primary" id="btnCropApply">자르기 적용</button>
+            <button id="btnCropCancel" class="tool">취소</button>
+          </span>
           <div class="toolbar-sep"></div>
           <div class="btn-group">
             <button id="btnSelectMode" class="tool" title="선택 모드 — 드래그 영역에 완전히 들어온 마커만 선택 (단축키 s)"><svg class="icon"><use href="#i-select"/></svg> 선택 (S)</button>
@@ -412,37 +529,15 @@
             <span class="val" id="eraseBrushVal">100%</span>
           </div>
           <div class="toolbar-sep"></div>
-          <div class="btn-group">
-            <button id="btnRotateCCW" class="tool" title="도면 이미지를 왼쪽으로 90° 회전"><svg class="icon"><use href="#i-rotate-ccw"/></svg> 좌회전</button>
-            <button id="btnRotateCW" class="tool" title="도면 이미지를 오른쪽으로 90° 회전"><svg class="icon"><use href="#i-rotate-cw"/></svg> 우회전</button>
-            <button id="btnCropMode" class="tool" title="도면 이미지의 일부만 남기고 잘라냅니다 (단축키 c)"><svg class="icon"><use href="#i-crop"/></svg> 자르기 (C)</button>
-          </div>
-          <span id="cropActions">
-            <button class="primary" id="btnCropApply">자르기 적용</button>
-            <button id="btnCropCancel" class="tool">취소</button>
-          </span>
-          <div class="toolbar-sep"></div>
-          <button id="btnGridView" class="tool" title="모든 도면을 축소판으로 한 번에 훑어봅니다 (단축키 g)"><svg class="icon"><use href="#i-grid"/></svg> 전체 보기 (G)</button>
           <button id="btnCoordGuide" class="tool" title="10% 간격 점선 그리드와 커서 위치의 정확한 % 좌표를 보여줍니다. CSV에 좌표를 직접 입력할 때 참고하세요 (단축키 q)"><svg class="icon"><use href="#i-guide"/></svg> 좌표안내 (Q)</button>
         </div>
         <div class="toolbar-row">
           <div class="mode-hint" id="modeHint">현재 선택된 유형: <b id="activeTypeLabel">벽체</b> (단축키 1/2) — 클릭해 추가, 드래그로 방향 지정 (Shift: 수직/수평 고정)</div>
           <div style="flex:1;"></div>
-          <div class="tool-slider">형식
-            <select id="exportFormatSelect">
-              <option value="png" selected>PNG</option>
-              <option value="pdf">PDF</option>
-            </select>
+          <div class="tool-slider">아이콘 크기
+            <input type="range" id="sizeSlider" min="0.6" max="2" step="0.1" value="1" />
+            <span class="val" id="sizeVal">100%</span>
           </div>
-          <select id="pdfPageSizeSelect" style="display:none;font-size:12.5px;padding:5px 6px;border-radius:6px;border:1px solid var(--gridline);">
-            <option value="original" selected>원본 비율</option>
-            <option value="a4l">A4 가로</option>
-            <option value="a4p">A4 세로</option>
-            <option value="a3l">A3 가로</option>
-            <option value="a3p">A3 세로</option>
-          </select>
-          <button id="btnExportAll" class="primary" title="현재 형식(PNG/PDF)으로 모든 도면을 한 번에 저장합니다. PDF는 도면 수만큼 페이지가 있는 파일 1개로, PNG는 도면별로 순서대로 저장됩니다."><svg class="icon"><use href="#i-archive"/></svg> 전체 도면 일괄 저장</button>
-          <button class="primary" id="btnExportPNG"><svg class="icon"><use href="#i-image"/></svg> 마킹 도면 PNG로 저장</button>
         </div>
       </div>
       <div class="canvas-wrap" id="canvasWrap">
@@ -454,6 +549,9 @@
       </div>
     </main>
 
+    <!-- 우측 사이드바 폭 조절 손잡이: 마우스로 눌러 좌우로 끌면 sidebar.right 폭이 실시간으로 바뀐다 -->
+    <div class="sidebar-resizer" id="rightSidebarResizer" title="드래그해서 결함 목록 폭 조절"></div>
+
     <!-- RIGHT SIDEBAR -->
     <aside class="sidebar right">
       <div>
@@ -461,23 +559,22 @@
           <span>결함 목록 (<span id="markerCount">0</span>건)</span>
           <button type="button" class="tool" id="btnEditFieldOptions" style="font-size:10.5px;padding:3px 7px;font-weight:400;text-transform:none;letter-spacing:0;" title="유형·부재명·결함명 드롭다운의 선택지 목록을 수정합니다"><svg class="icon"><use href="#i-settings"/></svg> 목록수정</button>
         </div>
-        <!-- 고정 컬럼 헤더: 카드와 똑같은 mc-num/mc-marktype/mc-field/mc-num2/mc-suffix 클래스를 그대로
-             써서, 사이드바 폭이 바뀌어도 헤더 칸과 카드 칸이 항상 나란히 맞는다. -->
+        <!-- 고정 컬럼 헤더: 카드와 똑같은 mc-num/mc-marktype/mc-field/mc-suffix 클래스를 그대로
+             써서, 사이드바 폭이 바뀌어도(가로 스크롤이 생겨도) 헤더 칸과 카드 칸이 항상 나란히 맞는다.
+             1·2번째(번호·색상)는 값 자체로 이미 의미가 드러나므로 헤더 글자는 비워둔다. -->
         <div id="tableWrap">
           <div class="marker-list-wrap">
             <div class="marker-list-head">
               <div class="mc-row">
-                <span class="mc-num">#</span>
-                <span class="mc-marktype">색상</span>
+                <span class="mc-num"></span>
+                <span class="mc-marktype"></span>
                 <span class="mc-field">유형</span>
                 <span class="mc-field">부재명</span>
                 <span class="mc-field">결함명</span>
-              </div>
-              <div class="mc-row">
-                <span class="mc-num2">폭</span>
-                <span class="mc-num2">길이</span>
+                <span class="mc-suffix">폭</span>
+                <span class="mc-suffix">길이</span>
                 <span class="mc-suffix">개수</span>
-                <span class="mc-num2">#</span>
+                <span class="mc-suffix">사진번호</span>
               </div>
             </div>
             <div class="marker-list" id="markerList"></div>
@@ -507,6 +604,7 @@
           <button id="btnExportXLSX" class="primary" style="width:100%;"><svg class="icon"><use href="#i-spreadsheet"/></svg> 엑셀로 저장</button>
         </div>
         <div style="font-size:10.5px;color:var(--text-secondary);margin-top:5px;">모든 도면의 결함을 표로 저장합니다(엑셀은 색상·서식 포함).</div>
+        <button id="btnExportPhotosZip" style="width:100%;margin-top:10px;" title="모든 도면의 결함 사진을 zip으로 한 번에 저장합니다. 파일명은 번호·유형·부재명·결함명 순으로 자동 생성됩니다"><svg class="icon"><use href="#i-camera"/></svg> 사진 일괄저장</button>
         <button id="btnShowStats" style="width:100%;margin-top:10px;"><svg class="icon"><use href="#i-chart"/></svg> 통계 보기</button>
       </div>
 
@@ -567,24 +665,35 @@
       <button type="button" id="btnTableInputClose" class="icon-btn"><svg class="icon icon-lg"><use href="#i-close"/></svg></button>
     </div>
     <div class="modal-body">
-      <table class="input-table" id="inputTable">
-        <thead>
-          <tr>
-            <th style="width:26px;">#</th>
-            <th style="width:130px;">유형</th>
-            <th style="width:90px;" id="thColX">X(%)</th>
-            <th style="width:90px;" id="thColY">Y(%)</th>
-            <th style="width:64px;">각도</th>
-            <th style="width:74px;">인출선배율</th>
-            <th>비고</th>
-            <th style="width:30px;"></th>
-          </tr>
-        </thead>
-        <tbody id="inputTableBody"></tbody>
-      </table>
-      <div style="display:flex;gap:8px;margin-top:8px;">
-        <button type="button" id="btnAddInputRow" class="add-drawing-btn" style="flex:1;">+ 행 추가</button>
-        <button type="button" id="btnLoadCurrentMarkers" class="add-drawing-btn" style="flex:1;" title="현재 도면에 이미 찍힌 마커들을 표로 불러와 값을 고친 뒤 한 번에 반영할 수 있습니다"><svg class="icon"><use href="#i-download"/></svg> 현재 도면의 마커 불러와 편집</button>
+      <div class="table-input-layout">
+        <!-- 공유 미리보기 지도: 현재 표의 모든 행을 번호 점으로 함께 보여준다. 포커스된(입력 중인) 행은
+             강조되고, 지도를 클릭하면 그 행의 X/Y(%)가 클릭한 위치로 채워진다. -->
+        <div class="ti-preview">
+          <div class="ti-preview-title">위치 미리보기</div>
+          <canvas id="tableInputPreviewCanvas" width="240" height="180"></canvas>
+          <div class="ti-preview-hint" id="tableInputPreviewHint">입력칸을 선택한 뒤 지도를 클릭하면 그 행의 X/Y가 채워집니다.</div>
+        </div>
+        <div class="table-input-main">
+          <table class="input-table" id="inputTable">
+            <thead>
+              <tr>
+                <th style="width:26px;">#</th>
+                <th style="width:130px;">유형</th>
+                <th style="width:90px;" id="thColX">X(%)</th>
+                <th style="width:90px;" id="thColY">Y(%)</th>
+                <th style="width:64px;">각도</th>
+                <th style="width:74px;">인출선배율</th>
+                <th>비고</th>
+                <th style="width:30px;"></th>
+              </tr>
+            </thead>
+            <tbody id="inputTableBody"></tbody>
+          </table>
+          <div style="display:flex;gap:8px;margin-top:8px;">
+            <button type="button" id="btnAddInputRow" class="add-drawing-btn" style="flex:1;">+ 행 추가</button>
+            <button type="button" id="btnLoadCurrentMarkers" class="add-drawing-btn" style="flex:1;" title="현재 도면에 이미 찍힌 마커들을 표로 불러와 값을 고친 뒤 한 번에 반영할 수 있습니다"><svg class="icon"><use href="#i-download"/></svg> 현재 도면의 마커 불러와 편집</button>
+          </div>
+        </div>
       </div>
     </div>
     <div class="modal-footer">
@@ -692,7 +801,7 @@
   </div>
 </div>
 
-<!-- 표제란(도곽) 인쇄 미리보기 — "표제란(도곽) 표시" 체크박스를 켜면 실제 PNG/PDF 저장 결과와 같은 모습을 미리 보여준다 -->
+<!-- 표제란(도곽) 인쇄 미리보기 — "미리보기" 버튼을 누르면 실제 PNG/PDF 저장 결과와 같은 모습을 미리 보여준다 -->
 <div class="modal-backdrop" id="tbPreviewBackdrop" style="display:none;">
   <div class="modal-panel" style="width:min(1100px, 96vw);">
     <div class="modal-header">
@@ -716,6 +825,37 @@
 <script>
 (function(){
   "use strict";
+
+  // ---------- 라이트/다크 모드 수동 전환 ----------
+  // 기본은 OS 설정을 따르지만, 우측 상단 버튼으로 사용자가 강제 전환할 수 있다. 선택값은
+  // <html data-theme="light|dark">에 반영되고(없으면 시스템 설정을 따름) localStorage에 저장돼 다음 방문에도 유지된다.
+  const THEME_STORE_KEY = 'defectMarkerTheme_v1';
+  function loadTheme(){
+    try{ const v = localStorage.getItem(THEME_STORE_KEY); return (v==='light'||v==='dark') ? v : null; } catch(err){ return null; }
+  }
+  function saveTheme(theme){
+    try{ if(theme) localStorage.setItem(THEME_STORE_KEY, theme); else localStorage.removeItem(THEME_STORE_KEY); } catch(err){ /* 저장 실패해도 화면 전환 자체는 동작 */ }
+  }
+  function isDarkNow(){
+    const forced = document.documentElement.getAttribute('data-theme');
+    if(forced) return forced==='dark';
+    return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  }
+  function updateThemeToggleUI(){
+    const btn = document.getElementById('btnThemeToggle');
+    if(!btn) return;
+    const dark = isDarkNow();
+    btn.innerHTML = dark
+      ? '<svg class="icon"><use href="#i-sun"></use></svg> 화이트 모드'
+      : '<svg class="icon"><use href="#i-moon"></use></svg> 다크 모드';
+    btn.title = dark ? '화이트(라이트) 모드로 전환' : '다크 모드로 전환';
+  }
+  function applyTheme(theme){
+    if(theme==='light' || theme==='dark') document.documentElement.setAttribute('data-theme', theme);
+    else document.documentElement.removeAttribute('data-theme');
+    updateThemeToggleUI();
+  }
+  applyTheme(loadTheme());
 
   // ---------- 위치 유형 정의: 벽체(화살표 인출선) / 바닥·천장(점 인출선) — 엑셀 표준 색상 ----------
   const DEFECT_TYPES = [
@@ -1186,7 +1326,7 @@
   }
 
   // ---------- 표제란(도곽) 인쇄 미리보기 ----------
-  // "표제란(도곽) 표시" 체크박스를 켜면 buildExportCanvasTitleBlock()로 실제 저장 결과와 똑같은 이미지를
+  // "표제란(도곽) 표시"를 켠 상태에서 "미리보기" 버튼을 누르면 buildExportCanvasTitleBlock()로 실제 저장 결과와 똑같은 이미지를
   // 그려 모달로 보여준다. 입력값이 바뀔 때마다 모달이 열려있으면 다시 그려서 항상 최신 상태를 반영한다.
   function isTbPreviewOpen(){
     const el = document.getElementById('tbPreviewBackdrop');
@@ -1673,18 +1813,44 @@
   }
   function toggleGridView(){ setGridView(!gridViewMode); }
 
+  // 결함 목록 하단 범례: "유형"(rptType, 카드의 3번째 칸) 값 기준으로 묶는다. rptType을 입력하지 않은
+  // 마커는 예전처럼 마킹 색상유형(DEFECT_TYPES) 라벨 — "벽체(1)"·"바닥/천장(2)" 등 — 로 표시한다.
+  // 마킹 색상유형(DEFECT_TYPES) 기준 집계 — 인쇄되는 표제란 하단 범례(computeLegendLayout)가 쓴다.
+  // 도면에 실제로 찍히는 색·모양과 항상 일치해야 하므로 rptType과는 별개로 유지한다.
   function usedTypes(d){
     return DEFECT_TYPES.map(type=>({type, count: d.markers.filter(m=>m.typeKey===type.key).length}))
       .filter(x=>x.count>0);
   }
 
+  // 결함 목록 하단 범례(사이드바)용 집계 — "유형"(rptType, 카드의 3번째 칸) 값 기준으로 묶는다. rptType을
+  // 입력하지 않은 마커는 예전처럼 마킹 색상유형 라벨 — "벽체(1)"·"바닥/천장(2)" 등 — 로 표시한다.
+  function usedRptTypeGroups(d){
+    const groups = [];
+    const indexByKey = new Map();
+    d.markers.forEach(m=>{
+      const rt = (m.rptType||'').trim();
+      const key = rt ? ('rt:'+rt) : ('type:'+m.typeKey);
+      let i = indexByKey.get(key);
+      if(i===undefined){
+        i = groups.length;
+        groups.push(rt ? { label: rt, swatchType: null, count: 0 } : { label: getType(m.typeKey).label, swatchType: getType(m.typeKey), count: 0 });
+        indexByKey.set(key, i);
+      }
+      groups[i].count++;
+    });
+    return groups;
+  }
+
   function renderLegendPreview(d){
     const wrap = document.getElementById('legendPreview');
     wrap.innerHTML = '';
-    usedTypes(d).forEach(({type,count})=>{
+    usedRptTypeGroups(d).forEach(({label, swatchType, count})=>{
       const chip = document.createElement('div');
       chip.className = 'legend-chip';
-      chip.innerHTML = `${typeSwatchSVG(type)}<span>${type.label} (${count})</span>`;
+      // rptType(유형)이 입력된 그룹은 특정 마킹 색상 하나로 정할 수 없으므로(같은 유형에 벽체/바닥 마커가
+      // 섞일 수 있음) 중립 점 아이콘을 쓰고, 미입력(마킹유형 기준 표시) 그룹만 실제 마킹 색상 스와치를 쓴다.
+      const swatch = swatchType ? typeSwatchSVG(swatchType) : `<span class="legend-dot"></span>`;
+      chip.innerHTML = `${swatch}<span>${escapeHTML(label)} (${count})</span>`;
       wrap.appendChild(chip);
     });
   }
@@ -2123,24 +2289,20 @@
       card.className = 'marker-card' + (selectedIds.has(m.id) ? ' selected' : '');
       card.dataset.id = m.id;
       const typeOptions = DEFECT_TYPES.map(t=>`<option value="${t.key}" ${t.key===m.typeKey?'selected':''}>${t.label}</option>`).join('');
-      // 마킹유형/번호/사진/삭제는 tabindex=-1로 빼서, Tab 키가 유형→부재명→결함명→폭→길이→개수→#
+      // 마킹유형/번호/사진/삭제는 tabindex=-1로 빼서, Tab 키가 유형→부재명→결함명→폭→길이→개수→사진번호
       // 순서로만 흐르다가 자연스럽게 다음 카드의 "유형" 칸으로 넘어가도록 한다(빠른 연속 입력용).
-      // 카드를 2행으로 나눈다: 1행(유형·부재명·결함명 등 "무엇/어디")은 넓게 늘어나고,
-      // 2행(폭·길이·개수·#·사진·삭제 등 "수치+동작")은 좁은 고정폭이라 사이드바가 450px로
-      // 좁아져도 두 행 모두 줄바꿈 없이 들어간다.
+      // 카드는 한 줄 — 사이드바가 좁아지면 marker-list-wrap에 가로 스크롤이 생겨서 대응한다.
       card.innerHTML = `
-        <div class="mc-row mc-row1">
+        <div class="mc-row">
           <input type="text" class="mc-num" data-role="pos" tabindex="-1" value="${idx+1}" title="번호 — 값을 바꾸면 도면·목록의 순서(번호)가 그 위치로 바뀝니다"/>
           <select data-role="type" class="mc-marktype" tabindex="-1" title="마킹 색상·모양(도면에 표시되는 유형)">${typeOptions}</select>
           ${buildReportSelectHTML('rptType', m.rptType, '유형')}
           ${buildReportSelectHTML('rptMember', m.rptMember, '부재명')}
           ${buildReportSelectHTML('rptDefect', m.rptDefect, '결함명')}
-        </div>
-        <div class="mc-row mc-row2">
-          <input type="text" class="mc-num2" data-role="rptWidth" placeholder="폭" title="폭" value="${escapeAttr(m.rptWidth||'')}"/>
-          <input type="text" class="mc-num2" data-role="rptLength" placeholder="길이" title="길이" value="${escapeAttr(m.rptLength||'')}"/>
-          <span class="mc-suffix"><input type="text" class="mc-num2" data-role="rptCount" placeholder="개수" title="개수" value="${escapeAttr(m.rptCount||'')}"/><span>개</span></span>
-          <input type="text" class="mc-num2" data-role="rptTag" placeholder="#" title="#" value="${escapeAttr(m.rptTag||'')}"/>
+          <span class="mc-suffix"><input type="text" data-role="rptWidth" placeholder="폭" title="폭(mm)" value="${escapeAttr(m.rptWidth||'')}"/><span>mm</span></span>
+          <span class="mc-suffix"><input type="text" data-role="rptLength" placeholder="길이" title="길이(mm)" value="${escapeAttr(m.rptLength||'')}"/><span>mm</span></span>
+          <span class="mc-suffix"><input type="text" data-role="rptCount" placeholder="개수" title="개수" value="${escapeAttr(m.rptCount||'')}"/><span>개</span></span>
+          <span class="mc-suffix"><span>#</span><input type="text" data-role="rptTag" placeholder="사진번호" title="사진번호" value="${escapeAttr(m.rptTag||'')}"/></span>
           <button class="mc-photo" data-role="photo" tabindex="-1" title="사진 첨부"><svg class="icon"><use href="#i-camera"/></svg>${(m.photos&&m.photos.length)?`<span class="photo-count">${m.photos.length}</span>`:''}</button>
           <button class="row-del" data-role="del" tabindex="-1" title="삭제"><svg class="icon"><use href="#i-close"/></svg></button>
         </div>
@@ -2390,12 +2552,17 @@
 
   // ---------- PNG 내보내기 ----------
   function sanitizeFilename(s){ return String(s||'').replace(/[\\/:*?"<>|]/g,'_').trim() || 'untitled'; }
+  // 저장 파일명 = 도면 제목(없으면 "외관조사망도") + 조사위치(활성 도면에 입력돼 있으면) + 날짜, '_'로 연결.
+  // 예: "외관조사망도_2층 계단실_20260814" / 도면제목·조사위치가 모두 비어있으면 "외관조사망도_20260814".
   function filenameBase(){
-    const site = document.getElementById('siteNameInput').value.trim();
-    const proj = document.getElementById('projectNameInput').value.trim();
-    const base = site || proj || '결함마킹';
+    const docTitle = document.getElementById('docTitleInput').value.trim();
+    const d = getActiveDrawing();
+    const surveyLocation = (d && d.surveyLocation) ? d.surveyLocation.trim() : '';
     const dt = new Date(); const ymd = dt.toISOString().slice(0,10).replace(/-/g,'');
-    return sanitizeFilename(base) + '_' + ymd;
+    const parts = [sanitizeFilename(docTitle || '외관조사망도')];
+    if(surveyLocation) parts.push(sanitizeFilename(surveyLocation));
+    parts.push(ymd);
+    return parts.join('_');
   }
   function wrapText(ctx, text, maxWidth){
     if(!text) return [];
@@ -2505,12 +2672,12 @@
     const legendFont = '600 14px system-ui, -apple-system, "Segoe UI", sans-serif';
     const legendRowH = 30;
 
-    // ---- 외곽 굵은 테두리(도곽)와 용지 가장자리 사이 여백 — 비대칭: 위쪽에 여유를 더 두고
-    // (108px), 좌·우·아래는 54px로 좁게 유지한다.
-    const FRAME_MARGIN_TOP = 108, FRAME_MARGIN_SIDE = 54, FRAME_MARGIN_BOTTOM = 54;
-    // 표제란·도면·범례(표) 바깥 테두리와 그 바깥의 굵은 외곽 틀 사이 여백. 이전엔 8px로 답답했던
-    // 간격을 넉넉하게 16px로 늘리고, 다른 값과 섞이지 않도록 상수로 고정한다.
-    const FRAME_TO_CONTENT_GAP = 16;
+    // ---- 외곽 굵은 테두리(도곽)와 용지 가장자리 사이 여백 — 비대칭: 위쪽은 기존(108px)의 1.5배인
+    // 162px, 좌·우·아래는 기존(54px)의 2배인 108px로 더 넉넉하게 둔다.
+    const FRAME_MARGIN_TOP = 162, FRAME_MARGIN_SIDE = 108, FRAME_MARGIN_BOTTOM = 108;
+    // 표제란·도면·범례(표) 바깥 테두리와 그 바깥의 굵은 외곽 틀 사이 여백. 8px→16px였던 간격을
+    // 다시 2배인 32px로 늘려 표가 외곽 틀에 붙어 보이지 않게 한다.
+    const FRAME_TO_CONTENT_GAP = 32;
     const contentMarginTop = FRAME_MARGIN_TOP + FRAME_TO_CONTENT_GAP;
     const contentMarginSide = FRAME_MARGIN_SIDE + FRAME_TO_CONTENT_GAP;
     const contentMarginBottom = FRAME_MARGIN_BOTTOM + FRAME_TO_CONTENT_GAP;
@@ -2532,7 +2699,9 @@
 
     // ---- 상단 표제란: 실무 도면 표제란처럼 "라벨 배지 + 값" 2행×2열 구성
     // (①용역명·②구분 한 줄, ③조사위치·④구조형식 한 줄), 눕히지 않은 정방향 글씨.
-    const titleBarH = clamp(outerH*0.135, 109, 169);
+    // 글자 크기(titleFontScale=1.43)가 커진 만큼 라벨 배지·표제란 높이 상한도 함께 넉넉히 늘려
+    // 값이 배지 밖으로 넘치지 않게 한다.
+    const titleBarH = clamp(outerH*0.135, 142, 220);
     const rowH = titleBarH/2, colW = contentW/2;
     const tbCells = [
       { r:0, c:0, label:'용 역 명', value: projName },
@@ -2540,10 +2709,10 @@
       { r:1, c:0, label:'조사위치', value: d.surveyLocation||'' },
       { r:1, c:1, label:'구조형식', value: structureType },
     ];
-    const badgeW = clamp(colW*0.22, 78, 137);
-    const badgeH = clamp(rowH*0.52, 27, 48);
+    const badgeW = clamp(colW*0.22, 102, 178);
+    const badgeH = clamp(rowH*0.52, 35, 62);
     const badgeMarginX = clamp(colW*0.035, 9, 20);
-    const titleFontScale = 1.1; // 도곽 상단 표제란 글자 크기(라벨/값)를 기존보다 1.1배 키움
+    const titleFontScale = 1.43; // 도곽 상단 표제란 글자 크기(라벨/값) — 1.1배였던 것을 다시 1.3배 키워 총 1.43배
     const labelFont = `700 ${Math.round(clamp(badgeH*0.42,13,22)*titleFontScale)}px system-ui, -apple-system, "Segoe UI", sans-serif`;
     const valueFont = `600 ${Math.round(clamp(badgeH*0.46,14,23)*titleFontScale)}px system-ui, -apple-system, "Segoe UI", sans-serif`;
 
@@ -2614,9 +2783,9 @@
     const legendY = outerH - contentMarginBottom - legendH;
     drawLegendBlock(ctx, rows, measure, legendFont, contentMarginSide, legendY, legendMargin, legendRowH, '표시된 결함이 없습니다');
 
-    // ---- 외곽 굵은 테두리(도곽) — 용지 가장자리에서 비대칭 여백(위 108px, 좌·우·아래 54px)만큼
+    // ---- 외곽 굵은 테두리(도곽) — 용지 가장자리에서 비대칭 여백(위 162px, 좌·우·아래 108px)만큼
     // 떨어뜨려서 표제란·도면·범례 전체를 감싸는 굵은 사각형 하나. 안쪽 내용물과는 항상
-    // FRAME_TO_CONTENT_GAP(16px)만큼 떨어져 있어 표가 테두리에 붙어 보이지 않는다.
+    // FRAME_TO_CONTENT_GAP(32px)만큼 떨어져 있어 표가 테두리에 붙어 보이지 않는다.
     ctx.strokeStyle = '#000000';
     ctx.lineWidth = 3;
     ctx.strokeRect(
@@ -2832,7 +3001,9 @@
   }
   function strToBytes(s){ return new TextEncoder().encode(s); }
   // files: [{name, data:Uint8Array}] → ZIP 파일 하나(Blob). 저장(store, 무압축) 방식이라 압축 라이브러리가 필요 없다.
-  function buildZipBlob(files){
+  // mimeType은 zip 자체를 어떤 파일로 인식시킬지에만 쓰인다(엑셀은 내부적으로 zip이라 스프레드시트
+  // mimetype을, 사진 묶음 등 진짜 zip 다운로드는 'application/zip'을 넘긴다).
+  function buildZipBlob(files, mimeType){
     const parts = [];
     const centralParts = [];
     let offset = 0;
@@ -2892,7 +3063,7 @@
     edv.setUint32(12, centralSize, true);
     edv.setUint32(16, centralOffset, true);
     edv.setUint16(20, 0, true);
-    return new Blob([...parts, ...centralParts, end], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+    return new Blob([...parts, ...centralParts, end], {type: mimeType || 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
   }
   function xmlEscape(s){
     return String(s==null?'':s).replace(/[&<>]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])).replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g,'');
@@ -2998,6 +3169,53 @@
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url; a.download = filenameBase() + '_결함목록.xlsx';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url), 3000);
+  }
+
+  // ---------- 사진 일괄 저장 ----------
+  // data: URL(FileReader.readAsDataURL / canvas.toDataURL 결과)을 zip에 넣을 원본 바이트로 되돌린다.
+  function dataURLToBytes(dataURL){
+    const m = /^data:([^;]+);base64,([\s\S]*)$/.exec(dataURL||'');
+    if(!m) return null;
+    const bin = atob(m[2]);
+    const bytes = new Uint8Array(bin.length);
+    for(let i=0;i<bin.length;i++) bytes[i] = bin.charCodeAt(i);
+    const ext = m[1]==='image/png' ? 'png' : (m[1]==='image/webp' ? 'webp' : 'jpg');
+    return { bytes, ext };
+  }
+  function hasAnyPhotos(){
+    return drawings.some(d=> d.markers.some(m=> m.photos && m.photos.length>0));
+  }
+  // 모든 도면의 결함 사진을 zip으로 한 번에 저장한다. 파일명은 표에 입력한 내용(번호·유형·부재명·결함명)
+  // 그대로를 따르고, 도면이 여러 개면 도면명 폴더로 나눠 같은 번호가 섞이지 않게 한다.
+  function exportAllPhotosZip(){
+    if(!hasAnyPhotos()){ alert('첨부된 사진이 없습니다.'); return; }
+    const multiDrawing = drawings.length > 1;
+    const entries = [];
+    drawings.forEach(d=>{
+      d.markers.forEach((m, idx)=>{
+        const photos = m.photos || [];
+        if(photos.length===0) return;
+        const nameParts = [String(idx+1)];
+        if(m.rptType) nameParts.push(m.rptType);
+        if(m.rptMember) nameParts.push(m.rptMember);
+        if(m.rptDefect) nameParts.push(m.rptDefect);
+        const baseName = sanitizeFilename(nameParts.join('_'));
+        const folder = multiDrawing ? sanitizeFilename(d.name) + '/' : '';
+        photos.forEach((photo, pi)=>{
+          const decoded = dataURLToBytes(photo);
+          if(!decoded) return;
+          const suffix = photos.length>1 ? `_${pi+1}` : '';
+          entries.push({ name: `${folder}${baseName}${suffix}.${decoded.ext}`, data: decoded.bytes });
+        });
+      });
+    });
+    if(entries.length===0){ alert('첨부된 사진이 없습니다.'); return; }
+    const blob = buildZipBlob(entries, 'application/zip');
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filenameBase() + '_사진.zip';
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(()=>URL.revokeObjectURL(url), 3000);
   }
@@ -3144,6 +3362,56 @@
   // null = "추가" 모드(모두 새 마커로 추가). Set = "편집" 모드(현재 도면의 마커를 불러와 표에서 고친 뒤
   // 적용 — 표에 남아있는 기존 마커는 값이 갱신되고, 표에서 지워버린(행 삭제) 기존 마커는 실제로도 삭제된다.
   let tableInputLoadedIds = null;
+  // ---------- 표로 입력: 공유 미리보기 지도 ----------
+  // 표의 모든 행을 활성 도면 축소판 위에 번호 점으로 함께 그려서, 숫자만으로는 가늠하기 어려운
+  // "이 좌표가 실제로 어디쯤인지"를 한눈에 보여준다. 포커스(입력 중)된 행은 파란 점으로 강조되고,
+  // 지도를 클릭하면 그 행의 X/Y(%)가 클릭 위치로 채워진다.
+  let tableInputFocusedRow = null;
+  function parseXYForPreview(tr){
+    // 범위(사각형) 유형은 X/Y에 "시작~끝"이 들어있으므로, 미리보기 점은 그 중간값 위치에 찍는다.
+    const parseOne = raw=>{
+      raw = (raw||'').trim();
+      if(!raw) return null;
+      const nums = raw.split('~').map(s=>parseFloat(s.trim())).filter(n=>!isNaN(n));
+      return nums.length ? nums.reduce((a,b)=>a+b,0)/nums.length : null;
+    };
+    const x = parseOne(tr.querySelector('[data-col="x"]').value);
+    const y = parseOne(tr.querySelector('[data-col="y"]').value);
+    if(x===null || y===null) return null;
+    return { x: clamp(x,0,100), y: clamp(y,0,100) };
+  }
+  function renderTableInputPreview(){
+    const canvas = document.getElementById('tableInputPreviewCanvas');
+    if(!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width, h = canvas.height;
+    ctx.clearRect(0,0,w,h);
+    const d = getActiveDrawing();
+    if(!d || !d.imgEl) return;
+    // 도면 원본 비율을 유지한 채(contain) 캔버스 안에 꽉 차게 배치
+    const scale = Math.min(w/d.naturalW, h/d.naturalH);
+    const drawW = d.naturalW*scale, drawH = d.naturalH*scale;
+    const offX = (w-drawW)/2, offY = (h-drawH)/2;
+    ctx.drawImage(d.imgEl, offX, offY, drawW, drawH);
+    ctx.strokeStyle = 'rgba(11,11,11,0.15)'; ctx.lineWidth = 1;
+    ctx.strokeRect(offX+0.5, offY+0.5, Math.max(0,drawW-1), Math.max(0,drawH-1));
+    // 아래 점 색은 <canvas> 픽셀에 직접 그리므로 CSS 테마 토큰이 아닌 고정 색을 쓴다(라이트/다크
+    // 어느 배경 위 도면이든 항상 또렷하게 보이도록 흰 테두리 + 고정 accent/red 조합 유지).
+    Array.from(document.getElementById('inputTableBody').children).forEach((tr, i)=>{
+      const pt = parseXYForPreview(tr);
+      if(!pt) return;
+      const px = offX + pt.x/100*drawW, py = offY + pt.y/100*drawH;
+      const focused = tr === tableInputFocusedRow;
+      const r = focused ? 9 : 7;
+      ctx.beginPath(); ctx.arc(px, py, r, 0, Math.PI*2);
+      ctx.fillStyle = focused ? '#2a78d6' : '#a72e2e';
+      ctx.fill();
+      ctx.lineWidth = 1.5; ctx.strokeStyle = '#ffffff'; ctx.stroke();
+      ctx.fillStyle = '#ffffff'; ctx.font = '700 9px system-ui, -apple-system, "Segoe UI", sans-serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(String(i+1), px, py+0.5);
+    });
+  }
   // 행의 유형(화살표류/범위류)에 따라 X/Y 칸의 placeholder를 바꿔서 그 칸이 지금 무엇을 의미하는지 보여준다.
   function updateRowXYMode(tr){
     const typeKey = tr.querySelector('[data-col="type"]').value;
@@ -3172,7 +3440,10 @@
       <td><input type="text" data-col="note" placeholder="비고"/></td>
       <td><button type="button" class="row-del" title="행 삭제"><svg class="icon"><use href="#i-close"/></svg></button></td>
     `;
-    tr.querySelector('.row-del').addEventListener('click', ()=>{ tr.remove(); renumberInputTable(); });
+    tr.querySelector('.row-del').addEventListener('click', ()=>{
+      if(tableInputFocusedRow===tr) tableInputFocusedRow = null;
+      tr.remove(); renumberInputTable(); renderTableInputPreview();
+    });
     tr.querySelector('[data-col="type"]').addEventListener('change', ()=> updateRowXYMode(tr));
     updateRowXYMode(tr);
     return tr;
@@ -3183,6 +3454,7 @@
   function addInputRow(){
     const tbody = document.getElementById('inputTableBody');
     tbody.appendChild(buildInputRow(tbody.children.length+1));
+    renderTableInputPreview();
   }
   function updateTableInputModeUI(){
     const sub = document.getElementById('tableInputSub');
@@ -3205,7 +3477,9 @@
     tbody.innerHTML = '';
     for(let i=0;i<6;i++) tbody.appendChild(buildInputRow(i+1));
     updateTableInputModeUI();
+    tableInputFocusedRow = tbody.firstElementChild;
     document.getElementById('tableInputBackdrop').style.display = 'flex';
+    renderTableInputPreview();
   }
   // 현재 도면에 이미 찍힌 마커들을 표로 불러와 표에서 값을 고친 뒤 "변경사항 적용"으로 한 번에 반영("편집 모드").
   function loadCurrentMarkersIntoTable(){
@@ -3238,9 +3512,12 @@
       tbody.appendChild(tr);
     });
     updateTableInputModeUI();
+    tableInputFocusedRow = tbody.firstElementChild;
+    renderTableInputPreview();
   }
   function closeTableInputModal(){
     document.getElementById('tableInputBackdrop').style.display = 'none';
+    tableInputFocusedRow = null;
     // 다음에 열 때는 다시 화면 가운데에서 시작하도록 드래그로 옮긴 위치를 초기화한다.
     const panel = document.getElementById('tableInputPanel');
     panel.style.position = ''; panel.style.left = ''; panel.style.top = ''; panel.style.margin = '';
@@ -3249,6 +3526,47 @@
     const el = document.getElementById('tableInputBackdrop');
     return !!el && el.style.display !== 'none';
   }
+  // 입력칸에 포커스가 가면 그 행을 미리보기 지도의 "포커스된 행"으로 강조하고, X/Y를 고치면
+  // (직접 입력이든 지도를 클릭해서든) 점 위치를 바로 다시 그린다.
+  document.getElementById('inputTableBody').addEventListener('focusin', e=>{
+    const tr = e.target.closest('tr');
+    if(tr){ tableInputFocusedRow = tr; renderTableInputPreview(); }
+  });
+  document.getElementById('inputTableBody').addEventListener('input', e=>{
+    if(e.target.matches('[data-col="x"],[data-col="y"]')) renderTableInputPreview();
+  });
+  // 미리보기 지도를 클릭하면 그 위치를(%) 현재 포커스된 행의 X/Y에 채운다. 아직 포커스된 행이
+  // 없으면 표의 첫 행을 대상으로 삼는다. 범위(사각형) 유형 행은 클릭한 점을 시작 좌표로, 기본
+  // 10%p 크기의 범위를 채워 넣어 바로 편집할 수 있게 한다.
+  document.getElementById('tableInputPreviewCanvas').addEventListener('click', e=>{
+    const d = getActiveDrawing();
+    if(!d || !d.imgEl) return;
+    const canvas = e.currentTarget;
+    const rect = canvas.getBoundingClientRect();
+    const w = canvas.width, h = canvas.height;
+    const scale = Math.min(w/d.naturalW, h/d.naturalH);
+    const drawW = d.naturalW*scale, drawH = d.naturalH*scale;
+    const offX = (w-drawW)/2, offY = (h-drawH)/2;
+    const cx = (e.clientX-rect.left) * (w/rect.width);
+    const cy = (e.clientY-rect.top) * (h/rect.height);
+    const xPct = clamp((cx-offX)/drawW*100, 0, 100);
+    const yPct = clamp((cy-offY)/drawH*100, 0, 100);
+    const tbody = document.getElementById('inputTableBody');
+    let tr = tableInputFocusedRow;
+    if(!tr || !tbody.contains(tr)){ tr = tbody.firstElementChild; tableInputFocusedRow = tr; }
+    if(!tr) return;
+    const typeKey = tr.querySelector('[data-col="type"]').value;
+    const isRect = getType(typeKey).endStyle==='rect';
+    const xInput = tr.querySelector('[data-col="x"]'), yInput = tr.querySelector('[data-col="y"]');
+    if(isRect){
+      xInput.value = `${xPct.toFixed(1)}~${clamp(xPct+10,0,100).toFixed(1)}`;
+      yInput.value = `${yPct.toFixed(1)}~${clamp(yPct+10,0,100).toFixed(1)}`;
+    } else {
+      xInput.value = xPct.toFixed(1);
+      yInput.value = yPct.toFixed(1);
+    }
+    renderTableInputPreview();
+  });
   // 엑셀 등에서 표를 복사해 표의 한 칸에 붙여넣으면(Ctrl+V) 탭/줄바꿈으로 구분된 값을
   // 그 칸을 기준으로 표 전체에 자동으로 채워 넣는다(부족한 행은 자동 추가).
   document.getElementById('inputTableBody').addEventListener('paste', e=>{
@@ -3277,6 +3595,7 @@
       });
     });
     renumberInputTable();
+    renderTableInputPreview();
   });
   // "추가" 모드에서는 유효한 행을 모두 새 마커로 추가. "편집" 모드(tableInputLoadedIds)에서는 불러왔던
   // 마커를 표의 값으로 갱신하고, 표에서 지워진(행 삭제) 기존 마커는 실제로도 삭제, 새로 채운 빈 행은 추가한다.
@@ -3615,13 +3934,25 @@
     });
     return Array.from(counts.entries()).sort((a,b)=> b[1]-a[1]);
   }
-  function statsTableHTML(title, pairs, total){
+  // 항목이 여러 개(도면·부재명·결함명 등)일 수 있는 순위형 데이터라 막대그래프로 표현한다 — 막대는
+  // 값(개수) 크기 비교가 목적이므로 단일 accent 색을 쓰고, 예외적으로 "마킹 유형별"만 실제 도면에
+  // 찍히는 마킹 색상(colorFn)을 그대로 재사용해 캔버스의 색과 바로 연결되도록 한다.
+  function statsChartHTML(title, pairs, total, colorFn){
     if(pairs.length===0) return '';
+    const max = Math.max(...pairs.map(([,c])=>c), 1);
     const rows = pairs.map(([label,count])=>{
       const pct = total>0 ? Math.round(count/total*100) : 0;
-      return `<tr><td><span class="bar" style="width:${Math.max(4,pct)}px;"></span>${escapeHTML(String(label))}</td><td class="n">${count}</td></tr>`;
+      const barPct = Math.max(3, Math.round(count/max*100));
+      const color = colorFn ? colorFn(label) : '';
+      const labelStr = escapeHTML(String(label));
+      return `
+        <div class="chart-row">
+          <div class="chart-label" title="${escapeAttr(String(label))}">${labelStr}</div>
+          <div class="chart-bar-track"><div class="chart-bar" style="width:${barPct}%;${color?`background:${color};`:''}"></div></div>
+          <div class="chart-value">${count}<span class="chart-pct">(${pct}%)</span></div>
+        </div>`;
     }).join('');
-    return `<div class="stats-section"><h4>${title}</h4><table class="stats-table"><thead><tr><th>항목</th><th style="text-align:right;">개수</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+    return `<div class="stats-section"><h4>${title}</h4><div class="chart-list">${rows}</div></div>`;
   }
   function renderStatsModal(){
     const allMarkers = [];
@@ -3638,17 +3969,18 @@
     const byMember = tallyBy(allMarkers, m=>m.rptMember, '(미입력)');
     const byDefect = tallyBy(allMarkers, m=>m.rptDefect, '(미입력)');
     const photoCount = allMarkers.reduce((s,m)=> s + ((m.photos&&m.photos.length)||0), 0);
+    const markTypeColor = label => { const t = DEFECT_TYPES.find(x=>x.label===label); return t ? t.color : '#8f8d86'; };
     body.innerHTML = `
       <div class="stats-summary">
         <div class="stat-box"><div class="n">${total}</div><div class="l">전체 결함 수</div></div>
         <div class="stat-box"><div class="n">${drawings.length}</div><div class="l">도면 수</div></div>
         <div class="stat-box"><div class="n">${photoCount}</div><div class="l">첨부 사진 수</div></div>
       </div>
-      ${statsTableHTML('도면별 개수', byDrawing, total)}
-      ${statsTableHTML('마킹 유형별 개수', byMarkType, total)}
-      ${statsTableHTML('유형(부위)별 개수', byRptType, total)}
-      ${statsTableHTML('부재명별 개수', byMember, total)}
-      ${statsTableHTML('결함명별 개수', byDefect, total)}
+      ${statsChartHTML('도면별 개수', byDrawing, total)}
+      ${statsChartHTML('마킹 유형별 개수', byMarkType, total, markTypeColor)}
+      ${statsChartHTML('유형(부위)별 개수', byRptType, total)}
+      ${statsChartHTML('부재명별 개수', byMember, total)}
+      ${statsChartHTML('결함명별 개수', byDefect, total)}
     `;
   }
   function openStatsModal(){ renderStatsModal(); document.getElementById('statsBackdrop').style.display = 'flex'; }
@@ -3830,6 +4162,10 @@
   document.getElementById('btnCropCancel').addEventListener('click', exitCropMode);
   document.getElementById('btnCropApply').addEventListener('click', performCropApply);
 
+  document.getElementById('btnThemeToggle').addEventListener('click', ()=>{
+    applyTheme(isDarkNow() ? 'light' : 'dark');
+    saveTheme(document.documentElement.getAttribute('data-theme'));
+  });
   document.getElementById('btnGridView').addEventListener('click', toggleGridView);
   document.getElementById('btnCoordGuide').addEventListener('click', toggleCoordGuide);
 
@@ -3838,14 +4174,15 @@
     document.getElementById('pdfPageSizeSelect').style.display = isPdf ? '' : 'none';
     // textContent로 통째로 바꾸면 안에 있던 svg 아이콘까지 지워지므로, innerHTML로 아이콘+글자를 함께 교체한다.
     document.getElementById('btnExportPNG').innerHTML = isPdf
-      ? '<svg class="icon"><use href="#i-file-pdf"></use></svg> 마킹 도면 PDF로 저장'
-      : '<svg class="icon"><use href="#i-image"></use></svg> 마킹 도면 PNG로 저장';
+      ? '<svg class="icon"><use href="#i-file-pdf"></use></svg> 현재 도면 저장'
+      : '<svg class="icon"><use href="#i-image"></use></svg> 현재 도면 저장';
   });
 
   document.getElementById('btnExportPNG').addEventListener('click', exportPNG);
   document.getElementById('btnExportAll').addEventListener('click', exportAllDrawings);
   document.getElementById('btnExportCSV').addEventListener('click', exportCSV);
   document.getElementById('btnExportXLSX').addEventListener('click', exportXLSX);
+  document.getElementById('btnExportPhotosZip').addEventListener('click', exportAllPhotosZip);
 
   document.getElementById('btnImportCSVVisual').addEventListener('click', ()=> document.getElementById('importCSVInput').click());
   document.getElementById('importCSVInput').addEventListener('change', e=>{
@@ -3866,7 +4203,7 @@
   });
   document.getElementById('titleBlockToggle').addEventListener('change', e=>{
     document.getElementById('btnReopenTbPreview').style.display = e.target.checked ? 'inline-block' : 'none';
-    if(e.target.checked) openTbPreview(); else closeTbPreview();
+    if(!e.target.checked) closeTbPreview();
   });
   document.getElementById('btnReopenTbPreview').addEventListener('click', openTbPreview);
   document.getElementById('btnTbPreviewClose').addEventListener('click', closeTbPreview);
@@ -3904,6 +4241,7 @@
     if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='y' && !isEditing){ e.preventDefault(); redo(); return; }
     if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='z' && !isEditing){ e.preventDefault(); undo(); return; }
     if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='s'){ e.preventDefault(); saveProject(); return; }
+    if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='d'){ e.preventDefault(); exportPNG(); return; }
     if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='a' && !isEditing){
       e.preventDefault();
       const d = getActiveDrawing();
@@ -4405,6 +4743,45 @@
       });
     });
   }
+
+  // ---------- 우측 사이드바 폭 조절(드래그) ----------
+  const RIGHT_SIDEBAR_WIDTH_KEY = 'defectMarkerRightSidebarWidth_v1';
+  function applyRightSidebarWidth(px){
+    const el = document.querySelector('.sidebar.right');
+    if(!el) return;
+    el.style.width = px+'px';
+    el.style.flexBasis = px+'px';
+  }
+  (function initRightSidebarResize(){
+    const handle = document.getElementById('rightSidebarResizer');
+    const sidebar = document.querySelector('.sidebar.right');
+    if(!handle || !sidebar) return;
+    try{
+      const saved = parseInt(localStorage.getItem(RIGHT_SIDEBAR_WIDTH_KEY), 10);
+      if(!isNaN(saved) && saved>0) applyRightSidebarWidth(saved);
+    } catch(err){ /* 저장된 값이 없거나 읽기 실패해도 기본 CSS 폭으로 동작 */ }
+    let dragging = false, startX = 0, startW = 0;
+    handle.addEventListener('mousedown', e=>{
+      dragging = true; startX = e.clientX; startW = sidebar.getBoundingClientRect().width;
+      handle.classList.add('dragging');
+      document.body.style.userSelect = 'none';
+      e.preventDefault();
+    });
+    window.addEventListener('mousemove', e=>{
+      if(!dragging) return;
+      // 손잡이가 사이드바 왼쪽에 붙어 있으므로, 왼쪽으로 끌면(dx<0) 사이드바가 넓어진다.
+      const dx = e.clientX - startX;
+      const w = clamp(startW - dx, 320, Math.round(window.innerWidth*0.8));
+      applyRightSidebarWidth(w);
+    });
+    window.addEventListener('mouseup', ()=>{
+      if(!dragging) return;
+      dragging = false;
+      handle.classList.remove('dragging');
+      document.body.style.userSelect = '';
+      try{ localStorage.setItem(RIGHT_SIDEBAR_WIDTH_KEY, String(Math.round(sidebar.getBoundingClientRect().width))); } catch(err){ /* 저장 실패해도 화면상 조절 자체는 유지됨 */ }
+    });
+  })();
 
   // ---------- 초기화 ----------
   renderTypeGrid();
