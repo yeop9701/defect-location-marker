@@ -114,6 +114,10 @@
   .canvas-shell{background:var(--surface-1);box-shadow:0 1px 8px rgba(11,11,11,0.10);border:none;
     border-radius:6px;position:relative;}
   #mainCanvas{display:block;cursor:crosshair;border-radius:3px;}
+  /* 마커/오버레이 전용 레이어. 도면(정적) 위에 그대로 겹쳐 그리되, 마우스 이벤트는 항상 아래
+     #mainCanvas가 받도록 pointer-events:none — 드래그 중 매 프레임 무거운 도면 리사이즈(drawImage)를
+     반복하지 않고 이 레이어만 다시 그리면 되므로 마커가 많아도 버벅이지 않는다. */
+  #markerCanvas{display:block;position:absolute;top:0;left:0;pointer-events:none;border-radius:3px;}
   .empty-state{color:var(--muted);font-size:14px;text-align:center;padding:60px 30px;max-width:360px;margin:auto;}
   .empty-state button{margin-top:14px;}
   .thumb-grid{display:none;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:16px;width:100%;
@@ -344,6 +348,7 @@
       <div class="canvas-wrap" id="canvasWrap">
         <div class="canvas-shell" id="canvasShell">
           <canvas id="mainCanvas" tabindex="0"></canvas>
+          <canvas id="markerCanvas"></canvas>
         </div>
         <div class="thumb-grid" id="thumbGrid"></div>
       </div>
@@ -1201,12 +1206,29 @@
     return Math.max(2, eraseBrushRadiusNatural(d) * scale);
   }
 
+  // 도면(정적 이미지)과 마커(동적 표시)를 두 개의 겹친 캔버스로 분리해서 그린다:
+  //   #mainCanvas   = 도면 원본 이미지만 그리는 정적 레이어. 확대/축소·도면 전환·이미지 편집(자르기/
+  //                   회전/지우개 커밋) 때만 다시 그리면 되는, 픽셀 수가 크고(고해상도 스캔본) 비용이
+  //                   큰 drawImage 리사이즈가 여기서만 일어난다.
+  //   #markerCanvas = 마커·선택 표시·러버밴드/자르기 등 상호작용 오버레이를 그리는 동적 레이어.
+  //                   드래그 중 마우스가 움직일 때마다(초당 수십 번) 다시 그려지지만, 도면 이미지를
+  //                   다시 그리지 않으므로 마커가 아무리 많아도 가볍다.
+  // renderCanvas()는 두 레이어를 한 번에 갱신하는 편의 함수이고, 드래그처럼 잦은 갱신이 필요한
+  // 곳에서는 이미지가 바뀌지 않으므로 renderMarkerLayer()만 호출한다.
   function renderCanvas(){
+    if(!renderBaseLayer()) return;
+    renderMarkerLayer();
+  }
+
+  // 정적 레이어(도면 이미지)를 그리고, 두 캔버스의 크기·위치를 함께 맞춘다. 도면이 없으면 false 반환.
+  function renderBaseLayer(){
     const canvas = document.getElementById('mainCanvas');
+    const markerCanvas = document.getElementById('markerCanvas');
     const wrap = document.getElementById('canvasWrap');
     const d = getActiveDrawing();
     if(!d){
       canvas.style.display='none';
+      markerCanvas.style.display='none';
       let placeholder = document.getElementById('emptyState');
       if(!placeholder){
         placeholder = document.createElement('div');
@@ -1217,10 +1239,11 @@
         placeholder.querySelector('#btnEmptyAdd').addEventListener('click', ()=> document.getElementById('addDrawingInput').click());
       }
       placeholder.style.display='block';
-      return;
+      return false;
     }
     const ph = document.getElementById('emptyState'); if(ph) ph.style.display='none';
     canvas.style.display='block';
+    markerCanvas.style.display='block';
     // 화면 배율(devicePixelRatio)만큼 실제 캔버스 해상도를 높여 화질 저하(블러/깨짐)를 방지.
     // 표시 크기(CSS px)는 그대로 두고, 뒷단 픽셀 수(canvas.width/height)만 배율만큼 키운다.
     const dpr = Math.max(1, Math.min(window.devicePixelRatio || 1, 2.5));
@@ -1229,6 +1252,8 @@
     const w = Math.round(cssW*dpr), h = Math.round(cssH*dpr);
     canvas.width = w; canvas.height = h;
     canvas.style.width = cssW+'px'; canvas.style.height = cssH+'px';
+    markerCanvas.width = w; markerCanvas.height = h;
+    markerCanvas.style.width = cssW+'px'; markerCanvas.style.height = cssH+'px';
     // 캔버스가 wrap보다 작을 때는 스크롤 여지가 전혀 없어 휠 줌의 커서 고정 보정(scrollLeft/Top)이
     // 먹지 않는다. shell 오른쪽/아래에 wrap 클라이언트 크기만큼 보이지 않는 여백을 항상 확보해 두면
     // 캔버스 크기와 무관하게 스크롤 가능한 여유 공간이 항상 존재해, 커서 고정 보정이 항상 동작한다.
@@ -1250,6 +1275,16 @@
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
     ctx.drawImage(d.imgEl, 0, 0, w, h);
+    return true;
+  }
+
+  // 동적 레이어(마커+오버레이)만 다시 그린다. 도면 이미지는 손대지 않으므로 드래그 중 반복 호출해도 가볍다.
+  function renderMarkerLayer(){
+    const d = getActiveDrawing(); if(!d) return;
+    const markerCanvas = document.getElementById('markerCanvas'); if(!markerCanvas) return;
+    const w = markerCanvas.width, h = markerCanvas.height;
+    const ctx = markerCanvas.getContext('2d');
+    ctx.clearRect(0,0,w,h);
     const r = markerRadiusFor(d, w, h);
     d.markers.forEach((m,idx)=>{
       drawMarkerDispatch(ctx, d, m, idx+1, w, h, r, selectedIds.has(m.id));
@@ -1683,9 +1718,18 @@
       }
     }
   }
+  // 마커를 실행취소 이력용으로 복사한다. id·좌표·유형 등 스칼라 필드는 서로 독립되도록 복사하되,
+  // m.photos(첨부 사진, base64 배열)는 참조를 그대로 공유한다 — 사진 추가/삭제는 pushUndo()를 거치지
+  // 않는 별도 동작이라 실행취소 대상이 아니며, 매 마커 편집(이동·유형 변경 등)마다 사진 데이터까지
+  // JSON으로 통째로 복제해 이력에 쌓이면(가장 큰 메모리 낭비 원인) 마커가 많아질수록 캔버스가
+  // 버벅이므로, 사진만은 깊은 복사에서 제외한다. 마커가 삭제됐다 되돌려져도(undo) 사진은 같은
+  // 배열 참조를 그대로 들고 있으므로 데이터가 사라지지 않는다.
+  function cloneMarkersForUndo(markers){
+    return markers.map(m=>({...m}));
+  }
   function pushUndo(){
     const d = getActiveDrawing(); if(!d) return;
-    undoStack.push({type:'markers', drawingId:d.id, markers: JSON.parse(JSON.stringify(d.markers))});
+    undoStack.push({type:'markers', drawingId:d.id, markers: cloneMarkersForUndo(d.markers)});
     if(undoStack.length>60) undoStack.shift();
     redoStack = []; // 새 작업이 일어나면 그 이전의 "다시하기" 기록은 더 이상 의미가 없으므로 비운다
   }
@@ -1700,7 +1744,7 @@
       naturalH: d.naturalH,
       baseW: d.baseW,
       baseH: d.baseH,
-      markers: JSON.parse(JSON.stringify(d.markers)),
+      markers: cloneMarkersForUndo(d.markers),
     });
     if(undoStack.length>60) undoStack.shift();
     trimImageEntries(undoStack);
@@ -1731,7 +1775,7 @@
     const d = drawings.find(x=>x.id===last.drawingId); if(!d){ undo(); return; }
     if(last.type==='image'){
       redoStack.push({ type:'image', drawingId:d.id, imgSrc:d.imgSrc, naturalW:d.naturalW, naturalH:d.naturalH,
-        baseW:d.baseW, baseH:d.baseH, markers: JSON.parse(JSON.stringify(d.markers)) });
+        baseW:d.baseW, baseH:d.baseH, markers: cloneMarkersForUndo(d.markers) });
       trimImageEntries(redoStack);
       if(redoStack.length>60) redoStack.shift();
       const img = new Image();
@@ -1744,7 +1788,7 @@
       };
       img.src = last.imgSrc;
     } else {
-      redoStack.push({type:'markers', drawingId:d.id, markers: JSON.parse(JSON.stringify(d.markers))});
+      redoStack.push({type:'markers', drawingId:d.id, markers: cloneMarkersForUndo(d.markers)});
       if(redoStack.length>60) redoStack.shift();
       d.markers = last.markers;
       if(d.id===activeDrawingId){ renderCanvas(); renderTable(); }
@@ -1765,7 +1809,7 @@
     const d = drawings.find(x=>x.id===next.drawingId); if(!d){ redo(); return; }
     if(next.type==='image'){
       undoStack.push({ type:'image', drawingId:d.id, imgSrc:d.imgSrc, naturalW:d.naturalW, naturalH:d.naturalH,
-        baseW:d.baseW, baseH:d.baseH, markers: JSON.parse(JSON.stringify(d.markers)) });
+        baseW:d.baseW, baseH:d.baseH, markers: cloneMarkersForUndo(d.markers) });
       trimImageEntries(undoStack);
       if(undoStack.length>60) undoStack.shift();
       const img = new Image();
@@ -1778,7 +1822,7 @@
       };
       img.src = next.imgSrc;
     } else {
-      undoStack.push({type:'markers', drawingId:d.id, markers: JSON.parse(JSON.stringify(d.markers))});
+      undoStack.push({type:'markers', drawingId:d.id, markers: cloneMarkersForUndo(d.markers)});
       if(undoStack.length>60) undoStack.shift();
       d.markers = next.markers;
       if(d.id===activeDrawingId){ renderCanvas(); renderTable(); }
@@ -3488,7 +3532,7 @@
   document.getElementById('sizeSlider').addEventListener('input', e=>{
     iconSizeMult = parseFloat(e.target.value);
     document.getElementById('sizeVal').textContent = Math.round(iconSizeMult*100)+'%';
-    renderCanvas();
+    renderMarkerLayer(); // 아이콘 크기는 마커에만 영향 — 슬라이더를 끄는 동안 매번 도면까지 다시 그릴 필요 없음
   });
   document.getElementById('btnSelectMode').addEventListener('click', toggleSelectMode);
   document.getElementById('btnMoveMode').addEventListener('click', toggleMoveMode);
@@ -3496,7 +3540,7 @@
   document.getElementById('eraseBrushSlider').addEventListener('input', e=>{
     eraseBrushMult = parseFloat(e.target.value);
     document.getElementById('eraseBrushVal').textContent = Math.round(eraseBrushMult*100)+'%';
-    renderCanvas();
+    renderMarkerLayer(); // 브러시 굵기 미리보기도 오버레이일 뿐 도면 이미지는 바뀌지 않음
   });
   document.getElementById('btnRotateCCW').addEventListener('click', ()=> rotateDrawing(-90));
   document.getElementById('btnRotateCW').addEventListener('click', ()=> rotateDrawing(90));
@@ -3636,7 +3680,7 @@
   const canvas = document.getElementById('mainCanvas');
 
   canvas.addEventListener('mouseleave', ()=>{
-    if(eraseCursorPt){ eraseCursorPt = null; renderCanvas(); }
+    if(eraseCursorPt){ eraseCursorPt = null; renderMarkerLayer(); }
   });
 
   function onPointerDown(e){
@@ -3661,7 +3705,7 @@
       pushImageUndo(d); // 브러시로 이미지·마커를 함께 지울 수 있으므로 스트로크 시작 시 한 번만 기록(마커 상태도 함께 담김)
       pendingAction = { mode:'erase', strokePts:[{x:p.x,y:p.y}] };
       eraseAtPoint(d, p.x, p.y);
-      renderCanvas();
+      renderMarkerLayer();
       return;
     }
 
@@ -3742,7 +3786,7 @@
       if(eraseMode){
         canvas.style.cursor = 'crosshair';
         eraseCursorPt = { x:p0.x, y:p0.y };
-        renderCanvas();
+        renderMarkerLayer();
         return;
       }
       if(pendingRectCreate){
@@ -3751,7 +3795,7 @@
           : { x:p0.x, y:p0.y };
         rectCreateCurX = snapped.x; rectCreateCurY = snapped.y;
         canvas.style.cursor = 'crosshair';
-        renderCanvas();
+        renderMarkerLayer();
         return;
       }
       const rectRotHover = hitTestRectRotateHandle(d0, p0.x, p0.y);
@@ -3761,7 +3805,7 @@
       else if(hitTestHandle(d0, p0.x, p0.y)) canvas.style.cursor = 'alias';
       else if(hitTestMarker(d0, p0.x, p0.y)) canvas.style.cursor = 'move';
       else canvas.style.cursor = 'crosshair';
-      if(coordGuideOn) renderCanvas();
+      if(coordGuideOn) renderMarkerLayer();
       return;
     }
     const d = getActiveDrawing(); if(!d) return;
@@ -3770,7 +3814,7 @@
 
     if(pendingAction.mode==='crop'){
       pendingAction.curX = p.x; pendingAction.curY = p.y;
-      renderCanvas();
+      renderMarkerLayer();
       return;
     }
 
@@ -3792,7 +3836,7 @@
           }
         }
       });
-      renderCanvas();
+      renderMarkerLayer();
     } else if(pendingAction.mode==='rotate'){
       const m = d.markers.find(mm=>mm.id===pendingAction.hitId);
       if(m){
@@ -3808,7 +3852,7 @@
           const lm = dist/baseLen;
           if(isFinite(lm) && lm>0.05) m.lenMult = lm;
         }
-        renderCanvas();
+        renderMarkerLayer();
       }
     } else if(pendingAction.mode==='resizeRect'){
       const m = d.markers.find(mm=>mm.id===pendingAction.hitId);
@@ -3835,7 +3879,7 @@
         m.rectYPct = clamp(ny0/h*100,0,100);
         m.rectWPct = clamp((nx1-nx0)/w*100,0.5,100);
         m.rectHPct = clamp((ny1-ny0)/h*100,0.5,100);
-        renderCanvas();
+        renderMarkerLayer();
       }
     } else if(pendingAction.mode==='rotateRect'){
       const m = d.markers.find(mm=>mm.id===pendingAction.hitId);
@@ -3845,19 +3889,19 @@
         let ang = Math.atan2(p.y-pendingAction.cy, p.x-pendingAction.cx) * 180/Math.PI + 90;
         if(e.shiftKey) ang = Math.round(ang/15)*15; // 15°씩 스냅
         m.rectAngle = ((ang%360)+360)%360;
-        renderCanvas();
+        renderMarkerLayer();
       }
     } else if(pendingAction.mode==='rubberband' && pendingAction.moved){
       pendingAction.curX = p.x; pendingAction.curY = p.y;
-      renderCanvas();
+      renderMarkerLayer();
     } else if(pendingAction.mode==='create'){
       pendingAction.curX = p.x; pendingAction.curY = p.y;
       pendingAction.shiftKey = e.shiftKey;
-      renderCanvas();
+      renderMarkerLayer();
     } else if(pendingAction.mode==='erase'){
       pendingAction.strokePts.push({x:p.x,y:p.y});
       eraseAtPoint(d, p.x, p.y);
-      renderCanvas();
+      renderMarkerLayer();
     }
   }
   canvas.addEventListener('mousemove', onPointerMove);
