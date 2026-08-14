@@ -173,7 +173,7 @@
 
   /* 서랍을 여닫는 탭 — 캔버스 좌우 가장자리에 붙어 항상 눌리는 손잡이. z-index가 서랍/배경보다
      높아 서랍이 열려 있어도 같은 자리를 다시 눌러 닫을 수 있다. */
-  .tablet-edge-tab{display:none;position:absolute;top:50%;transform:translateY(-50%);z-index:60;
+  .tablet-edge-tab{display:none;position:absolute;top:14%;transform:translateY(-50%);z-index:60;
     flex-direction:column;align-items:center;gap:2px;padding:14px 8px;min-height:64px;
     background:var(--accent);color:#fff;border:none;font-size:11.5px;font-weight:700;
     box-shadow:0 2px 10px rgba(0,0,0,.25);line-height:1.3;}
@@ -506,7 +506,7 @@
       </label>
       <div class="toolbar-sep"></div>
       <button type="button" id="btnThemeToggle" class="tool" title="화이트/다크 모드 전환"><svg class="icon"><use href="#i-moon"/></svg> 다크 모드</button>
-      <button type="button" id="btnTabletModeToggle" class="tool" title="태블릿 모드를 수동으로 켜고 끕니다. 화면 폭이 1100px 이하면 자동으로 켜지지만, 키보드를 붙인 아이패드처럼 데스크톱 레이아웃이 더 편할 때는 여기서 꺼둘 수 있습니다."><svg class="icon"><use href="#i-tablet"/></svg> 태블릿 모드</button>
+      <button type="button" id="btnTabletModeToggle" class="tool" title="누를 때마다 자동 → 켬 → 끔 순서로 순환합니다. 자동은 화면 폭 1100px 이하에서 태블릿 모드가 켜지고, 켬/끔은 화면 폭과 무관하게 고정됩니다(키보드를 붙인 아이패드 등에서 유용)."><svg class="icon"><use href="#i-tablet"/></svg> 태블릿 모드: <span id="tabletModeStateLabel">자동</span></button>
     </div>
   </header>
 
@@ -988,6 +988,11 @@
     document.body.classList.toggle('layout-tablet', on);
     const btn = document.getElementById('btnTabletModeToggle');
     if(btn) btn.classList.toggle('active', on);
+    const stateLabel = document.getElementById('tabletModeStateLabel');
+    if(stateLabel){
+      const override = getTabletModeOverride();
+      stateLabel.textContent = override==='on' ? '켬' : override==='off' ? '끔' : '자동';
+    }
     if(!on) closeAllDrawers(); // 데스크톱으로 돌아가면 서랍이 열린 채로 숨어있지 않도록 상태 초기화
   }
   applyTabletMode();
@@ -2123,11 +2128,12 @@
     return null;
   }
   // 범위(사각형) 마커의 회전 손잡이 히트테스트 — 현재 선택된 범위 마커에만 적용.
-  function hitTestRectRotateHandle(d, x, y){
+  // isTouch: 터치 입력일 때만 히트 반경을 넓힌다(마우스는 기존 그대로).
+  function hitTestRectRotateHandle(d, x, y, isTouch){
     const canvas = document.getElementById('mainCanvas');
     const w = canvas.width, h = canvas.height;
     const r = markerRadiusFor(d, w, h);
-    const hitR = Math.max(11, r*0.6);
+    const hitR = Math.max(11, r*0.6) * (isTouch ? 1.75 : 1);
     for(let i=d.markers.length-1;i>=0;i--){
       const m = d.markers[i];
       if(!selectedIds.has(m.id)) continue;
@@ -4324,8 +4330,10 @@
 
   // ---------- 태블릿 서랍(사이드바) 여닫기 ----------
   document.getElementById('btnTabletModeToggle').addEventListener('click', ()=>{
-    const currentlyOn = document.body.classList.contains('layout-tablet');
-    setTabletModeOverride(currentlyOn ? 'off' : 'on');
+    // 자동 → 켬 → 끔 → 자동 순으로 3단계 순환. 자동으로 돌아갈 때는 override를 지워 화면 폭 자동판정에 맡긴다.
+    const override = getTabletModeOverride();
+    const next = override===null ? 'on' : override==='on' ? 'off' : null;
+    setTabletModeOverride(next);
     applyTabletMode();
   });
   document.getElementById('btnDrawerLeft').addEventListener('click', ()=> toggleDrawer('left'));
@@ -4510,7 +4518,7 @@
       return;
     }
 
-    const rectRotHit = hitTestRectRotateHandle(d, p.x, p.y);
+    const rectRotHit = hitTestRectRotateHandle(d, p.x, p.y, isTouchEvent(e));
     if(rectRotHit){
       pushUndo();
       const m = rectRotHit.marker;
@@ -4599,7 +4607,7 @@
         renderMarkerLayer();
         return;
       }
-      const rectRotHover = hitTestRectRotateHandle(d0, p0.x, p0.y);
+      const rectRotHover = hitTestRectRotateHandle(d0, p0.x, p0.y, isTouchEvent(e));
       const rectHandleHover = hitTestRectResizeHandle(d0, p0.x, p0.y, isTouchEvent(e));
       if(rectRotHover) canvas.style.cursor = 'grab';
       else if(rectHandleHover) canvas.style.cursor = RESIZE_CURSORS[rectHandleHover.corner] || 'pointer';
