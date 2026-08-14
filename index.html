@@ -94,7 +94,9 @@
   }
   .icon{width:15px;height:15px;flex:0 0 auto;display:inline-block;vertical-align:-3px;}
   .icon-lg{width:17px;height:17px;}
-  .app{display:flex;flex-direction:column;height:100vh;overflow:hidden;}
+  /* 100dvh를 우선 지원하되, 구형 브라우저는 뒤의 선언을 모르는 값으로 무시하고 앞줄 100vh를 그대로 쓴다.
+     iOS Safari는 100vh가 하단 주소창을 무시하고 계산돼 화면 아래가 잘리므로 100dvh(동적 뷰포트)로 보정. */
+  .app{display:flex;flex-direction:column;height:100vh;height:100dvh;overflow:hidden;}
   header.topbar{
     background:var(--surface-1);
     border-bottom:1px solid var(--gridline);
@@ -130,7 +132,8 @@
   button#btnMoveMode.active{background:var(--mode-move);border-color:var(--mode-move);color:#fff;font-weight:700;}
   button#btnEraseMode.active{background:var(--mode-erase);border-color:var(--mode-erase);color:#fff;font-weight:700;}
   button#btnGridView.active,
-  button#btnCoordGuide.active{background:var(--text-primary);border-color:var(--text-primary);color:var(--surface-1);font-weight:700;}
+  button#btnCoordGuide.active,
+  button#btnTabletModeToggle.active{background:var(--text-primary);border-color:var(--text-primary);color:var(--surface-1);font-weight:700;}
   .btn-group{display:flex;align-items:center;gap:6px;padding:3px;border-radius:9px;background:var(--surface-2);flex:0 0 auto;}
   .toolbar-sep{width:1px;align-self:stretch;background:var(--gridline);margin:0 2px;}
   .layout{display:flex;flex:1;min-height:0;gap:0;}
@@ -148,6 +151,76 @@
   .sidebar-resizer{width:6px;flex:0 0 6px;cursor:col-resize;background:transparent;position:relative;}
   .sidebar-resizer:hover, .sidebar-resizer.dragging{background:var(--accent-soft);}
   .sidebar-resizer::after{content:'';position:absolute;top:0;bottom:0;left:2px;width:2px;background:var(--gridline);}
+
+  /* ---------- 태블릿 전용 레이아웃 ----------
+     JS가 화면 폭 1100px 이하에서 자동으로, 또는 상단 "태블릿 모드" 버튼으로 수동으로 body에
+     layout-tablet 클래스를 붙였다 뗀다. 마커 좌표계산·캔버스 렌더링·내보내기·표제란·CSV 로직은
+     전혀 건드리지 않고, 좌우 사이드바를 화면 밖 서랍(drawer)으로 바꾸고 터치 대상을 키우는
+     "배치"만 바꾼다. .layout이 이미 헤더 아래부터 시작하는 flex 컨테이너이므로, 서랍은
+     position:fixed 대신 .layout 기준 position:absolute로 띄워 헤더 높이를 따로 계산할 필요가 없다. */
+  body.layout-tablet .layout{position:relative;overflow:hidden;}
+  body.layout-tablet .sidebar{
+    position:absolute;top:0;bottom:0;z-index:55;max-width:88vw;
+    box-shadow:0 8px 28px rgba(0,0,0,0.28);transition:transform .22s ease;
+  }
+  body.layout-tablet .sidebar.left{left:0;width:300px;transform:translateX(-100%);}
+  body.layout-tablet .sidebar.right{right:0;left:auto;width:min(480px,88vw);transform:translateX(100%);}
+  body.layout-tablet .sidebar.open{transform:translateX(0);}
+  body.layout-tablet .sidebar-resizer{display:none;} /* 서랍 폭은 고정 — 드래그 리사이즈는 데스크톱 전용 */
+
+  .tablet-drawer-backdrop{display:none;position:absolute;inset:0;background:rgba(0,0,0,.35);z-index:50;}
+  body.layout-tablet .tablet-drawer-backdrop.show{display:block;}
+
+  /* 서랍을 여닫는 탭 — 캔버스 좌우 가장자리에 붙어 항상 눌리는 손잡이. z-index가 서랍/배경보다
+     높아 서랍이 열려 있어도 같은 자리를 다시 눌러 닫을 수 있다. */
+  .tablet-edge-tab{display:none;position:absolute;top:50%;transform:translateY(-50%);z-index:60;
+    flex-direction:column;align-items:center;gap:2px;padding:14px 8px;min-height:64px;
+    background:var(--accent);color:#fff;border:none;font-size:11.5px;font-weight:700;
+    box-shadow:0 2px 10px rgba(0,0,0,.25);line-height:1.3;}
+  body.layout-tablet .tablet-edge-tab{display:inline-flex;}
+  .tablet-edge-tab.left{left:0;border-radius:0 10px 10px 0;}
+  .tablet-edge-tab.right{right:0;border-radius:10px 0 0 10px;}
+  /* 해당 서랍이 열려 있는 동안은 탭이 서랍 안 내용과 겹쳐 보이므로 숨긴다 — 배경(backdrop)을 눌러 닫는다. */
+  body.layout-tablet .tablet-edge-tab.tab-hidden{display:none;}
+
+  /* 터치 대상 확대 — 버튼/입력/선택칸을 손가락으로 누르기 편한 최소 44px로 키운다(마우스 조작은 무관). */
+  body.layout-tablet button,
+  body.layout-tablet select,
+  body.layout-tablet input[type=text]{min-height:44px;font-size:13.5px;}
+  body.layout-tablet .icon{width:17px;height:17px;}
+  body.layout-tablet .marker-card .mc-num,
+  body.layout-tablet .marker-card select.mc-marktype,
+  body.layout-tablet .marker-card .mc-photo,
+  body.layout-tablet .marker-card .row-del{min-width:44px;}
+
+  /* 단축키 안내는 태블릿에서 숨김 — 자주 쓰는 동작(유형 선택·선택/이동/지우개 모드·실행취소)은
+     이미 큰 버튼으로 접근 가능하므로 텍스트 목록 대신 그 버튼들을 그대로 쓰면 된다. */
+  body.layout-tablet #helpSecShortcuts{display:none;}
+
+  /* 결함 목록: 가로로 넓은 한 줄 카드 대신, 태블릿에서는 칸이 줄바꿈되어 세로로 쌓이는 카드가 된다.
+     칸을 나란히 맞추던 고정 헤더(marker-list-head)는 쌓인 카드와는 맞지 않으므로 숨기고, 대신
+     각 칸 위에 data-label(값은 renderTable()이 채움)로 라벨을 붙인다. */
+  body.layout-tablet .marker-list-head{display:none;}
+  body.layout-tablet .marker-list-wrap{overflow-x:hidden;max-height:none;}
+  body.layout-tablet .marker-list{min-width:0;}
+  body.layout-tablet .marker-card .mc-row{flex-wrap:wrap;row-gap:10px;}
+  body.layout-tablet .marker-card .mc-field,
+  body.layout-tablet .marker-card .mc-suffix{
+    flex:1 1 auto;width:calc(50% - 5px);min-width:130px;position:relative;padding-top:14px;
+  }
+  body.layout-tablet .marker-card .mc-field::before,
+  body.layout-tablet .marker-card .mc-suffix::before{
+    content:attr(data-label);position:absolute;top:0;left:1px;font-size:9.5px;
+    color:var(--muted);text-transform:uppercase;letter-spacing:.03em;
+  }
+  body.layout-tablet .marker-card .mc-field select,
+  body.layout-tablet .marker-card .mc-field input.mc-custom{width:100%;}
+
+  /* 드래그가 필요한 슬라이더(아이콘 크기·브러시 굵기)는 태블릿에서 숨기고 +/- 버튼으로 대신한다. */
+  body.layout-tablet .tool-slider input[type=range]{display:none;}
+  .stepper-btn{display:none;min-width:36px;min-height:36px;padding:0;justify-content:center;font-size:16px;font-weight:700;}
+  body.layout-tablet .stepper-btn{display:inline-flex;}
+
   .panel-title{font-size:12px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.03em;margin:0 0 8px;}
   .drawing-tabs{display:flex;flex-direction:column;gap:6px;}
   .drawing-tab{
@@ -381,6 +454,7 @@
 <symbol id="i-camera" viewBox="0 0 24 24"><path d="M4 8.2h3.1l1.7-2h6.4l1.7 2H20a1 1 0 0 1 1 1V18a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.2a1 1 0 0 1 1-1z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="12" cy="13.5" r="3.3" fill="none" stroke="currentColor" stroke-width="1.8"/></symbol>
 <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.3" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 2.5v2.4M12 19.1v2.4M21.5 12h-2.4M4.9 12H2.5M18.6 5.4l-1.7 1.7M7.1 16.9l-1.7 1.7M18.6 18.6l-1.7-1.7M7.1 7.1 5.4 5.4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
 <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14.2A8.5 8.5 0 1 1 9.8 4a6.8 6.8 0 0 0 10.2 10.2z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></symbol>
+<symbol id="i-tablet" viewBox="0 0 24 24"><rect x="4" y="2.5" width="16" height="19" rx="2.2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M10.4 18.5h3.2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
 </defs>
 </svg>
 <div class="app">
@@ -432,10 +506,16 @@
       </label>
       <div class="toolbar-sep"></div>
       <button type="button" id="btnThemeToggle" class="tool" title="화이트/다크 모드 전환"><svg class="icon"><use href="#i-moon"/></svg> 다크 모드</button>
+      <button type="button" id="btnTabletModeToggle" class="tool" title="태블릿 모드를 수동으로 켜고 끕니다. 화면 폭이 1100px 이하면 자동으로 켜지지만, 키보드를 붙인 아이패드처럼 데스크톱 레이아웃이 더 편할 때는 여기서 꺼둘 수 있습니다."><svg class="icon"><use href="#i-tablet"/></svg> 태블릿 모드</button>
     </div>
   </header>
 
   <div class="layout">
+    <!-- 태블릿 레이아웃 전용: 좌우 사이드바를 서랍으로 열고 닫는 손잡이 탭 + 배경 클릭으로 닫는 오버레이.
+         데스크톱에서는 CSS(.tablet-edge-tab, .tablet-drawer-backdrop)가 기본적으로 숨겨둔다. -->
+    <button type="button" class="tablet-edge-tab left" id="btnDrawerLeft" title="도면 목록 · 위치 유형 열기/닫기">도면<br/>유형</button>
+    <button type="button" class="tablet-edge-tab right" id="btnDrawerRight" title="결함 목록 열기/닫기">결함<br/>목록</button>
+    <div class="tablet-drawer-backdrop" id="tabletDrawerBackdrop"></div>
 
     <!-- LEFT SIDEBAR -->
     <aside class="sidebar left">
@@ -472,7 +552,7 @@
               <li>범위 마커는 선택 시 모서리·변 손잡이로 크기 조절 가능</li>
             </ul>
           </div>
-          <div class="help-sec">
+          <div class="help-sec" id="helpSecShortcuts">
             <h5>모드 · 단축키</h5>
             <ul class="kbd-list">
               <li><span class="kbd-hint">1~4</span>유형 선택</li>
@@ -491,6 +571,7 @@
               <li>마우스 휠: 커서 위치 기준 확대/축소 · 휠(가운데) 버튼 드래그: 화면 이동</li>
               <li>좌회전/우회전으로 90°씩 회전, 자르기로 일부만 남기기 — 모두 실행취소 가능(이미지 작업은 최근 8회까지)</li>
               <li>태블릿: 손가락 1개로 그리기·이동·선택, 2개로 핀치 확대/축소</li>
+              <li>화면이 좁으면 좌우 목록이 자동으로 서랍(edge tab)으로 바뀝니다. 상단 "태블릿 모드" 버튼으로 수동 전환 가능</li>
             </ul>
           </div>
           <div class="help-sec">
@@ -525,7 +606,9 @@
             <button id="btnEraseMode" class="tool" title="지우개 모드 — 마커는 클릭으로 삭제, 도면은 드래그하면 브러시로 지워짐 (단축키 d)"><svg class="icon"><use href="#i-eraser"/></svg> 지우개 (D)</button>
           </div>
           <div class="tool-slider" id="eraseBrushGroup" style="display:none;">브러시 굵기
+            <button type="button" class="stepper-btn" id="btnBrushMinus" title="브러시 굵기 줄이기">−</button>
             <input type="range" id="eraseBrushSlider" min="0.4" max="4" step="0.1" value="1" />
+            <button type="button" class="stepper-btn" id="btnBrushPlus" title="브러시 굵기 늘리기">+</button>
             <span class="val" id="eraseBrushVal">100%</span>
           </div>
           <div class="toolbar-sep"></div>
@@ -535,7 +618,9 @@
           <div class="mode-hint" id="modeHint">현재 선택된 유형: <b id="activeTypeLabel">벽체</b> (단축키 1/2) — 클릭해 추가, 드래그로 방향 지정 (Shift: 수직/수평 고정)</div>
           <div style="flex:1;"></div>
           <div class="tool-slider">아이콘 크기
+            <button type="button" class="stepper-btn" id="btnSizeMinus" title="아이콘 크기 줄이기">−</button>
             <input type="range" id="sizeSlider" min="0.6" max="2" step="0.1" value="1" />
+            <button type="button" class="stepper-btn" id="btnSizePlus" title="아이콘 크기 늘리기">+</button>
             <span class="val" id="sizeVal">100%</span>
           </div>
         </div>
@@ -856,6 +941,60 @@
     updateThemeToggleUI();
   }
   applyTheme(loadTheme());
+
+  // ---------- 태블릿 전용 레이아웃 ----------
+  // 화면 폭이 좁으면 자동으로, 또는 상단 "태블릿 모드" 버튼으로 수동으로 <body class="layout-tablet">를
+  // 붙였다 뗀다. 사용자가 수동으로 켜거나 끄면 그 선택이 화면 폭 자동 판정보다 우선하며(예: 키보드를
+  // 붙인 아이패드에서는 데스크톱 모드가 더 편할 수 있음) localStorage에 저장돼 다음 방문에도 유지된다.
+  // 마커 좌표계산·캔버스 렌더링·내보내기 로직과는 완전히 무관한 순수 배치 전환이다.
+  const TABLET_BREAKPOINT_PX = 1100;
+  const TABLET_MODE_STORE_KEY = 'defectMarkerTabletMode_v1'; // 'on' | 'off' | 없음(자동 판정)
+  function getTabletModeOverride(){
+    try{ const v = localStorage.getItem(TABLET_MODE_STORE_KEY); return (v==='on'||v==='off') ? v : null; } catch(err){ return null; }
+  }
+  function setTabletModeOverride(v){
+    try{ if(v) localStorage.setItem(TABLET_MODE_STORE_KEY, v); else localStorage.removeItem(TABLET_MODE_STORE_KEY); } catch(err){ /* 저장 실패해도 전환 자체는 동작 */ }
+  }
+  function isTabletModeActive(){
+    const override = getTabletModeOverride();
+    if(override) return override==='on';
+    return window.innerWidth <= TABLET_BREAKPOINT_PX;
+  }
+  function closeAllDrawers(){
+    document.querySelectorAll('.sidebar.left, .sidebar.right').forEach(el=> el.classList.remove('open'));
+    const backdrop = document.getElementById('tabletDrawerBackdrop');
+    if(backdrop) backdrop.classList.remove('show');
+    // 서랍이 닫히면 양쪽 여닫이 탭 모두 다시 보이게 한다.
+    const tabL = document.getElementById('btnDrawerLeft'); if(tabL) tabL.classList.remove('tab-hidden');
+    const tabR = document.getElementById('btnDrawerRight'); if(tabR) tabR.classList.remove('tab-hidden');
+  }
+  function openDrawer(side){
+    const el = document.querySelector('.sidebar.'+side);
+    if(!el) return;
+    el.classList.add('open');
+    const backdrop = document.getElementById('tabletDrawerBackdrop');
+    if(backdrop) backdrop.classList.add('show');
+    // 열린 쪽의 탭은 서랍 안 내용과 겹쳐 보이므로 숨긴다(닫을 때는 배경을 누르면 됨).
+    const tab = document.getElementById(side==='left' ? 'btnDrawerLeft' : 'btnDrawerRight');
+    if(tab) tab.classList.add('tab-hidden');
+  }
+  function toggleDrawer(side){
+    const el = document.querySelector('.sidebar.'+side);
+    if(el && el.classList.contains('open')) closeAllDrawers();
+    else openDrawer(side);
+  }
+  function applyTabletMode(){
+    const on = isTabletModeActive();
+    document.body.classList.toggle('layout-tablet', on);
+    const btn = document.getElementById('btnTabletModeToggle');
+    if(btn) btn.classList.toggle('active', on);
+    if(!on) closeAllDrawers(); // 데스크톱으로 돌아가면 서랍이 열린 채로 숨어있지 않도록 상태 초기화
+  }
+  applyTabletMode();
+  window.addEventListener('resize', ()=>{
+    if(getTabletModeOverride()) return; // 수동으로 켜거나 껐으면 화면 폭이 바뀌어도 자동 재판정하지 않음
+    applyTabletMode();
+  });
 
   // ---------- 위치 유형 정의: 벽체(화살표 인출선) / 바닥·천장(점 인출선) — 엑셀 표준 색상 ----------
   const DEFECT_TYPES = [
@@ -1883,6 +2022,8 @@
     const cy = (touch ? touch.clientY : e.clientY) - rect.top;
     return { x: cx * (canvas.width/rect.width), y: cy * (canvas.height/rect.height) };
   }
+  // 터치(손가락) 입력으로 발생한 이벤트인지 판별 — 손잡이 히트 반경을 넓힐지 결정하는 데만 쓴다.
+  function isTouchEvent(e){ return !!((e.touches && e.touches.length) || (e.changedTouches && e.changedTouches.length)); }
 
   // 배지(번호 원)뿐 아니라 인출선(화살표·선)이나 범위 마커의 사각형 몸통을 클릭해도 그 마커가
   // 잡히도록(선택/이동) 확장 — "화살표, 선, 원 모두 각각 클릭만으로도 선택 가능"
@@ -1915,10 +2056,13 @@
 
   // 인출선 끝(화살표/원) 손잡이 — 드래그하면 방향(각도)·길이를 조절. 범위(사각형) 마커는 3클릭으로
   // 생성하며 별도 핸들이 없으므로 대상에서 제외한다.
-  function hitTestHandle(d, x, y){
+  // isTouch: 터치 입력일 때만 히트 반경을 넓힌다(손가락은 마우스 커서보다 훨씬 굵어 9px는 집기 어려움).
+  // 마우스 동작(기본값 false)은 기존 반경 그대로 유지된다.
+  function hitTestHandle(d, x, y, isTouch){
     const canvas = document.getElementById('mainCanvas');
     const w = canvas.width, h = canvas.height;
     const r = markerRadiusFor(d, w, h);
+    const touchMult = isTouch ? 1.75 : 1;
     for(let i=d.markers.length-1;i>=0;i--){
       const m = d.markers[i];
       const type = getType(m.typeKey);
@@ -1927,7 +2071,7 @@
       const cx = m.xPct/100*w, cy = m.yPct/100*h;
       const rad = (m.angle||0) * Math.PI/180;
       const tipX = cx + Math.cos(rad)*len, tipY = cy + Math.sin(rad)*len;
-      if(Math.hypot(x-tipX, y-tipY) <= Math.max(9, r*0.95)) return m;
+      if(Math.hypot(x-tipX, y-tipY) <= Math.max(9, r*0.95)*touchMult) return m;
     }
     return null;
   }
@@ -1959,11 +2103,12 @@
     return toRectWorld(localX, localY, badgeX, badgeY, angle||0);
   }
   // 범위(사각형) 마커의 리사이즈 핸들 히트테스트 — 현재 선택된 범위 마커에만 적용.
-  function hitTestRectResizeHandle(d, x, y){
+  // isTouch: 터치 입력일 때만 히트 반경을 넓힌다(마우스는 기존 그대로).
+  function hitTestRectResizeHandle(d, x, y, isTouch){
     const canvas = document.getElementById('mainCanvas');
     const w = canvas.width, h = canvas.height;
     const r = markerRadiusFor(d, w, h);
-    const hitR = Math.max(10, r*0.55);
+    const hitR = Math.max(10, r*0.55) * (isTouch ? 1.75 : 1);
     for(let i=d.markers.length-1;i>=0;i--){
       const m = d.markers[i];
       if(!selectedIds.has(m.id)) continue;
@@ -2248,7 +2393,7 @@
       .concat(opts.map(o=>`<option value="${escapeAttr(o)}" ${!isCustom && val===o ? 'selected':''}>${escapeHTML(o)}</option>`))
       .concat([`<option value="__custom__" ${isCustom?'selected':''}>직접입력…</option>`])
       .join('');
-    return `<span class="mc-field" title="${label}">
+    return `<span class="mc-field" title="${label}" data-label="${label}">
         <select data-role="${fieldKey}" title="${label}">${optionsHTML}</select>
         <input type="text" class="mc-custom" data-role="${fieldKey}_custom" placeholder="${label} 입력" title="${label}" value="${escapeAttr(isCustom?val:'')}" style="display:${isCustom?'inline-block':'none'};" />
       </span>`;
@@ -2299,10 +2444,10 @@
           ${buildReportSelectHTML('rptType', m.rptType, '유형')}
           ${buildReportSelectHTML('rptMember', m.rptMember, '부재명')}
           ${buildReportSelectHTML('rptDefect', m.rptDefect, '결함명')}
-          <span class="mc-suffix"><input type="text" data-role="rptWidth" placeholder="폭" title="폭(mm)" value="${escapeAttr(m.rptWidth||'')}"/><span>mm</span></span>
-          <span class="mc-suffix"><input type="text" data-role="rptLength" placeholder="길이" title="길이(mm)" value="${escapeAttr(m.rptLength||'')}"/><span>mm</span></span>
-          <span class="mc-suffix"><input type="text" data-role="rptCount" placeholder="개수" title="개수" value="${escapeAttr(m.rptCount||'')}"/><span>개</span></span>
-          <span class="mc-suffix"><span>#</span><input type="text" data-role="rptTag" placeholder="사진번호" title="사진번호" value="${escapeAttr(m.rptTag||'')}"/></span>
+          <span class="mc-suffix" data-label="폭"><input type="text" data-role="rptWidth" placeholder="폭" title="폭(mm)" value="${escapeAttr(m.rptWidth||'')}"/><span>mm</span></span>
+          <span class="mc-suffix" data-label="길이"><input type="text" data-role="rptLength" placeholder="길이" title="길이(mm)" value="${escapeAttr(m.rptLength||'')}"/><span>mm</span></span>
+          <span class="mc-suffix" data-label="개수"><input type="text" data-role="rptCount" placeholder="개수" title="개수" value="${escapeAttr(m.rptCount||'')}"/><span>개</span></span>
+          <span class="mc-suffix" data-label="사진번호"><span>#</span><input type="text" data-role="rptTag" placeholder="사진번호" title="사진번호" value="${escapeAttr(m.rptTag||'')}"/></span>
           <button class="mc-photo" data-role="photo" tabindex="-1" title="사진 첨부"><svg class="icon"><use href="#i-camera"/></svg>${(m.photos&&m.photos.length)?`<span class="photo-count">${m.photos.length}</span>`:''}</button>
           <button class="row-del" data-role="del" tabindex="-1" title="삭제"><svg class="icon"><use href="#i-close"/></svg></button>
         </div>
@@ -2431,7 +2576,11 @@
       btn.className = 'type-btn' + (type.key===activeTypeKey ? ' active':'');
       btn.style.setProperty('--type-color', type.color);
       btn.innerHTML = `<span class="type-swatch">${typeSwatchSVG(type)}</span><span>${type.label}</span><span class="kbd-hint">${type.shortcut}</span>`;
-      btn.addEventListener('click', ()=> setActiveType(type.key));
+      btn.addEventListener('click', ()=>{
+        setActiveType(type.key);
+        // 태블릿에서는 유형을 고르면 곧바로 도면을 클릭할 것이므로 서랍을 자동으로 닫아준다.
+        if(document.body.classList.contains('layout-tablet')) closeAllDrawers();
+      });
       grid.appendChild(btn);
     });
   }
@@ -4155,6 +4304,34 @@
     document.getElementById('eraseBrushVal').textContent = Math.round(eraseBrushMult*100)+'%';
     renderMarkerLayer(); // 브러시 굵기 미리보기도 오버레이일 뿐 도면 이미지는 바뀌지 않음
   });
+
+  // 태블릿에서는 드래그가 필요한 슬라이더 대신 +/- 버튼으로 같은 range input을 한 단계씩 움직인다.
+  // 값을 바꾼 뒤 input 이벤트를 그대로 발생시켜, 위의 기존 슬라이더 리스너(아이콘 크기/브러시 굵기 로직)를
+  // 그대로 재사용한다 — 렌더링/좌표 로직은 전혀 새로 만들지 않는다.
+  function stepRangeInput(id, dir){
+    const el = document.getElementById(id);
+    if(!el) return;
+    const min = parseFloat(el.min), max = parseFloat(el.max), step = parseFloat(el.step) || 0.1;
+    let v = Math.round((parseFloat(el.value) + dir*step) * 100) / 100;
+    v = Math.min(max, Math.max(min, v));
+    el.value = v;
+    el.dispatchEvent(new Event('input', { bubbles:true }));
+  }
+  document.getElementById('btnSizeMinus').addEventListener('click', ()=> stepRangeInput('sizeSlider', -1));
+  document.getElementById('btnSizePlus').addEventListener('click', ()=> stepRangeInput('sizeSlider', 1));
+  document.getElementById('btnBrushMinus').addEventListener('click', ()=> stepRangeInput('eraseBrushSlider', -1));
+  document.getElementById('btnBrushPlus').addEventListener('click', ()=> stepRangeInput('eraseBrushSlider', 1));
+
+  // ---------- 태블릿 서랍(사이드바) 여닫기 ----------
+  document.getElementById('btnTabletModeToggle').addEventListener('click', ()=>{
+    const currentlyOn = document.body.classList.contains('layout-tablet');
+    setTabletModeOverride(currentlyOn ? 'off' : 'on');
+    applyTabletMode();
+  });
+  document.getElementById('btnDrawerLeft').addEventListener('click', ()=> toggleDrawer('left'));
+  document.getElementById('btnDrawerRight').addEventListener('click', ()=> toggleDrawer('right'));
+  document.getElementById('tabletDrawerBackdrop').addEventListener('click', closeAllDrawers);
+
   document.getElementById('btnRotateCCW').addEventListener('click', ()=> rotateDrawing(-90));
   document.getElementById('btnRotateCW').addEventListener('click', ()=> rotateDrawing(90));
 
@@ -4344,7 +4521,7 @@
       return;
     }
 
-    const rectHandleHit = hitTestRectResizeHandle(d, p.x, p.y);
+    const rectHandleHit = hitTestRectResizeHandle(d, p.x, p.y, isTouchEvent(e));
     if(rectHandleHit){
       pushUndo();
       const m = rectHandleHit.marker;
@@ -4355,7 +4532,7 @@
       return;
     }
 
-    const handleHit = hitTestHandle(d, p.x, p.y);
+    const handleHit = hitTestHandle(d, p.x, p.y, isTouchEvent(e));
     if(handleHit){
       pushUndo();
       selectOnly(handleHit.id);
@@ -4423,10 +4600,10 @@
         return;
       }
       const rectRotHover = hitTestRectRotateHandle(d0, p0.x, p0.y);
-      const rectHandleHover = hitTestRectResizeHandle(d0, p0.x, p0.y);
+      const rectHandleHover = hitTestRectResizeHandle(d0, p0.x, p0.y, isTouchEvent(e));
       if(rectRotHover) canvas.style.cursor = 'grab';
       else if(rectHandleHover) canvas.style.cursor = RESIZE_CURSORS[rectHandleHover.corner] || 'pointer';
-      else if(hitTestHandle(d0, p0.x, p0.y)) canvas.style.cursor = 'alias';
+      else if(hitTestHandle(d0, p0.x, p0.y, isTouchEvent(e))) canvas.style.cursor = 'alias';
       else if(hitTestMarker(d0, p0.x, p0.y)) canvas.style.cursor = 'move';
       else canvas.style.cursor = 'crosshair';
       if(coordGuideOn) renderMarkerLayer();
