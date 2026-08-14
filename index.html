@@ -134,6 +134,7 @@
   button#btnGridView.active,
   button#btnCoordGuide.active,
   button#btnTabletModeToggle.active{background:var(--text-primary);border-color:var(--text-primary);color:var(--surface-1);font-weight:700;}
+  button#btnStylusOnlyToggle.active{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:700;}
   .btn-group{display:flex;align-items:center;gap:6px;padding:3px;border-radius:9px;background:var(--surface-2);flex:0 0 auto;}
   .toolbar-sep{width:1px;align-self:stretch;background:var(--gridline);margin:0 2px;}
   .layout{display:flex;flex:1;min-height:0;gap:0;}
@@ -464,6 +465,7 @@
 <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.3" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 2.5v2.4M12 19.1v2.4M21.5 12h-2.4M4.9 12H2.5M18.6 5.4l-1.7 1.7M7.1 16.9l-1.7 1.7M18.6 18.6l-1.7-1.7M7.1 7.1 5.4 5.4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
 <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14.2A8.5 8.5 0 1 1 9.8 4a6.8 6.8 0 0 0 10.2 10.2z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></symbol>
 <symbol id="i-tablet" viewBox="0 0 24 24"><rect x="4" y="2.5" width="16" height="19" rx="2.2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M10.4 18.5h3.2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+<symbol id="i-pencil" viewBox="0 0 24 24"><path d="M4 20l1-4.6L15.6 4.8a1.8 1.8 0 0 1 2.6 0l1 1a1.8 1.8 0 0 1 0 2.6L8.6 19 4 20z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M13.6 6.8l3.6 3.6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
 </defs>
 </svg>
 <div class="app">
@@ -516,6 +518,7 @@
       <div class="toolbar-sep"></div>
       <button type="button" id="btnThemeToggle" class="tool" title="화이트/다크 모드 전환"><svg class="icon"><use href="#i-moon"/></svg> 다크 모드</button>
       <button type="button" id="btnTabletModeToggle" class="tool" title="누를 때마다 자동 → 켬 → 끔 순서로 순환합니다. 자동은 화면 폭 1100px 이하에서 태블릿 모드가 켜지고, 켬/끔은 화면 폭과 무관하게 고정됩니다(키보드를 붙인 아이패드 등에서 유용)."><svg class="icon"><use href="#i-tablet"/></svg> 태블릿 모드: <span id="tabletModeStateLabel">자동</span></button>
+      <button type="button" id="btnStylusOnlyToggle" class="tool" title="켜두면 애플펜슬(스타일러스) 터치만 받고 손가락·손바닥 터치는 무시합니다. 태블릿에서 그림을 그리다 손바닥이 화면에 닿아 실수로 마커가 찍히는 것을 막을 때 사용하세요(사파리 전용 기능이라 다른 브라우저에서는 켜면 모든 터치가 막힙니다)."><svg class="icon"><use href="#i-pencil"/></svg> 펜슬 전용</button>
     </div>
   </header>
 
@@ -4920,6 +4923,37 @@
   }
   window.addEventListener('mouseup', onPointerUp);
 
+  // ---------- 애플펜슬 전용 모드 ----------
+  // 태블릿에서 손날/손바닥이 화면에 닿아 그림을 그리는 도중 실수로 마커가 찍히거나 옮겨지는
+  // 것을 막기 위한 옵션. 켜두면 Touch.touchType(사파리 전용 비표준 속성)이 'stylus'인 터치만
+  // 받아들이고 그 외(손가락 등) 터치는 통째로 무시한다. 설정은 localStorage에 저장해 다음
+  // 방문에도 유지된다.
+  const STYLUS_ONLY_STORE_KEY = 'defectMarkerStylusOnly_v1';
+  function isStylusOnlyActive(){
+    try{ return localStorage.getItem(STYLUS_ONLY_STORE_KEY) === 'on'; } catch(err){ return false; }
+  }
+  function setStylusOnlyActive(on){
+    try{ if(on) localStorage.setItem(STYLUS_ONLY_STORE_KEY, 'on'); else localStorage.removeItem(STYLUS_ONLY_STORE_KEY); } catch(err){ /* 저장 실패해도 이번 세션 동작 자체는 유지됨 */ }
+  }
+  function applyStylusOnlyUI(){
+    const btn = document.getElementById('btnStylusOnlyToggle');
+    if(btn) btn.classList.toggle('active', isStylusOnlyActive());
+  }
+  // 스타일러스 전용 모드가 꺼져 있으면 항상 통과. 켜져 있으면 첫 번째 터치의 touchType이
+  // 'stylus'일 때만 통과시킨다 — touchType을 지원하지 않는 브라우저(사파리 이외)에서는 이 값이
+  // 항상 undefined라 사실상 모든 터치가 막히는데, 애플펜슬 자체가 아이패드(사파리) 전용이라
+  // 실사용에는 문제가 없다.
+  function touchAllowedByStylusFilter(e){
+    if(!isStylusOnlyActive()) return true;
+    const t = e.touches && e.touches[0];
+    return !!(t && t.touchType === 'stylus');
+  }
+  applyStylusOnlyUI();
+  document.getElementById('btnStylusOnlyToggle').addEventListener('click', ()=>{
+    setStylusOnlyActive(!isStylusOnlyActive());
+    applyStylusOnlyUI();
+  });
+
   // ---------- 터치(태블릿) 지원: 손가락 하나는 마우스와 동일하게(그리기·이동·선택·리사이즈),
   // 손가락 두 개는 핀치로 확대/축소(휠 줌과 동일한 "커서 위치 고정" 로직을 두 손가락 중점 기준으로 적용) ----------
   let pinchState = null; // {startDist, startZoom, midX, midY} — midX/midY는 직전 프레임의 두 손가락 중점(패닝 계산용)
@@ -4958,12 +4992,17 @@
   function endPinch(){ pinchState = null; }
 
   canvas.addEventListener('touchstart', e=>{
+    // 펜슬 전용 모드에서 손가락/손바닥 터치는 여기서 걸러진다. preventDefault를 반드시 호출해야
+    // 하는데, 안 하면 브라우저가 무시된 터치를 "탭"으로 보고 합성 mousedown/click 이벤트를 대신
+    // 발생시켜 캔버스의 별도 mousedown 리스너를 통해 결국 마커가 찍혀버린다(필터를 우회당함).
+    if(!touchAllowedByStylusFilter(e)){ e.preventDefault(); return; }
     if(e.touches.length===2){ e.preventDefault(); startPinch(e); return; }
     if(e.touches.length>1) return;
     e.preventDefault();
     onPointerDown(e);
   }, { passive:false });
   canvas.addEventListener('touchmove', e=>{
+    if(!touchAllowedByStylusFilter(e)){ e.preventDefault(); return; }
     if(e.touches.length===2){ e.preventDefault(); updatePinch(e); return; }
     if(e.touches.length>1) return;
     e.preventDefault();
