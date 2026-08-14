@@ -202,6 +202,9 @@
      칸을 나란히 맞추던 고정 헤더(marker-list-head)는 쌓인 카드와는 맞지 않으므로 숨기고, 대신
      각 칸 위에 data-label(값은 renderTable()이 채움)로 라벨을 붙인다. */
   body.layout-tablet .marker-list-head{display:none;}
+  /* 태블릿에서는 getUserMedia 웹캠 미리보기 대신 카메라 앱을 직접 여는 capture=environment
+     방식(photoFileInput)을 쓰므로, 데스크톱 전용 폴백인 "사진 촬영" 버튼은 숨긴다. */
+  body.layout-tablet #btnOpenCamera{display:none;}
   body.layout-tablet .marker-list-wrap{overflow-x:hidden;max-height:none;}
   body.layout-tablet .marker-list{min-width:0;}
   body.layout-tablet .marker-card .mc-row{flex-wrap:wrap;row-gap:10px;}
@@ -656,6 +659,7 @@
           <span>결함 목록 (<span id="markerCount">0</span>건)</span>
           <button type="button" class="tool" id="btnEditFieldOptions" style="font-size:10.5px;padding:3px 7px;font-weight:400;text-transform:none;letter-spacing:0;" title="유형·부재명·결함명 드롭다운의 선택지 목록을 수정합니다"><svg class="icon"><use href="#i-settings"/></svg> 목록수정</button>
         </div>
+        <input type="text" class="side-input" id="markerSearchInput" placeholder="검색 (유형·부재명·결함명·사진번호)" style="width:100%;margin:2px 0 8px;" />
         <!-- 고정 컬럼 헤더: 카드와 똑같은 mc-num/mc-marktype/mc-field/mc-suffix 클래스를 그대로
              써서, 사이드바 폭이 바뀌어도(가로 스크롤이 생겨도) 헤더 칸과 카드 칸이 항상 나란히 맞는다.
              1·2번째(번호·색상)는 값 자체로 이미 의미가 드러나므로 헤더 글자는 비워둔다. -->
@@ -1006,6 +1010,14 @@
       stateLabel.textContent = override==='on' ? '켬' : override==='off' ? '끔' : '자동';
     }
     if(!on) closeAllDrawers(); // 데스크톱으로 돌아가면 서랍이 열린 채로 숨어있지 않도록 상태 초기화
+    // 태블릿에서는 "+ 사진 추가"가 파일 선택 대신 카메라 앱을 바로 열도록 capture 속성을 붙인다
+    // (데스크톱은 getUserMedia 기반 "사진 촬영" 버튼을 폴백으로 그대로 씀 — capture 속성은
+    // 데스크톱 브라우저에서는 애초에 무시되므로 남겨둬도 무해하지만, 의도를 분명히 하기 위해 뗀다).
+    const photoInput = document.getElementById('photoFileInput');
+    if(photoInput){
+      if(on) photoInput.setAttribute('capture', 'environment');
+      else photoInput.removeAttribute('capture');
+    }
   }
   applyTabletMode();
   window.addEventListener('resize', ()=>{
@@ -2523,6 +2535,17 @@
   }
   // 위에서 만든 select+커스텀입력 한 쌍에 변경 이벤트를 연결 — select에서 "직접입력…"을 고르면 텍스트칸이
   // 나타나 포커스되고, 텍스트칸에 입력하는 값이 곧 그 마커의 실제 값이 된다.
+  // 카드의 유형/부재명/결함명/사진번호 값이 바뀔 때마다 검색 색인(card.dataset.search)도 함께
+  // 갱신한다 — renderTable()이 다시 호출되지 않는 필드 편집(직접입력 텍스트 등)에서도 검색이
+  // 최신 값을 바로 반영하도록.
+  function computeCardSearchIndex(m){
+    return [getType(m.typeKey).label, m.rptType, m.rptMember, m.rptDefect, m.rptTag]
+      .filter(Boolean).join(' ').toLowerCase();
+  }
+  function updateCardSearchIndex(card, m){
+    card.dataset.search = computeCardSearchIndex(m);
+    applyMarkerSearchFilter();
+  }
   function wireReportSelect(card, fieldKey, m){
     const sel = card.querySelector(`[data-role="${fieldKey}"]`);
     const custom = card.querySelector(`[data-role="${fieldKey}_custom"]`);
@@ -2535,8 +2558,9 @@
         custom.style.display = 'none';
         m[fieldKey] = sel.value;
       }
+      updateCardSearchIndex(card, m);
     });
-    custom.addEventListener('input', ()=>{ markDirty(); m[fieldKey] = custom.value; });
+    custom.addEventListener('input', ()=>{ markDirty(); m[fieldKey] = custom.value; updateCardSearchIndex(card, m); });
   }
   function renderTable(){
     const d = getActiveDrawing();
@@ -2558,6 +2582,8 @@
       card.className = 'marker-card' + (selectedIds.has(m.id) ? ' selected' : '');
       card.dataset.id = m.id;
       const typeOptions = DEFECT_TYPES.map(t=>`<option value="${t.key}" ${t.key===m.typeKey?'selected':''}>${t.label}</option>`).join('');
+      // 검색/필터 입력란이 대조할 문자열 — 유형·부재명·결함명·사진번호를 한데 모아 소문자로 저장해둔다.
+      card.dataset.search = computeCardSearchIndex(m);
       // 마킹유형/번호/사진/삭제는 tabindex=-1로 빼서, Tab 키가 유형→부재명→결함명→폭→길이→개수→사진번호
       // 순서로만 흐르다가 자연스럽게 다음 카드의 "유형" 칸으로 넘어가도록 한다(빠른 연속 입력용).
       // 카드는 한 줄 — 사이드바가 좁아지면 marker-list-wrap에 가로 스크롤이 생겨서 대응한다.
@@ -2582,6 +2608,7 @@
       });
       card.querySelector('[data-role="type"]').addEventListener('change', (e)=>{
         pushUndo(); m.typeKey = e.target.value; renderCanvas(); renderLegendPreview(d);
+        updateCardSearchIndex(card, m);
       });
       card.querySelector('[data-role="photo"]').addEventListener('click', ()=> openPhotoModal(m.id));
       card.querySelector('[data-role="del"]').addEventListener('click', ()=> deleteMarker(m.id));
@@ -2602,11 +2629,39 @@
       wireReportSelect(card, 'rptMember', m);
       wireReportSelect(card, 'rptDefect', m);
       ['rptWidth','rptLength','rptCount','rptTag'].forEach(key=>{
-        card.querySelector(`[data-role="${key}"]`).addEventListener('input', (e)=>{ markDirty(); m[key] = e.target.value; });
+        card.querySelector(`[data-role="${key}"]`).addEventListener('input', (e)=>{
+          markDirty(); m[key] = e.target.value;
+          if(key==='rptTag') updateCardSearchIndex(card, m); // 사진번호(#)만 검색 대상이라 이때만 갱신
+        });
       });
       list.appendChild(card);
     });
+    applyMarkerSearchFilter();
   }
+  // 결함 목록 검색/필터 — 마커 데이터·내보내기 로직은 건드리지 않고, 렌더링된 카드를
+  // display:none으로 숨기고 보여주는 순수 UI 필터다(검색해도 CSV/PDF 내보내기 내용은 그대로).
+  let emptyMarkerNoteDefaultText = null;
+  function applyMarkerSearchFilter(){
+    const noteEl = document.getElementById('emptyMarkerNote');
+    if(emptyMarkerNoteDefaultText===null) emptyMarkerNoteDefaultText = noteEl.textContent;
+    const cards = document.querySelectorAll('#markerList .marker-card');
+    if(cards.length===0) return; // 결함이 아예 없는 경우는 renderTable()의 빈 상태 처리에 맡긴다
+    const q = (document.getElementById('markerSearchInput').value||'').trim().toLowerCase();
+    let visibleCount = 0;
+    cards.forEach(card=>{
+      const match = !q || (card.dataset.search||'').includes(q);
+      card.style.display = match ? '' : 'none';
+      if(match) visibleCount++;
+    });
+    if(q && visibleCount===0){
+      noteEl.textContent = '검색 결과가 없습니다.';
+      noteEl.style.display = 'block';
+    } else {
+      noteEl.textContent = emptyMarkerNoteDefaultText;
+      noteEl.style.display = 'none';
+    }
+  }
+  document.getElementById('markerSearchInput').addEventListener('input', applyMarkerSearchFilter);
 
   // ---------- 유형 팔레트 / 모드 전환 (추가 / 이동 / 지우개, 서로 배타적) ----------
   function setActiveType(key){
