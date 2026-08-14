@@ -423,6 +423,8 @@
   .import-progress-toast{position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:2000;
     background:var(--surface-1);border:1px solid var(--gridline);border-radius:9px;
     box-shadow:0 8px 28px rgba(11,11,11,0.22);padding:10px 16px;font-size:12.5px;color:var(--text-primary);}
+  /* 새 서비스워커 버전 알림 — 복구 배너와 동시에 뜰 수 있으므로 위(top) 대신 아래(bottom)에 둔다. */
+  .sw-update-banner{top:auto;bottom:14px;}
 </style>
 </head>
 <body>
@@ -739,7 +741,7 @@
       </div>
 
       <div class="footer-note">
-        Ver 2.0 · 건축시설물 정밀안전진단/점검용 결함 마킹 도구
+        Ver 2.0 (<span id="buildDateLabel"></span>) · 건축시설물 정밀안전진단/점검용 결함 마킹 도구
       </div>
     </aside>
 
@@ -1079,6 +1081,9 @@
   // 프로젝트 파일(.json)의 스키마 버전. 이보다 높은 version 값을 가진 파일을 열면(더 상위 버전에서 저장된
   // 파일) applyProjectData()가 경고 후 계속할지 확인한다.
   const PROJECT_FILE_VERSION = 2;
+  // 빌드 도구 없이 파일 하나로 배포하는 프로젝트라 커밋 해시를 자동으로 넣을 수 없으므로,
+  // 배포용으로 이 파일을 고칠 때 날짜를 함께 갱신한다. 하단 "Ver 2.0" 표기 옆에 표시된다.
+  const APP_BUILD_DATE = '2026-08-15';
   // "미저장 변경사항이 있는가"를 매번 전체 스냅샷을 JSON.stringify해서 비교하면(특히 사진·도면
   // 이미지가 많을 때) beforeunload/자동저장 틱마다 무거운 직렬화가 반복된다. 대신 마커·도면·프로젝트
   // 정보를 실제로 바꾸는 지점에서 markDirty()/markImagesDirty()를 호출해 플래그만 세우고, 파일
@@ -5156,12 +5161,34 @@
     });
   }
 
-  // ---------- PWA: 서비스워커 등록(오프라인 캐시) ----------
+  // ---------- PWA: 서비스워커 등록(오프라인 캐시) + 새 버전 알림 ----------
+  function showSwUpdateBanner(){
+    if(document.getElementById('swUpdateBanner')) return; // 이미 떠있으면 중복 생성 방지
+    const banner = document.createElement('div');
+    banner.id = 'swUpdateBanner';
+    banner.className = 'recovery-banner sw-update-banner';
+    banner.innerHTML = `
+      <span><b>새 버전</b>이 있습니다. 새로고침하면 최신 내용으로 업데이트됩니다.</span>
+      <button type="button" class="primary" id="btnSwReload">새로고침</button>
+      <button type="button" id="btnSwDismiss">나중에</button>
+    `;
+    document.body.appendChild(banner);
+    banner.querySelector('#btnSwReload').addEventListener('click', ()=> window.location.reload());
+    banner.querySelector('#btnSwDismiss').addEventListener('click', ()=> banner.remove());
+  }
   if('serviceWorker' in navigator){
     window.addEventListener('load', ()=>{
+      // 등록 시점에 이미 이 탭을 제어하는 서비스워커가 있었다면(=재방문), 그 뒤에 컨트롤러가
+      // 바뀌는 순간(=service-worker.js가 skipWaiting+clients.claim으로 새 버전으로 교체 완료된
+      // 순간)이 곧 "새 버전이 설치됐다"는 신호다. 최초 설치(컨트롤러가 원래 없던 경우)는 업데이트가
+      // 아니므로 배너를 띄우지 않는다.
+      const hadController = !!navigator.serviceWorker.controller;
       navigator.serviceWorker.register('service-worker.js').catch(err=>{
         console.warn('서비스워커 등록 실패:', err);
       });
+      if(hadController){
+        navigator.serviceWorker.addEventListener('controllerchange', showSwUpdateBanner, { once:true });
+      }
     });
   }
 
@@ -5205,6 +5232,7 @@
   })();
 
   // ---------- 초기화 ----------
+  { const el = document.getElementById('buildDateLabel'); if(el) el.textContent = APP_BUILD_DATE; }
   renderTypeGrid();
   renderDrawingTabs();
   updateModeButtonsUI();
