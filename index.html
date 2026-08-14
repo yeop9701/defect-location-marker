@@ -416,6 +416,10 @@
   .recovery-banner b{font-weight:700;}
   .recovery-banner .rb-time{color:var(--muted);font-size:11px;}
   .recovery-banner button{white-space:nowrap;}
+  /* 도면 이미지 여러 장을 한 번에 추가할 때 진행 상황을 알리는 토스트 — 파일 한 장뿐이면 표시하지 않는다. */
+  .import-progress-toast{position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:2000;
+    background:var(--surface-1);border:1px solid var(--gridline);border-radius:9px;
+    box-shadow:0 8px 28px rgba(11,11,11,0.22);padding:10px 16px;font-size:12.5px;color:var(--text-primary);}
 </style>
 </head>
 <body>
@@ -1552,20 +1556,69 @@
   // 커지므로, 긴 변이 이 값을 넘으면 추가 시점에 한 번만 축소해 저장한다. 표제란 인쇄용 PDF 등은
   // 어차피 이 정도 해상도면 충분히 선명하다.
   const MAX_DRAWING_DIM = 4000;
+  // 여러 장을 한 번에 추가할 때 진행 상황을 알리는 토스트. 파일이 한 장뿐이면(가장 흔한 경우)
+  // 화면이 깜빡이지 않도록 표시하지 않는다.
+  let drawingImportProgressEl = null;
+  function updateDrawingImportProgress(done, total){
+    if(total<=1) return;
+    if(!drawingImportProgressEl){
+      drawingImportProgressEl = document.createElement('div');
+      drawingImportProgressEl.className = 'import-progress-toast';
+      document.body.appendChild(drawingImportProgressEl);
+    }
+    drawingImportProgressEl.textContent = `도면 이미지 불러오는 중... (${done}/${total})`;
+  }
+  function hideDrawingImportProgress(){
+    if(drawingImportProgressEl){ drawingImportProgressEl.remove(); drawingImportProgressEl = null; }
+  }
+  // FileReader/Image 로딩은 비동기라 완료되는 순서가 파일을 고른 순서와 다를 수 있다(특히 파일
+  // 크기가 서로 다르면 작은 파일이 먼저 끝남). 그래서 결과를 파일 순서 그대로의 슬롯 배열에 채워두고,
+  // 전부 끝난 뒤에야 한꺼번에 순서대로 drawings에 push한다 — 완료 순서와 무관하게 항상 고른 순서를 지킨다.
   function addImagesFromFiles(fileList){
-    Array.from(fileList||[]).forEach(file=>{
+    const files = Array.from(fileList||[]);
+    if(files.length===0) return;
+    const total = files.length;
+    const slots = new Array(total).fill(null);
+    const failedNames = [];
+    let settled = 0;
+    updateDrawingImportProgress(0, total);
+
+    function finishSlot(i, nd, failedName){
+      slots[i] = nd;
+      if(failedName) failedNames.push(failedName);
+      settled++;
+      updateDrawingImportProgress(settled, total);
+      if(settled !== total) return;
+      hideDrawingImportProgress();
+      let firstNewId = null;
+      let addedAny = false;
+      slots.forEach(d=>{
+        if(!d) return;
+        drawings.push(d);
+        addedAny = true;
+        if(!firstNewId) firstNewId = d.id;
+      });
+      if(addedAny){
+        markImagesDirty();
+        renderDrawingTabs();
+        setActiveDrawing(firstNewId);
+      }
+      if(failedNames.length>0){
+        alert('다음 이미지를 불러오지 못했습니다(파일이 손상되었거나 지원하지 않는 형식입니다):\n- '+failedNames.join('\n- '));
+      }
+    }
+
+    files.forEach((file, i)=>{
       const reader = new FileReader();
+      reader.onerror = ()=> finishSlot(i, null, file.name);
       reader.onload = ()=>{
         const img = new Image();
+        img.onerror = ()=> finishSlot(i, null, file.name);
         img.onload = ()=>{
           const name = file.name.replace(/\.[a-zA-Z0-9]+$/, '');
           const w = img.naturalWidth, h = img.naturalHeight;
           if(Math.max(w,h) <= MAX_DRAWING_DIM){
-            const nd = buildDrawingFromImage(img, reader.result, name);
-            drawings.push(nd);
-            markImagesDirty();
-            renderDrawingTabs();
-            setActiveDrawing(nd.id);
+            finishSlot(i, buildDrawingFromImage(img, reader.result, name));
             return;
           }
           // 긴 변 기준으로 축소. 원본 형식(JPEG/WebP)은 그대로 유지해 화질 손실을 최소화하고,
@@ -1580,13 +1633,8 @@
           const mime = (file.type==='image/jpeg' || file.type==='image/webp') ? file.type : 'image/png';
           const resizedURL = mime==='image/jpeg' ? off.toDataURL(mime, 0.92) : off.toDataURL(mime);
           const img2 = new Image();
-          img2.onload = ()=>{
-            const nd = buildDrawingFromImage(img2, resizedURL, name);
-            drawings.push(nd);
-            markImagesDirty();
-            renderDrawingTabs();
-            setActiveDrawing(nd.id);
-          };
+          img2.onerror = ()=> finishSlot(i, null, file.name); // 축소본 재로딩 실패(극히 드묾)
+          img2.onload = ()=> finishSlot(i, buildDrawingFromImage(img2, resizedURL, name));
           img2.src = resizedURL;
         };
         img.src = reader.result;
