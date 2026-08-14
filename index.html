@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>결함 위치 도면 마킹 도구</title>
 <meta name="description" content="건축시설물 정밀안전진단/점검용 결함 위치 도면 마킹 도구" />
 <meta name="theme-color" content="#2a78d6" />
@@ -278,7 +278,10 @@
   .canvas-wrap{flex:1;min-height:0;overflow:auto;display:flex;align-items:flex-start;justify-content:flex-start;padding:24px;}
   .canvas-shell{background:var(--surface-1);box-shadow:0 1px 8px rgba(11,11,11,0.10);border:none;
     border-radius:6px;position:relative;}
-  #mainCanvas{display:block;cursor:crosshair;border-radius:3px;}
+  /* touch-action:none — 브라우저의 기본 터치 제스처(스크롤·핀치줌·더블탭줌)를 캔버스에서 완전히 꺼서
+     onPointerDown/updatePinch 등 우리가 직접 처리하는 한 손가락 그리기·두 손가락 패닝/줌과 겹치거나
+     지연(탭 딜레이)이 생기지 않게 한다. */
+  #mainCanvas{display:block;cursor:crosshair;border-radius:3px;touch-action:none;}
   /* 마커/오버레이 전용 레이어. 도면(정적) 위에 그대로 겹쳐 그리되, 마우스 이벤트는 항상 아래
      #mainCanvas가 받도록 pointer-events:none — 드래그 중 매 프레임 무거운 도면 리사이즈(drawImage)를
      반복하지 않고 이 레이어만 다시 그리면 되므로 마커가 많아도 버벅이지 않는다. */
@@ -1770,6 +1773,19 @@
     return true;
   }
 
+  // touchmove/mousemove는 화면 주사율만큼(초당 60~120회) 발생할 수 있는데, 그때마다 매번 동기로
+  // 다시 그리면 브라우저가 실제로 화면에 반영할 수 있는 속도(requestAnimationFrame, 보통 초당 60회)
+  // 보다 훨씬 자주 그리는 셈이라 낭비다. 같은 프레임 안에서 발생한 여러 번의 호출을 한 번의 렌더로
+  // 합쳐준다 — 드래그 중인 onPointerMove에서만 이 스로틀 버전을 쓰고, 클릭 등 1회성 갱신은 기존처럼
+  // renderMarkerLayer()를 직접 즉시 호출한다.
+  let markerRenderRAF = null;
+  function scheduleMarkerRender(){
+    if(markerRenderRAF) return; // 이미 다음 프레임에 렌더링이 예약돼 있으면 추가로 예약하지 않음
+    markerRenderRAF = requestAnimationFrame(()=>{
+      markerRenderRAF = null;
+      renderMarkerLayer();
+    });
+  }
   // 동적 레이어(마커+오버레이)만 다시 그린다. 도면 이미지는 손대지 않으므로 드래그 중 반복 호출해도 가볍다.
   function renderMarkerLayer(){
     const d = getActiveDrawing(); if(!d) return;
@@ -4703,6 +4719,8 @@
 
   const RESIZE_CURSORS = { nw:'nwse-resize', se:'nwse-resize', ne:'nesw-resize', sw:'nesw-resize', n:'ns-resize', s:'ns-resize', e:'ew-resize', w:'ew-resize' };
 
+  // touchmove/mousemove 핸들러 — 드래그 중 매 이벤트마다 renderMarkerLayer()를 직접 부르지 않고
+  // scheduleMarkerRender()로 rAF 프레임당 한 번만 그리도록 스로틀한다(위 정의 참고).
   function onPointerMove(e){
     if(pendingAction && pendingAction.mode==='pan'){
       const wrap = document.getElementById('canvasWrap');
@@ -4718,7 +4736,7 @@
       if(eraseMode){
         canvas.style.cursor = 'crosshair';
         eraseCursorPt = { x:p0.x, y:p0.y };
-        renderMarkerLayer();
+        scheduleMarkerRender();
         return;
       }
       if(pendingRectCreate){
@@ -4727,7 +4745,7 @@
           : { x:p0.x, y:p0.y };
         rectCreateCurX = snapped.x; rectCreateCurY = snapped.y;
         canvas.style.cursor = 'crosshair';
-        renderMarkerLayer();
+        scheduleMarkerRender();
         return;
       }
       const rectRotHover = hitTestRectRotateHandle(d0, p0.x, p0.y, isTouchEvent(e));
@@ -4737,7 +4755,7 @@
       else if(hitTestHandle(d0, p0.x, p0.y, isTouchEvent(e))) canvas.style.cursor = 'alias';
       else if(hitTestMarker(d0, p0.x, p0.y)) canvas.style.cursor = 'move';
       else canvas.style.cursor = 'crosshair';
-      if(coordGuideOn) renderMarkerLayer();
+      if(coordGuideOn) scheduleMarkerRender();
       return;
     }
     const d = getActiveDrawing(); if(!d) return;
@@ -4746,7 +4764,7 @@
 
     if(pendingAction.mode==='crop'){
       pendingAction.curX = p.x; pendingAction.curY = p.y;
-      renderMarkerLayer();
+      scheduleMarkerRender();
       return;
     }
 
@@ -4768,7 +4786,7 @@
           }
         }
       });
-      renderMarkerLayer();
+      scheduleMarkerRender();
     } else if(pendingAction.mode==='rotate'){
       const m = d.markers.find(mm=>mm.id===pendingAction.hitId);
       if(m){
@@ -4784,7 +4802,7 @@
           const lm = dist/baseLen;
           if(isFinite(lm) && lm>0.05) m.lenMult = lm;
         }
-        renderMarkerLayer();
+        scheduleMarkerRender();
       }
     } else if(pendingAction.mode==='resizeRect'){
       const m = d.markers.find(mm=>mm.id===pendingAction.hitId);
@@ -4811,7 +4829,7 @@
         m.rectYPct = clamp(ny0/h*100,0,100);
         m.rectWPct = clamp((nx1-nx0)/w*100,0.5,100);
         m.rectHPct = clamp((ny1-ny0)/h*100,0.5,100);
-        renderMarkerLayer();
+        scheduleMarkerRender();
       }
     } else if(pendingAction.mode==='rotateRect'){
       const m = d.markers.find(mm=>mm.id===pendingAction.hitId);
@@ -4821,19 +4839,19 @@
         let ang = Math.atan2(p.y-pendingAction.cy, p.x-pendingAction.cx) * 180/Math.PI + 90;
         if(e.shiftKey) ang = Math.round(ang/15)*15; // 15°씩 스냅
         m.rectAngle = ((ang%360)+360)%360;
-        renderMarkerLayer();
+        scheduleMarkerRender();
       }
     } else if(pendingAction.mode==='rubberband' && pendingAction.moved){
       pendingAction.curX = p.x; pendingAction.curY = p.y;
-      renderMarkerLayer();
+      scheduleMarkerRender();
     } else if(pendingAction.mode==='create'){
       pendingAction.curX = p.x; pendingAction.curY = p.y;
       pendingAction.shiftKey = e.shiftKey;
-      renderMarkerLayer();
+      scheduleMarkerRender();
     } else if(pendingAction.mode==='erase'){
       pendingAction.strokePts.push({x:p.x,y:p.y});
       eraseAtPoint(d, p.x, p.y);
-      renderMarkerLayer();
+      scheduleMarkerRender();
     }
   }
   canvas.addEventListener('mousemove', onPointerMove);
@@ -4951,6 +4969,14 @@
     if(e.touches.length===0) onPointerUp(e);
   }, { passive:false });
   window.addEventListener('touchcancel', ()=>{ endPinch(); pendingAction = null; renderCanvas(); });
+
+  // iOS 사파리는 캔버스에서 touch-action:none + preventDefault로 막아도, 두 손가락 제스처를
+  // 표준 touch 이벤트보다 먼저 자체 gesturestart/gesturechange/gestureend로 가로채 페이지 전체를
+  // 확대해버리는 경우가 있다(사파리 전용 비표준 이벤트라 다른 브라우저에는 존재하지 않음).
+  // 세 이벤트 모두 막아 페이지 전체 확대를 방지한다.
+  ['gesturestart','gesturechange','gestureend'].forEach(evt=>{
+    document.addEventListener(evt, e=> e.preventDefault());
+  });
 
   // ---------- 자동저장(IndexedDB) ----------
   // 웹앱 전환: Electron 시절엔 없던 기능. 파일시스템에 의존하지 않고 브라우저 IndexedDB에 현재
