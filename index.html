@@ -660,6 +660,12 @@
   // 이미지 스냅샷은 용량이 크므로(Data URL 전체를 들고 있음) 스택 전체 길이와 별개로 최근 8개까지만 유지한다.
   let undoStack = [];
   let redoStack = []; // Ctrl+Shift+Z / Ctrl+Y로 되돌리기(undo)를 다시 앞으로 돌릴 때 사용
+  // 프로젝트 파일(.json)의 스키마 버전. 이보다 높은 version 값을 가진 파일을 열면(더 상위 버전에서 저장된
+  // 파일) applyProjectData()가 경고 후 계속할지 확인한다.
+  const PROJECT_FILE_VERSION = 2;
+  // 마지막으로 파일에 저장(또는 파일/자동저장에서 불러오기)된 시점의 스냅샷 JSON.
+  // beforeunload에서 현재 상태와 비교해 "미저장 변경사항"이 있는지 판단하는 기준선이다.
+  let lastSavedSnapshotJSON = null;
   let pendingAction = null; // {mode:'move'|'rotate'|'create'|'rubberband'|'crop', hitId, startX, startY, moved}
   let cropMode = false;
   let cropRect = null; // {x,y,w,h} in canvas backing-px
@@ -1018,10 +1024,8 @@
           e.stopPropagation(); return;
         }
         if(act==='del'){
-          if(confirm(`"${d.name}" 도면과 표시된 결함 ${d.markers.length}건을 삭제할까요?`)){
-            drawings = drawings.filter(x=>x.id!==d.id);
-            if(activeDrawingId===d.id){ activeDrawingId = drawings[0]? drawings[0].id : null; }
-            renderDrawingTabs(); setActiveDrawing(activeDrawingId);
+          if(confirm(`"${d.name}" 도면과 표시된 결함 ${d.markers.length}건을 삭제할까요? (실행취소로 되돌릴 수 있습니다)`)){
+            deleteDrawing(d.id);
           }
           e.stopPropagation(); return;
         }
@@ -1702,8 +1706,28 @@
     trimImageEntries(undoStack);
     redoStack = [];
   }
+  // 도면 탭 삭제(휴지통 아이콘)도 실행취소로 되돌릴 수 있도록, 필터로 바로 지우지 않고 undoStack에
+  // {type:'drawing', drawing, index} 형태로 기록한 뒤 배열에서 제거한다. undo()가 같은 자리에 되살린다.
+  function deleteDrawing(id){
+    const idx = drawings.findIndex(x=>x.id===id); if(idx<0) return;
+    const d = drawings[idx];
+    undoStack.push({type:'drawing', drawing:d, index:idx});
+    if(undoStack.length>60) undoStack.shift();
+    redoStack = [];
+    drawings.splice(idx,1);
+    if(activeDrawingId===d.id){ activeDrawingId = drawings[0] ? drawings[0].id : null; }
+    renderDrawingTabs(); setActiveDrawing(activeDrawingId);
+  }
   function undo(){
     const last = undoStack.pop(); if(!last) return;
+    if(last.type==='drawing'){
+      const insertAt = Math.min(last.index, drawings.length);
+      drawings.splice(insertAt, 0, last.drawing);
+      redoStack.push({type:'drawing', drawingId:last.drawing.id});
+      if(redoStack.length>60) redoStack.shift();
+      setActiveDrawing(last.drawing.id);
+      return;
+    }
     const d = drawings.find(x=>x.id===last.drawingId); if(!d){ undo(); return; }
     if(last.type==='image'){
       redoStack.push({ type:'image', drawingId:d.id, imgSrc:d.imgSrc, naturalW:d.naturalW, naturalH:d.naturalH,
@@ -1728,6 +1752,16 @@
   }
   function redo(){
     const next = redoStack.pop(); if(!next) return;
+    if(next.type==='drawing'){
+      const idx = drawings.findIndex(x=>x.id===next.drawingId); if(idx<0){ redo(); return; }
+      const removed = drawings[idx];
+      undoStack.push({type:'drawing', drawing:removed, index:idx});
+      if(undoStack.length>60) undoStack.shift();
+      drawings.splice(idx,1);
+      if(activeDrawingId===removed.id){ activeDrawingId = drawings[0] ? drawings[0].id : null; }
+      renderDrawingTabs(); setActiveDrawing(activeDrawingId);
+      return;
+    }
     const d = drawings.find(x=>x.id===next.drawingId); if(!d){ redo(); return; }
     if(next.type==='image'){
       undoStack.push({ type:'image', drawingId:d.id, imgSrc:d.imgSrc, naturalW:d.naturalW, naturalH:d.naturalH,
@@ -3306,6 +3340,7 @@
     if(drawings.length===0){ alert('저장할 도면이 없습니다.'); return; }
     const data = buildProjectSnapshot();
     downloadBlob(JSON.stringify(data), filenameBase()+'_project.json', 'application/json');
+    lastSavedSnapshotJSON = JSON.stringify(data); // 파일로 실제 저장됐으므로, 이 시점을 "저장됨" 기준선으로 삼는다
   }
 
   function loadProjectFile(file){
@@ -3321,9 +3356,18 @@
 
   // 프로젝트 데이터(파일에서 읽었든, 자동저장 스냅샷에서 읽었든)를 실제 화면 상태에 반영한다.
   // File 저장/불러오기와 자동저장 복구가 이 함수 하나를 공유한다.
+  // - data.version이 이 도구가 아는 버전보다 높으면(더 상위 버전에서 저장된 파일) 경고하고 계속할지 묻는다.
+  // - 도면 이미지 중 일부가 손상돼 로드에 실패해도, 나머지 도면은 정상적으로 열고 무엇이 실패했는지 알려준다.
   function applyProjectData(data, opts){
     opts = opts || {};
     if(!data || !Array.isArray(data.drawings)){ if(!opts.silent) alert('올바른 프로젝트 파일이 아닙니다.'); return; }
+    if(data.version && data.version > PROJECT_FILE_VERSION){
+      const proceed = confirm(
+        '이 프로젝트 파일은 더 상위 버전(v'+data.version+')의 도구에서 저장되었습니다.\n'+
+        '현재 도구는 v'+PROJECT_FILE_VERSION+'이라, 일부 내용이 정상적으로 열리지 않을 수 있습니다.\n계속 여시겠습니까?'
+      );
+      if(!proceed) return;
+    }
     document.getElementById('projectNameInput').value = data.projectName || '';
     document.getElementById('siteNameInput').value = data.siteName || '';
     document.getElementById('structureTypeInput').value = data.structureType || '';
@@ -3333,9 +3377,38 @@
     selectedIds = new Set();
     undoStack = [];
     redoStack = [];
-    if(data.drawings.length===0){ renderDrawingTabs(); renderCanvas(); renderTable(); return; }
-    let loaded = 0;
+    if(data.drawings.length===0){
+      renderDrawingTabs(); renderCanvas(); renderTable();
+      lastSavedSnapshotJSON = JSON.stringify(buildProjectSnapshot());
+      if(opts.onDone) opts.onDone();
+      return;
+    }
+    const total = data.drawings.length;
+    const failedNames = [];
+    let settled = 0;
+    function finishIfDone(){
+      if(settled !== total) return;
+      drawings.sort((a,b)=> data.drawings.findIndex(x=>x.id===a.id) - data.drawings.findIndex(x=>x.id===b.id));
+      activeDrawingId = drawings[0] ? drawings[0].id : null;
+      renderDrawingTabs(); renderCanvas(); renderTable(); syncSurveyLocationField();
+      lastSavedSnapshotJSON = JSON.stringify(buildProjectSnapshot());
+      if(failedNames.length>0){
+        const tail = drawings.length>0
+          ? '나머지 '+drawings.length+'개 도면은 정상적으로 열렸습니다.'
+          : '정상적으로 열린 도면이 없습니다.';
+        alert(
+          '다음 도면 이미지를 불러오지 못했습니다(파일 손상 또는 알 수 없는 형식):\n- '+failedNames.join('\n- ')+
+          '\n\n'+tail
+        );
+      }
+      if(opts.onDone) opts.onDone();
+    }
     data.drawings.forEach(dd=>{
+      if(!dd || !dd.imgSrc){
+        failedNames.push((dd && dd.name) || '(이름 없음)');
+        settled++; finishIfDone();
+        return;
+      }
       const img = new Image();
       img.onload = ()=>{
         const nd = buildDrawingFromImage(img, dd.imgSrc, dd.name);
@@ -3343,13 +3416,11 @@
         nd.surveyLocation = dd.surveyLocation || '';
         nd.markers = Array.isArray(dd.markers) ? dd.markers : [];
         drawings.push(nd);
-        loaded++;
-        if(loaded === data.drawings.length){
-          drawings.sort((a,b)=> data.drawings.findIndex(x=>x.id===a.id) - data.drawings.findIndex(x=>x.id===b.id));
-          activeDrawingId = drawings[0].id;
-          renderDrawingTabs(); renderCanvas(); renderTable(); syncSurveyLocationField();
-          if(opts.onDone) opts.onDone();
-        }
+        settled++; finishIfDone();
+      };
+      img.onerror = ()=>{
+        failedNames.push(dd.name || '(이름 없음)');
+        settled++; finishIfDone();
       };
       img.src = dd.imgSrc;
     });
@@ -3358,7 +3429,7 @@
   // 저장 파일과 동일한 형태로 현재 작업 상태를 스냅샷 객체로 만든다 (자동저장용, 다운로드는 하지 않음).
   function buildProjectSnapshot(){
     return {
-      version: 2,
+      version: PROJECT_FILE_VERSION,
       projectName: document.getElementById('projectNameInput').value,
       siteName: document.getElementById('siteNameInput').value,
       structureType: document.getElementById('structureTypeInput').value,
@@ -3948,6 +4019,22 @@
   setInterval(runAutosaveTick, AUTOSAVE_INTERVAL_MS);
   window.addEventListener('pagehide', runAutosaveTick);
 
+  // ---------- 미저장 변경사항 확인(창/탭 닫기) ----------
+  // 마지막으로 파일 저장/불러오기한 시점의 스냅샷(lastSavedSnapshotJSON)과 현재 상태를 비교해
+  // 다르면 "미저장 변경사항"으로 본다. 자동저장(IndexedDB)은 이 기준선을 갱신하지 않는다 —
+  // 브라우저 저장소가 지워질 수 있어 실제 파일 저장과는 안전성이 다르기 때문이다.
+  function hasUnsavedChanges(){
+    if(drawings.length===0) return false;
+    try{ return JSON.stringify(buildProjectSnapshot()) !== lastSavedSnapshotJSON; }
+    catch(err){ return false; }
+  }
+  window.addEventListener('beforeunload', e=>{
+    if(hasUnsavedChanges()){
+      e.preventDefault();
+      e.returnValue = '';
+    }
+  });
+
   function formatAutosaveTime(ts){
     try{
       const d = new Date(ts);
@@ -3996,6 +4083,7 @@
   updateModeHint();
   renderCanvas();
   renderTable();
+  lastSavedSnapshotJSON = JSON.stringify(buildProjectSnapshot()); // 빈 프로젝트 = "저장됨" 기준선
   checkAutosaveRecovery();
 })();
 </script>
