@@ -1,0 +1,17 @@
+{
+  "name": "결함 위치 도면 마킹 도구",
+  "short_name": "결함마킹",
+  "description": "건축시설물 정밀안전진단/점검용 결함 위치 도면 마킹 도구",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#f2f1ee",
+  "theme_color": "#2a78d6",
+  "lang": "ko",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

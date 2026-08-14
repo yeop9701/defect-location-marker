@@ -1,0 +1,4003 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>결함 위치 도면 마킹 도구</title>
+<meta name="description" content="건축시설물 정밀안전진단/점검용 결함 위치 도면 마킹 도구" />
+<meta name="theme-color" content="#2a78d6" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="apple-mobile-web-app-title" content="결함마킹" />
+<link rel="manifest" href="manifest.json" />
+<link rel="icon" href="icon-192.png" />
+<link rel="apple-touch-icon" href="icon-192.png" />
+<style>
+  :root{
+    --surface-1:#fcfcfb;
+    --surface-page:#f2f1ee;
+    --text-primary:#0b0b0b;
+    --text-secondary:#52514e;
+    --muted:#898781;
+    --gridline:#e1e0d9;
+    --border:rgba(11,11,11,0.10);
+    --accent:#2a78d6;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;height:100%;}
+  body{
+    font-family:system-ui,-apple-system,"Segoe UI",sans-serif;
+    background:var(--surface-page);
+    color:var(--text-primary);
+    -webkit-font-smoothing:antialiased;
+  }
+  .app{display:flex;flex-direction:column;height:100vh;overflow:hidden;}
+  header.topbar{
+    background:var(--surface-1);
+    border-bottom:1px solid var(--gridline);
+    padding:14px 20px;
+    display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;
+  }
+  .proj-fields{display:flex;gap:10px;flex-wrap:wrap;}
+  .proj-fields label{font-size:12px;color:var(--text-secondary);display:flex;flex-direction:column;gap:3px;}
+  .proj-fields input[type=text]{
+    font-size:13px;padding:6px 8px;border:1px solid var(--gridline);border-radius:6px;
+    min-width:160px;background:var(--surface-1);color:var(--text-primary);
+  }
+  .proj-actions{display:flex;gap:6px;flex-wrap:wrap;}
+  button{
+    font-family:inherit;font-size:12.5px;padding:7px 11px;border-radius:7px;
+    border:1px solid var(--gridline);background:var(--surface-1);color:var(--text-primary);
+    cursor:pointer;line-height:1.3;
+  }
+  button:hover{background:#f0efec;}
+  button.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600;}
+  button.primary:hover{background:#256abf;}
+  button.danger{color:#a72e2e;}
+  button:disabled{opacity:.45;cursor:not-allowed;}
+  button#btnMoveMode.active{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:700;}
+  button#btnSelectMode.active{background:#7a3fc9;border-color:#7a3fc9;color:#fff;font-weight:700;}
+  button#btnEraseMode.active{background:#a72e2e;border-color:#a72e2e;color:#fff;font-weight:700;}
+  button#btnGridView.active{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:700;}
+  button#btnCoordGuide.active{background:#0d7a4f;border-color:#0d7a4f;color:#fff;font-weight:700;}
+  .btn-group{display:flex;align-items:center;gap:6px;padding:3px;border-radius:9px;background:#f5f4f1;}
+  .toolbar-sep{width:1px;align-self:stretch;background:var(--gridline);margin:0 2px;}
+  .layout{display:flex;flex:1;min-height:0;gap:0;}
+  .sidebar{width:250px;flex:0 0 250px;background:var(--surface-1);border-right:1px solid var(--gridline);
+    display:flex;flex-direction:column;padding:14px;gap:16px;overflow-y:auto;}
+  .sidebar.right{border-right:none;border-left:1px solid var(--gridline);width:720px;flex:0 0 720px;}
+  .panel-title{font-size:12px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.03em;margin:0 0 8px;}
+  .drawing-tabs{display:flex;flex-direction:column;gap:6px;}
+  .drawing-tab{
+    display:flex;align-items:center;gap:6px;padding:7px 8px 7px 10px;border-radius:7px;
+    cursor:pointer;font-size:13px;border-left:3px solid transparent;
+  }
+  .drawing-tab:hover{background:#f0efec;}
+  .drawing-tab.active{background:#eef4fc;border-left-color:var(--accent);font-weight:600;}
+  .drawing-tab .name{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .drawing-tab .icon-btn{font-size:11px;padding:2px 5px;border:none;background:transparent;color:var(--muted);}
+  .drawing-tab .icon-btn:hover{color:var(--text-primary);background:#e1e0d9;border-radius:4px;}
+  .add-drawing-btn{width:100%;padding:9px;border:1px dashed var(--gridline);border-radius:8px;background:transparent;
+    font-size:12.5px;color:var(--text-secondary);cursor:pointer;}
+  .add-drawing-btn:hover{background:#f0efec;}
+  .type-grid{display:grid;grid-template-columns:1fr;gap:6px;}
+  .type-btn{
+    display:flex;align-items:center;gap:8px;padding:9px 10px;border-radius:8px;border:none;
+    background:#f5f4f1;cursor:pointer;font-size:13px;text-align:left;color:var(--text-secondary);
+    transition:background .12s ease;width:100%;
+  }
+  .type-btn:hover{background:#eeede9;}
+  .type-btn.active{background:color-mix(in srgb, var(--type-color) 16%, #fcfcfb);color:var(--text-primary);font-weight:700;}
+  .type-swatch{width:15px;height:15px;flex:0 0 15px;position:relative;display:flex;align-items:center;justify-content:center;}
+  .type-swatch svg,.type-swatch img{width:100%;height:100%;display:block;}
+  .type-btn span:nth-child(2){flex:1;}
+  .kbd-hint{flex:0 0 auto;font-size:10px;font-weight:700;color:var(--muted);background:rgba(11,11,11,0.08);
+    border-radius:4px;padding:2px 6px;letter-spacing:.02em;}
+  .type-btn.active .kbd-hint{color:var(--text-secondary);background:rgba(11,11,11,0.10);}
+  .help-box{font-size:12px;color:var(--text-secondary);line-height:1.6;background:#f6f5f2;border:none;
+    border-radius:8px;padding:10px 11px;}
+  .help-box b{color:var(--text-primary);}
+  .help-toggle{font-size:11.5px;color:var(--accent);cursor:pointer;background:none;border:none;padding:0;text-decoration:underline;}
+  main.canvas-area{flex:1;display:flex;flex-direction:column;min-width:0;min-height:0;background:var(--surface-page);}
+  .toolbar2{display:flex;flex-direction:column;gap:6px;padding:10px 16px;background:var(--surface-1);
+    border-bottom:1px solid var(--gridline);}
+  .toolbar-row{display:flex;align-items:center;gap:14px;flex-wrap:wrap;}
+  .zoom-group{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--text-secondary);}
+  .zoom-group select{font-size:12.5px;padding:5px 6px;border-radius:6px;border:1px solid var(--gridline);}
+  .tool-slider{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-secondary);}
+  .tool-slider input[type=range]{width:88px;accent-color:var(--accent);}
+  .tool-slider .val{font-size:11px;color:var(--muted);min-width:34px;}
+  .mode-hint{font-size:12px;color:var(--muted);}
+  #cropActions{display:none;align-items:center;gap:6px;}
+  .canvas-wrap{flex:1;min-height:0;overflow:auto;display:flex;align-items:flex-start;justify-content:flex-start;padding:24px;}
+  .canvas-shell{background:var(--surface-1);box-shadow:0 1px 8px rgba(11,11,11,0.10);border:none;
+    border-radius:6px;position:relative;}
+  #mainCanvas{display:block;cursor:crosshair;border-radius:3px;}
+  .empty-state{color:var(--muted);font-size:14px;text-align:center;padding:60px 30px;max-width:360px;margin:auto;}
+  .empty-state button{margin-top:14px;}
+  .thumb-grid{display:none;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:16px;width:100%;
+    align-content:start;align-self:flex-start;}
+  .thumb-card{background:var(--surface-1);border:1px solid var(--gridline);border-radius:8px;overflow:hidden;
+    cursor:pointer;transition:box-shadow .12s ease, transform .12s ease;}
+  .thumb-card:hover{box-shadow:0 4px 14px rgba(11,11,11,0.14);transform:translateY(-1px);}
+  .thumb-card.active{border-color:var(--accent);box-shadow:0 0 0 2px rgba(42,120,214,0.35);}
+  .thumb-card canvas{width:100%;display:block;background:#fff;}
+  .thumb-label{padding:8px 10px;font-size:12.5px;display:flex;justify-content:space-between;align-items:center;gap:6px;}
+  .thumb-label .name{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .thumb-label .count{font-size:11px;color:var(--muted);flex:0 0 auto;}
+  .thumb-empty{grid-column:1/-1;color:var(--muted);font-size:13px;text-align:center;padding:40px;}
+  .num-badge{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;
+    background:var(--text-primary);color:#fff;font-size:10px;font-weight:700;flex:0 0 auto;}
+  .row-del{background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;padding:2px 4px;}
+  .row-del:hover{color:#a72e2e;}
+  /* 결함 목록: 결함 하나당 한 줄로 유형/부재명/결함명/폭/길이/개수/#를 입력받는다(사이드바가 넓어 스크롤 없이 다 보임) */
+  .marker-list{display:flex;flex-direction:column;gap:6px;margin-top:6px;}
+  .marker-card{display:flex;align-items:center;gap:5px;background:#f8f7f5;border:1px solid var(--gridline);
+    border-radius:8px;padding:6px 7px;}
+  .marker-card.selected{background:#eaf2fc;border-color:rgba(42,120,214,0.4);}
+  .marker-card input,.marker-card select{font-size:11.5px;padding:4px 5px;border-radius:5px;border:1px solid var(--gridline);
+    background:var(--surface-1);color:var(--text-primary);}
+  .marker-card .mc-num{width:30px;flex:0 0 30px;text-align:center;padding:4px 2px;font-weight:700;}
+  .marker-card select.mc-marktype{width:68px;flex:0 0 68px;}
+  .mc-field{display:flex;align-items:center;gap:3px;flex:1 1 78px;min-width:60px;}
+  .mc-field select{flex:1 1 auto;min-width:56px;width:auto;}
+  .mc-field input.mc-custom{flex:1 1 70px;min-width:56px;}
+  .marker-card .mc-num2{width:48px;flex:0 0 48px;text-align:center;}
+  .mc-suffix{display:flex;align-items:center;gap:3px;flex:0 0 auto;}
+  .mc-suffix span{font-size:10.5px;color:var(--muted);flex:0 0 auto;}
+  .marker-card .row-del{flex:0 0 auto;}
+  .mc-photo{background:none;border:none;color:var(--muted);cursor:pointer;font-size:13px;padding:2px 4px;position:relative;flex:0 0 auto;}
+  .mc-photo:hover{color:var(--accent);}
+  .mc-photo .photo-count{position:absolute;top:-4px;right:-3px;background:var(--accent);color:#fff;font-size:9px;font-weight:700;
+    border-radius:8px;padding:0 4px;line-height:14px;min-width:14px;text-align:center;}
+  .photo-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:8px;}
+  .photo-thumb{position:relative;border-radius:6px;overflow:hidden;border:1px solid var(--gridline);cursor:pointer;
+    aspect-ratio:1/1;background:#eee;}
+  .photo-thumb img{width:100%;height:100%;object-fit:cover;display:block;}
+  .photo-thumb .photo-del{position:absolute;top:2px;right:2px;background:rgba(11,11,11,0.55);color:#fff;border:none;
+    border-radius:50%;width:18px;height:18px;font-size:11px;cursor:pointer;line-height:1;padding:0;}
+  .stats-summary{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;}
+  .stats-summary .stat-box{background:#f6f5f2;border-radius:8px;padding:10px 16px;flex:1 1 120px;text-align:center;}
+  .stats-summary .stat-box .n{font-size:22px;font-weight:800;color:var(--text-primary);}
+  .stats-summary .stat-box .l{font-size:11px;color:var(--muted);margin-top:2px;}
+  .stats-section{margin-bottom:16px;}
+  .stats-section h4{font-size:12px;font-weight:700;color:var(--text-secondary);margin:0 0 6px;}
+  table.stats-table{width:100%;border-collapse:collapse;font-size:12.5px;}
+  table.stats-table th{text-align:left;color:var(--muted);font-weight:600;font-size:10.5px;text-transform:uppercase;
+    letter-spacing:.02em;padding:4px 6px;border-bottom:1px solid var(--gridline);}
+  table.stats-table td{padding:5px 6px;border-bottom:1px solid var(--gridline);}
+  table.stats-table td.n{text-align:right;font-weight:700;width:60px;}
+  table.stats-table .bar{display:inline-block;height:6px;background:var(--accent);border-radius:3px;vertical-align:middle;margin-right:6px;}
+  .legend-preview{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;}
+  .legend-chip{display:flex;align-items:center;gap:6px;font-size:11.5px;background:#f5f4f1;border:none;
+    border-radius:20px;padding:4px 10px 4px 7px;color:var(--text-secondary);}
+  .legend-chip img{display:block;width:22px;height:22px;flex:0 0 22px;}
+  input[type=file]{display:none;}
+  .file-label{display:inline-block;}
+  hr.sep{border:none;border-top:1px solid var(--gridline);margin:2px 0;}
+  .empty-marker-note{font-size:11.5px;color:var(--muted);padding:6px 2px;}
+  .footer-note{font-size:10.5px;color:var(--muted);line-height:1.6;padding-top:6px;border-top:1px solid var(--gridline);margin-top:auto;}
+  .check-row{display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--text-secondary);cursor:pointer;}
+  .check-row input{accent-color:var(--accent);}
+  .side-field{display:flex;flex-direction:column;gap:3px;font-size:11px;color:var(--muted);margin-top:8px;}
+  .side-input{font-size:12px;padding:6px 8px;border:1px solid var(--gridline);border-radius:6px;
+    background:var(--surface-1);color:var(--text-primary);width:100%;}
+  .sidebar-btn-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;}
+  .tb-template-row{display:flex;gap:4px;margin-bottom:8px;}
+  .tb-template-row select{flex:1;min-width:0;font-size:11.5px;padding:5px 6px;border-radius:6px;border:1px solid var(--gridline);
+    background:var(--surface-1);color:var(--text-primary);}
+  .tb-template-row button{flex:0 0 auto;padding:5px 8px;font-size:12px;}
+  .titleblock-fields{display:flex;flex-direction:column;gap:8px;background:#f6f5f2;border-radius:8px;padding:10px;}
+  .tb-field{display:flex;flex-direction:column;gap:3px;font-size:11px;color:var(--muted);}
+  .tb-field input[type=text]{font-size:12px;padding:6px 8px;border:1px solid var(--gridline);border-radius:6px;
+    background:var(--surface-1);color:var(--text-primary);width:100%;}
+  .modal-backdrop{position:fixed;inset:0;background:rgba(11,11,11,0.45);display:flex;align-items:center;
+    justify-content:center;z-index:1000;padding:24px;}
+  .modal-panel{background:var(--surface-1);border-radius:10px;box-shadow:0 12px 40px rgba(11,11,11,0.35);
+    width:min(1180px, 96vw);max-height:88vh;display:flex;flex-direction:column;overflow:hidden;}
+  .modal-header{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;
+    padding:16px 18px;border-bottom:1px solid var(--gridline);cursor:move;user-select:none;}
+  .modal-header button{cursor:pointer;}
+  .modal-title{font-size:15px;font-weight:700;}
+  .modal-sub{font-size:11.5px;color:var(--muted);margin-top:4px;line-height:1.5;max-width:820px;}
+  .modal-body{padding:14px 18px;overflow:auto;flex:1;}
+  .modal-footer{display:flex;align-items:center;gap:8px;padding:12px 18px;border-top:1px solid var(--gridline);}
+  table.input-table{border-collapse:collapse;font-size:12px;width:100%;}
+  table.input-table th{text-align:left;color:var(--muted);font-weight:600;font-size:10.5px;text-transform:uppercase;
+    letter-spacing:.02em;padding:4px 5px;border-bottom:1px solid var(--gridline);position:sticky;top:0;background:var(--surface-1);}
+  table.input-table td{padding:2px 3px;border-bottom:1px solid var(--gridline);}
+  table.input-table input[type=text], table.input-table select{
+    font-size:11.5px;padding:5px 6px;border-radius:5px;border:1px solid var(--gridline);width:100%;
+    background:var(--surface-1);color:var(--text-primary);}
+  table.input-table .row-del{background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;padding:2px 4px;}
+  table.input-table .row-del:hover{color:#a72e2e;}
+  .recovery-banner{position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:2000;
+    background:var(--surface-1);border:1px solid var(--gridline);border-radius:9px;
+    box-shadow:0 8px 28px rgba(11,11,11,0.22);padding:12px 14px;display:flex;align-items:center;gap:12px;
+    font-size:12.5px;color:var(--text-primary);max-width:92vw;}
+  .recovery-banner b{font-weight:700;}
+  .recovery-banner .rb-time{color:var(--muted);font-size:11px;}
+  .recovery-banner button{white-space:nowrap;}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header class="topbar" style="justify-content:flex-end;">
+    <div class="proj-actions">
+      <button id="btnUndo" title="마지막 작업을 취소합니다. 마커 추가/이동/삭제뿐 아니라 자르기·회전·지우개처럼 도면 이미지 자체를 바꾼 작업도 함께 되돌립니다 (Ctrl+Z)">↶ 실행취소</button>
+      <button id="btnRedo" title="되돌린 작업을 다시 실행 (Ctrl+Shift+Z / Ctrl+Y)">↷ 다시실행</button>
+      <button id="btnSaveProject" title="현재 작업 전체를 파일로 저장 (도면 이미지 포함, 단축키 Ctrl+S)">💾 프로젝트 저장</button>
+      <label class="file-label"><button id="btnLoadProjectVisual" type="button">📂 프로젝트 불러오기</button>
+        <input type="file" id="loadProjectInput" accept=".json" />
+      </label>
+    </div>
+  </header>
+
+  <div class="layout">
+
+    <!-- LEFT SIDEBAR -->
+    <aside class="sidebar left">
+      <div>
+        <div class="panel-title">도면 목록</div>
+        <div class="drawing-tabs" id="drawingTabs"></div>
+        <label class="file-label" style="display:block;margin-top:8px;">
+          <button type="button" class="add-drawing-btn" id="btnAddDrawing">+ 도면 이미지 추가</button>
+          <input type="file" id="addDrawingInput" accept="image/*" multiple />
+        </label>
+      </div>
+
+      <div>
+        <div class="panel-title">위치 유형 선택 (클릭 후 도면 클릭)</div>
+        <div class="type-grid" id="typeGrid"></div>
+      </div>
+
+      <div>
+        <button class="help-toggle" id="helpToggle">사용법 / 단축키 보기</button>
+        <div class="help-box" id="helpBox" style="margin-top:8px;display:none;">
+          <b>1.</b> 왼쪽에서 도면(평면도·입면도) 이미지를 추가합니다.<br/>
+          <b>2.</b> 위치 유형을 고른 뒤(단축키 1~4) 도면을 클릭하면 마커가 찍힙니다. <b>클릭한 지점에서 그대로 드래그</b>하면 방향·인출선 길이를 함께 지정할 수 있습니다(Shift: 수직/수평 고정). "범위" 유형(3·4)은 <b>클릭 3번</b>으로 만듭니다 — ① 사각형 첫 코너 클릭 → ② 반대쪽 코너 클릭 → ③ 번호 배지를 놓을 위치 클릭.<br/>
+          <b>3.</b> 찍힌 마커의 화살표·원 끝을 드래그하면 방향·길이를 다시 조절, 가운데 번호를 드래그하면 위치를 옮길 수 있습니다. 화살표·선·사각형 어디를 클릭해도 그 마커가 선택/이동됩니다.<br/>
+          <b>4.</b> <b>s</b>: <b>선택 모드</b> — 빈 곳을 드래그하면 완전히 안에 들어온 마커만 한 번에 선택(Shift로 추가/해제). <b>m</b>: <b>이동 모드</b> — 마커만 안전하게 옮길 수 있고 빈 곳 클릭으로는 아무 것도 생기지 않습니다.<br/>
+          <b>5.</b> <b>d</b>: <b>지우개 모드</b> — 마커 위를 지나면 마커 삭제, 그 외 도면 위를 드래그하면 브러시처럼 이미지를 흰색으로 지웁니다(굵기 슬라이더로 조절, 이미지 실행취소로 복구 가능).<br/>
+          <b>6.</b> 여러 개를 선택한 채로 드래그하면 함께 이동, Delete로 한꺼번에 삭제, ←/→로 한꺼번에 회전됩니다.<br/>
+          <b>7.</b> 도면 위에서 <b>마우스 휠</b>로 커서 위치를 기준으로 확대/축소됩니다. <b>휠(가운데) 버튼을 누른 채 드래그</b>하면 모드에 상관없이 화면을 이동(패닝)할 수 있습니다. "⟲/⟳"으로 90°씩 회전, "자르기"로 일부만 남길 수 있습니다.<br/>
+          <b>8.</b> "저장" 형식은 PNG/PDF. 표제란(도곽)을 켜면 A4 가로 비율의 테두리 + 상단 표제란(용역명·구분·조사위치·구조형식)이 함께 인쇄됩니다. "🗂 전체 도면 일괄 저장"을 누르면 도면을 하나씩 바꿔가며 저장할 필요 없이 모든 도면을 한 번에 내보냅니다(PDF는 도면 수만큼 페이지가 이어진 파일 1개, PNG는 도면별로 순서대로 저장).<br/>
+          <b>9.</b> CSV로 좌표를 일괄 입력/내보내거나, "프로젝트 저장"으로 전체 작업을 파일로 저장해 이어서 작업할 수 있습니다.<br/>
+          <br/>
+          <b>단축키</b> — 1/2/3/4: 유형 선택 · <b>s</b>: 선택 모드 · <b>m</b>: 이동 모드 · <b>d</b>: 지우개 모드 · <b>c</b>: 자르기 모드 · <b>g</b>: 전체 도면 보기 · <b>q</b>: 좌표 안내 · ←/→: 인출선 회전(Shift 45°) · Delete: 선택 삭제 · Esc: 선택 해제/모드 취소 · Ctrl+Z: 실행취소 · Ctrl+Shift+Z(또는 Ctrl+Y): 다시실행 · Ctrl+A: 전체 선택 · <b>Ctrl+S</b>: 프로젝트 저장<br/>
+          <br/>
+          범위(사각형) 마커를 선택하면 네 모서리·네 변에 손잡이가 나타나 드래그로 크기를 조절할 수 있습니다. 태블릿에서는 손가락 하나로 그리기·이동·선택을, 손가락 두 개로 확대/축소(핀치)를 할 수 있습니다.<br/>
+          <br/>
+          이미지 회전·자르기·지우개(브러시)처럼 도면 이미지 자체를 바꾸는 작업도 <b>Ctrl+Z(실행취소)</b>로 함께 되돌릴 수 있습니다(단, 이미지가 바뀌는 작업은 최근 8회까지만 기록됩니다).<br/>
+          <br/>
+          모든 처리는 브라우저 안에서만 이루어지며 인터넷 연결 없이 사용할 수 있습니다.
+        </div>
+      </div>
+    </aside>
+
+    <!-- CENTER CANVAS -->
+    <main class="canvas-area">
+      <div class="toolbar2">
+        <div class="toolbar-row">
+          <div class="zoom-group">
+            확대/축소
+            <select id="zoomSelect">
+              <option value="0.25">25%</option>
+              <option value="0.5">50%</option>
+              <option value="0.75">75%</option>
+              <option value="1" selected>100%</option>
+              <option value="1.5">150%</option>
+              <option value="2">200%</option>
+            </select>
+            <span class="val" id="zoomPctLabel" title="도면 위에서 마우스 휠로 캐드처럼 확대/축소, 휠 버튼을 누른 채 드래그하면 화면 이동">100%</span>
+          </div>
+          <div class="tool-slider">아이콘 크기
+            <input type="range" id="sizeSlider" min="0.6" max="2" step="0.1" value="1" />
+            <span class="val" id="sizeVal">100%</span>
+          </div>
+          <div class="toolbar-sep"></div>
+          <div class="btn-group">
+            <button id="btnSelectMode" title="선택 모드 — 드래그 영역에 완전히 들어온 마커만 선택 (단축키 s)">⬚ 선택 (S)</button>
+            <button id="btnMoveMode" title="이동 모드 — 마커 이동 전용, 빈 곳 클릭으로는 아무 것도 생기지 않음 (단축키 m)">🖐 이동 (M)</button>
+            <button id="btnEraseMode" title="지우개 모드 — 마커는 클릭으로 삭제, 도면은 드래그하면 브러시로 지워짐 (단축키 d)">🧽 지우개 (D)</button>
+          </div>
+          <div class="tool-slider" id="eraseBrushGroup" style="display:none;">브러시 굵기
+            <input type="range" id="eraseBrushSlider" min="0.4" max="4" step="0.1" value="1" />
+            <span class="val" id="eraseBrushVal">100%</span>
+          </div>
+          <div class="toolbar-sep"></div>
+          <div class="btn-group">
+            <button id="btnRotateCCW" title="도면 이미지를 왼쪽으로 90° 회전">⟲ 좌회전</button>
+            <button id="btnRotateCW" title="도면 이미지를 오른쪽으로 90° 회전">⟳ 우회전</button>
+            <button id="btnCropMode" title="도면 이미지의 일부만 남기고 잘라냅니다 (단축키 c)">✂ 자르기 (C)</button>
+          </div>
+          <span id="cropActions">
+            <button class="primary" id="btnCropApply">자르기 적용</button>
+            <button id="btnCropCancel">취소</button>
+          </span>
+          <div class="toolbar-sep"></div>
+          <button id="btnGridView" title="모든 도면을 축소판으로 한 번에 훑어봅니다 (단축키 g)">🔲 전체 보기 (G)</button>
+          <button id="btnCoordGuide" title="10% 간격 점선 그리드와 커서 위치의 정확한 % 좌표를 보여줍니다. CSV에 좌표를 직접 입력할 때 참고하세요 (단축키 q)">📐 좌표안내 (Q)</button>
+        </div>
+        <div class="toolbar-row">
+          <div class="mode-hint" id="modeHint">현재 선택된 유형: <b id="activeTypeLabel">벽체</b> (단축키 1/2) — 클릭해 추가, 드래그로 방향 지정 (Shift: 수직/수평 고정)</div>
+          <div style="flex:1;"></div>
+          <div class="tool-slider">형식
+            <select id="exportFormatSelect">
+              <option value="png" selected>PNG</option>
+              <option value="pdf">PDF</option>
+            </select>
+          </div>
+          <select id="pdfPageSizeSelect" style="display:none;font-size:12.5px;padding:5px 6px;border-radius:6px;border:1px solid var(--gridline);">
+            <option value="original" selected>원본 비율</option>
+            <option value="a4l">A4 가로</option>
+            <option value="a4p">A4 세로</option>
+            <option value="a3l">A3 가로</option>
+            <option value="a3p">A3 세로</option>
+          </select>
+          <button id="btnExportAll" title="현재 형식(PNG/PDF)으로 모든 도면을 한 번에 저장합니다. PDF는 도면 수만큼 페이지가 있는 파일 1개로, PNG는 도면별로 순서대로 저장됩니다.">🗂 전체 도면 일괄 저장</button>
+          <button class="primary" id="btnExportPNG">🖼 마킹 도면 PNG로 저장</button>
+        </div>
+      </div>
+      <div class="canvas-wrap" id="canvasWrap">
+        <div class="canvas-shell" id="canvasShell">
+          <canvas id="mainCanvas" tabindex="0"></canvas>
+        </div>
+        <div class="thumb-grid" id="thumbGrid"></div>
+      </div>
+    </main>
+
+    <!-- RIGHT SIDEBAR -->
+    <aside class="sidebar right">
+      <div>
+        <div class="panel-title" style="display:flex;align-items:center;justify-content:space-between;gap:6px;">
+          <span>결함 목록 (<span id="markerCount">0</span>건)</span>
+          <button type="button" id="btnEditFieldOptions" style="font-size:10.5px;padding:3px 7px;font-weight:400;text-transform:none;letter-spacing:0;" title="유형·부재명·결함명 드롭다운의 선택지 목록을 수정합니다">⚙ 목록수정</button>
+        </div>
+        <div id="tableWrap">
+          <div class="marker-list" id="markerList"></div>
+          <div class="empty-marker-note" id="emptyMarkerNote">표시된 결함이 없습니다. 도면을 클릭해 추가해보세요.</div>
+        </div>
+        <div class="legend-preview" id="legendPreview"></div>
+      </div>
+
+      <hr class="sep" />
+
+      <div>
+        <div class="panel-title">좌표 입력·내보내기</div>
+        <div class="sidebar-btn-grid">
+          <label class="file-label" style="display:block;">
+            <button type="button" id="btnImportCSVVisual" style="width:100%;">📥 CSV 불러오기</button>
+            <input type="file" id="importCSVInput" accept=".csv" />
+          </label>
+          <button type="button" id="btnTableInput" style="width:100%;">📋 표로 입력</button>
+        </div>
+        <div style="font-size:10.5px;color:var(--muted);margin-top:5px;line-height:1.5;">
+          CSV 형식: <code>위치유형,X(%),Y(%),각도,비고</code>. 엑셀 저장 시 "CSV UTF-8"을 사용하세요.
+        </div>
+        <div class="sidebar-btn-grid" style="margin-top:10px;">
+          <button id="btnExportCSV" style="width:100%;">📤 CSV로 저장</button>
+          <button id="btnExportXLSX" style="width:100%;">📊 엑셀로 저장</button>
+        </div>
+        <div style="font-size:10.5px;color:var(--muted);margin-top:5px;">모든 도면의 결함을 표로 저장합니다(엑셀은 색상·서식 포함).</div>
+        <button id="btnShowStats" style="width:100%;margin-top:10px;">📈 통계 보기</button>
+      </div>
+
+      <hr class="sep" />
+
+      <div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;">
+          <label class="check-row">
+            <input type="checkbox" id="titleBlockToggle" />
+            표제란(도곽) 표시
+          </label>
+          <button type="button" id="btnReopenTbPreview" style="display:none;font-size:10.5px;padding:3px 7px;" title="인쇄 미리보기 다시 열기">👁 미리보기</button>
+        </div>
+        <div class="panel-title" style="margin-top:10px;">표제란 입력</div>
+        <div class="tb-template-row">
+          <select id="tbTemplateSelect" title="자주 쓰는 표제란 값을 템플릿으로 저장해뒀다가 바로 불러올 수 있습니다">
+            <option value="">템플릿 불러오기…</option>
+          </select>
+          <button type="button" id="btnApplyTemplate" title="선택한 템플릿 값 적용">적용</button>
+          <button type="button" id="btnSaveTemplate" title="현재 용역명·구분·구조형식·도면제목을 새 템플릿으로 저장">💾</button>
+          <button type="button" id="btnDeleteTemplate" title="선택한 템플릿 삭제">🗑</button>
+        </div>
+        <div class="titleblock-fields">
+          <label class="tb-field">용역명
+            <input type="text" id="projectNameInput" placeholder="예: 2026년 정밀안전점검" />
+          </label>
+          <label class="tb-field">구분
+            <input type="text" id="siteNameInput" placeholder="예: OO아파트 1동" />
+          </label>
+          <label class="tb-field">조사위치
+            <input type="text" id="surveyLocationInput" placeholder="예: 2층 계단실" />
+          </label>
+          <label class="tb-field">구조형식
+            <input type="text" id="structureTypeInput" placeholder="예: 철근콘크리트 벽식구조" />
+          </label>
+        </div>
+        <div class="side-field">도면 제목 (비워두면 자동 생성)
+          <input type="text" class="side-input" id="docTitleInput" placeholder="예: 외관조사망도" />
+        </div>
+      </div>
+
+      <div class="footer-note">
+        Ver 2.0 · 건축시설물 정밀안전진단/점검용 결함 마킹 도구
+      </div>
+    </aside>
+
+  </div>
+</div>
+
+<!-- 표로 좌표 입력 모달: CSV 파일을 만들지 않고도 표 형태 UI에서 바로 여러 결함 좌표를 입력/붙여넣기 할 수 있음 -->
+<div class="modal-backdrop" id="tableInputBackdrop" style="display:none;">
+  <div class="modal-panel" id="tableInputPanel">
+    <div class="modal-header" id="tableInputDragHandle" title="여기를 마우스로 눌러 끌면 창을 옮길 수 있습니다">
+      <div>
+        <div class="modal-title">표로 좌표 입력 <span style="font-size:11px;font-weight:400;color:var(--muted);">(제목줄 드래그로 창 이동)</span></div>
+        <div class="modal-sub" id="tableInputSub">엑셀 표를 복사해 첫 칸에 붙여넣으면(Ctrl+V) 한 번에 채워집니다.</div>
+      </div>
+      <button type="button" id="btnTableInputClose" class="icon-btn" style="font-size:18px;">✕</button>
+    </div>
+    <div class="modal-body">
+      <table class="input-table" id="inputTable">
+        <thead>
+          <tr>
+            <th style="width:26px;">#</th>
+            <th style="width:130px;">유형</th>
+            <th style="width:90px;" id="thColX">X(%)</th>
+            <th style="width:90px;" id="thColY">Y(%)</th>
+            <th style="width:64px;">각도</th>
+            <th style="width:74px;">인출선배율</th>
+            <th>비고</th>
+            <th style="width:30px;"></th>
+          </tr>
+        </thead>
+        <tbody id="inputTableBody"></tbody>
+      </table>
+      <div style="display:flex;gap:8px;margin-top:8px;">
+        <button type="button" id="btnAddInputRow" class="add-drawing-btn" style="flex:1;">+ 행 추가</button>
+        <button type="button" id="btnLoadCurrentMarkers" class="add-drawing-btn" style="flex:1;" title="현재 도면에 이미 찍힌 마커들을 표로 불러와 값을 고친 뒤 한 번에 반영할 수 있습니다">📥 현재 도면의 마커 불러와 편집</button>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <div style="font-size:11px;color:var(--muted);flex:1;" id="tableInputFootNote">X/Y는 % 좌표(0~100). "범위" 유형은 "10~20"처럼 시작~끝을 물결(~)로 함께 입력하세요.</div>
+      <button type="button" id="btnTableInputCancel">취소</button>
+      <button type="button" class="primary" id="btnTableInputApply">현재 도면에 추가</button>
+    </div>
+  </div>
+</div>
+
+<!-- 결함 목록 카드의 유형/부재명/결함명 드롭다운에 나타나는 선택지 목록을 사용자가 직접 고칠 수 있는 모달 -->
+<div class="modal-backdrop" id="fieldOptionsBackdrop" style="display:none;">
+  <div class="modal-panel" style="width:min(480px, 92vw);">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title">결함 목록 선택지 수정</div>
+        <div class="modal-sub">우측 결함 목록 카드의 "유형"·"부재명"·"결함명" 드롭다운에 나타날 선택지를 줄마다 하나씩 입력하세요. 여기서 지운 항목도 이미 입력된 결함의 값은 그대로 남습니다.</div>
+      </div>
+      <button type="button" id="btnFieldOptionsClose" class="icon-btn" style="font-size:18px;">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <label class="side-field">유형 선택지 (예: 벽체, 천장, 바닥)
+          <textarea id="optFieldType" rows="4" style="font-size:12.5px;padding:8px;border:1px solid var(--gridline);border-radius:6px;font-family:inherit;resize:vertical;background:var(--surface-1);color:var(--text-primary);"></textarea>
+        </label>
+        <label class="side-field">부재명 선택지 (예: 콘크리트, 조적, 마감재, 철근)
+          <textarea id="optFieldMember" rows="5" style="font-size:12.5px;padding:8px;border:1px solid var(--gridline);border-radius:6px;font-family:inherit;resize:vertical;background:var(--surface-1);color:var(--text-primary);"></textarea>
+        </label>
+        <label class="side-field">결함명 선택지 (예: 수직균열, 박리, 누수흔적 …)
+          <textarea id="optFieldDefect" rows="10" style="font-size:12.5px;padding:8px;border:1px solid var(--gridline);border-radius:6px;font-family:inherit;resize:vertical;background:var(--surface-1);color:var(--text-primary);"></textarea>
+        </label>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <div style="font-size:11px;color:var(--muted);flex:1;">각 드롭다운 맨 아래에는 항상 "직접입력…"이 함께 나타나 목록에 없는 값도 입력할 수 있습니다.</div>
+      <button type="button" id="btnFieldOptionsReset">기본값으로</button>
+      <button type="button" id="btnFieldOptionsCancel">취소</button>
+      <button type="button" class="primary" id="btnFieldOptionsApply">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- 결함(마커)별 사진 첨부 — 카드의 📷 버튼을 누르면 그 결함의 사진을 추가/확대보기/삭제할 수 있는 모달 -->
+<div class="modal-backdrop" id="photoBackdrop" style="display:none;">
+  <div class="modal-panel" style="width:min(640px, 92vw);">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title">결함 사진</div>
+        <div class="modal-sub">이 결함에 현장 사진을 추가해 보관합니다. 프로젝트 저장 파일에 함께 저장됩니다.</div>
+      </div>
+      <button type="button" id="btnPhotoModalClose" class="icon-btn" style="font-size:18px;">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="photoGridView">
+        <div style="display:flex;gap:8px;">
+          <label class="file-label" style="display:block;flex:1;">
+            <button type="button" id="btnAddPhotos" class="add-drawing-btn" style="width:100%;">+ 사진 추가</button>
+            <input type="file" id="photoFileInput" accept="image/*" multiple />
+          </label>
+          <button type="button" id="btnOpenCamera" class="add-drawing-btn" style="flex:1;">📷 사진 촬영</button>
+        </div>
+        <div class="photo-grid" id="photoGrid" style="margin-top:10px;"></div>
+        <div class="empty-marker-note" id="photoEmptyNote" style="display:none;">아직 추가된 사진이 없습니다.</div>
+      </div>
+      <div id="photoPreviewView" style="display:none;">
+        <button type="button" id="btnPhotoBack" style="margin-bottom:10px;">◀ 목록으로</button>
+        <div style="display:flex;align-items:center;justify-content:center;gap:10px;">
+          <button type="button" id="btnPhotoPrev" title="이전 사진">◀</button>
+          <img id="photoPreviewImg" style="max-width:100%;max-height:56vh;border-radius:8px;border:1px solid var(--gridline);" />
+          <button type="button" id="btnPhotoNext" title="다음 사진">▶</button>
+        </div>
+      </div>
+      <div id="photoCameraView" style="display:none;">
+        <div style="font-size:11.5px;color:var(--muted);margin-bottom:8px;">카메라를 웹캠 등에서 사용할 수 있어야 합니다. 처음 여는 경우 카메라 접근을 허용해주세요.</div>
+        <video id="photoCameraVideo" autoplay playsinline style="width:100%;max-height:56vh;border-radius:8px;border:1px solid var(--gridline);background:#000;"></video>
+        <div style="display:flex;gap:8px;margin-top:10px;">
+          <button type="button" id="btnCameraCancel" style="flex:1;">취소</button>
+          <button type="button" class="primary" id="btnCameraCapture" style="flex:1;">📸 촬영해서 추가</button>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <div style="font-size:11px;color:var(--muted);flex:1;" id="photoModalFoot"></div>
+      <button type="button" class="danger" id="btnPhotoDeleteCurrent" style="display:none;">이 사진 삭제</button>
+      <button type="button" id="btnPhotoModalCloseFooter">닫기</button>
+    </div>
+  </div>
+</div>
+
+<!-- 결함 통계 요약 — 전체 도면을 대상으로 도면별/유형별/부재명별/결함명별 개수를 한눈에 보여준다 -->
+<div class="modal-backdrop" id="statsBackdrop" style="display:none;">
+  <div class="modal-panel" style="width:min(640px, 92vw);">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title">결함 통계 요약</div>
+        <div class="modal-sub">모든 도면을 합산한 결과입니다. 값을 고치면 창을 다시 열 때마다 최신 내용으로 갱신됩니다.</div>
+      </div>
+      <button type="button" id="btnStatsClose" class="icon-btn" style="font-size:18px;">✕</button>
+    </div>
+    <div class="modal-body" id="statsBody"></div>
+    <div class="modal-footer">
+      <div style="font-size:11px;color:var(--muted);flex:1;">결함이 없는 항목은 표에서 제외됩니다.</div>
+      <button type="button" id="btnStatsCloseFooter">닫기</button>
+    </div>
+  </div>
+</div>
+
+<!-- 표제란(도곽) 인쇄 미리보기 — "표제란(도곽) 표시" 체크박스를 켜면 실제 PNG/PDF 저장 결과와 같은 모습을 미리 보여준다 -->
+<div class="modal-backdrop" id="tbPreviewBackdrop" style="display:none;">
+  <div class="modal-panel" style="width:min(1100px, 96vw);">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title">표제란(도곽) 인쇄 미리보기</div>
+        <div class="modal-sub">PNG/PDF로 저장했을 때의 실제 모습입니다. 입력값을 바꾸면 자동으로 갱신됩니다.</div>
+      </div>
+      <button type="button" id="btnTbPreviewClose" class="icon-btn" style="font-size:18px;">✕</button>
+    </div>
+    <div class="modal-body" style="background:#e7e6e1;display:flex;justify-content:center;">
+      <canvas id="tbPreviewCanvas" style="max-width:100%;height:auto;box-shadow:0 2px 14px rgba(11,11,11,0.25);"></canvas>
+      <div class="empty-marker-note" id="tbPreviewNote" style="display:none;">먼저 도면을 추가해주세요.</div>
+    </div>
+    <div class="modal-footer">
+      <div style="font-size:11px;color:var(--muted);flex:1;">이 창을 닫아도 "표제란(도곽) 표시" 설정은 유지되어 저장 시 계속 포함됩니다.</div>
+      <button type="button" id="btnTbPreviewCloseFooter">닫기</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  // ---------- 위치 유형 정의: 벽체(화살표 인출선) / 바닥·천장(점 인출선) — 엑셀 표준 색상 ----------
+  const DEFECT_TYPES = [
+    {key:'wall', label:'벽체',     color:'#FF0000', shape:'circle', text:'#ffffff', endStyle:'arrow', shortcut:'1'}, // 엑셀 표준색상 "빨강"
+    {key:'flat', label:'바닥/천장', color:'#0047AB', shape:'circle', text:'#ffffff', endStyle:'dot',   shortcut:'2'}, // 기존보다 진한 파랑
+    {key:'wall_area', label:'벽체(범위)',     color:'#FF0000', shape:'circle', text:'#ffffff', endStyle:'rect', shortcut:'3'}, // 넓은 범위 손상: 사각형+빗금
+    {key:'flat_area', label:'바닥/천장(범위)', color:'#0047AB', shape:'circle', text:'#ffffff', endStyle:'rect', shortcut:'4'},
+  ];
+  const TYPE_MAP = {}; DEFECT_TYPES.forEach(t=>TYPE_MAP[t.key]=t);
+  function getType(key){ return TYPE_MAP[key] || DEFECT_TYPES[0]; }
+
+  // ---------- 결함 목록(우측 패널) 카드의 구조화 입력 항목 ----------
+  // 마킹 자체의 색상/모양을 결정하는 DEFECT_TYPES(위)와는 별개로, 보고서에 들어갈 "유형(부위)·부재명·결함명"을
+  // 드롭다운(+직접입력)으로, "폭·길이·개수·#"는 자유 입력으로 받는다. 드롭다운 선택지는 localStorage에 저장해
+  // "⚙ 목록수정" 버튼으로 사용자가 직접 고칠 수 있다.
+  const REPORT_FIELD_DEFAULTS = {
+    rptType:   ['벽체','천장','바닥'],
+    rptMember: ['콘크리트','조적','마감재','철근'],
+    rptDefect: ['수직균열','수평균열','경사균열','망상균열','박리','박락','노출','누수흔적','백태흔적'],
+  };
+  const REPORT_FIELD_STORE_KEY = 'defectMarkerReportFieldOptions_v1';
+  let reportFieldOptions = loadReportFieldOptions();
+  function loadReportFieldOptions(){
+    try{
+      const raw = localStorage.getItem(REPORT_FIELD_STORE_KEY);
+      if(raw){
+        const parsed = JSON.parse(raw);
+        return {
+          rptType: Array.isArray(parsed.rptType) ? parsed.rptType : REPORT_FIELD_DEFAULTS.rptType.slice(),
+          rptMember: Array.isArray(parsed.rptMember) ? parsed.rptMember : REPORT_FIELD_DEFAULTS.rptMember.slice(),
+          rptDefect: Array.isArray(parsed.rptDefect) ? parsed.rptDefect : REPORT_FIELD_DEFAULTS.rptDefect.slice(),
+        };
+      }
+    } catch(err){ /* 저장된 값이 손상되었으면 기본값으로 대체 */ }
+    return { rptType: REPORT_FIELD_DEFAULTS.rptType.slice(), rptMember: REPORT_FIELD_DEFAULTS.rptMember.slice(), rptDefect: REPORT_FIELD_DEFAULTS.rptDefect.slice() };
+  }
+  function saveReportFieldOptions(){
+    try{ localStorage.setItem(REPORT_FIELD_STORE_KEY, JSON.stringify(reportFieldOptions)); } catch(err){ /* 저장 실패해도 앱 동작에는 지장 없음 */ }
+  }
+
+  // ---------- 표제란 템플릿(자주 쓰는 용역명·구분·구조형식·도면제목을 이름 붙여 저장) ----------
+  const TB_TEMPLATE_STORE_KEY = 'defectMarkerTitleBlockTemplates_v1';
+  function loadTbTemplates(){
+    try{
+      const raw = localStorage.getItem(TB_TEMPLATE_STORE_KEY);
+      const parsed = raw ? JSON.parse(raw) : [];
+      return Array.isArray(parsed) ? parsed : [];
+    } catch(err){ return []; }
+  }
+  function saveTbTemplates(list){
+    try{ localStorage.setItem(TB_TEMPLATE_STORE_KEY, JSON.stringify(list)); } catch(err){ /* 저장 실패해도 앱 동작에는 지장 없음 */ }
+  }
+  let tbTemplates = loadTbTemplates();
+
+  // ---------- 상태 ----------
+  let drawings = [];          // {id,name,imgSrc,imgEl,naturalW,naturalH,baseW,baseH,markers:[{id,typeKey,xPct,yPct,angle,lenMult,note,
+                               //   rectXPct,rectYPct,rectWPct,rectHPct,rectAngle, rptType,rptMember,rptDefect,rptWidth,rptLength,rptCount,rptTag}]}
+  let activeDrawingId = null;
+  let activeTypeKey = 'wall';
+  let selectedIds = new Set();
+  let zoom = 1;
+  let iconSizeMult = 1;
+  let leaderLenMult = 1;
+  // 통합 실행취소 기록: 마커만 바뀌는 작업과 도면 이미지 자체가 바뀌는 작업(자르기/회전/지우개브러시)을
+  // 하나의 스택에 시간 순서대로 함께 기록해 "실행취소" 버튼 하나로 되돌릴 수 있게 한다.
+  // 항목은 {type:'markers', drawingId, markers} 또는 {type:'image', drawingId, imgSrc, naturalW, naturalH, baseW, baseH, markers} 형태.
+  // 이미지 스냅샷은 용량이 크므로(Data URL 전체를 들고 있음) 스택 전체 길이와 별개로 최근 8개까지만 유지한다.
+  let undoStack = [];
+  let redoStack = []; // Ctrl+Shift+Z / Ctrl+Y로 되돌리기(undo)를 다시 앞으로 돌릴 때 사용
+  let pendingAction = null; // {mode:'move'|'rotate'|'create'|'rubberband'|'crop', hitId, startX, startY, moved}
+  let cropMode = false;
+  let cropRect = null; // {x,y,w,h} in canvas backing-px
+  let moveMode = false; // true = 이동 모드 (마커 이동 전용, 빈 곳 클릭/드래그는 아무 동작 없음)
+  let selectMode = false; // true = 선택 모드 (빈 곳 드래그 = 러버밴드 다중 선택)
+  let eraseMode = false; // true = 지우개 모드 (마커 클릭 삭제 + 도면 위 드래그는 흰색 브러시)
+  let canvasDPR = 1; // 화면 표시용 캔버스의 실제 해상도 배율(고해상도 디스플레이 대응)
+  let gridViewMode = false; // true = 모든 도면을 축소판으로 훑어보는 화면
+  let eraseBrushMult = 1; // 지우개 브러시 굵기 배율
+  let eraseCursorPt = null; // {x,y} 캔버스 backing-px — 지우개 모드 브러시 크기 미리보기용
+  // 범위(사각형) 마커 3클릭 생성 상태: null(대기) → {stage:1,x1,y1}(첫 코너 찍음) → {stage:2,x1,y1,x2,y2}(반대 코너 찍음, 배지 위치 대기)
+  let pendingRectCreate = null;
+  let rectCreateCurX = 0, rectCreateCurY = 0; // 3클릭 진행 중 현재 마우스 위치(미리보기용)
+  let coordGuideOn = false; // true = 좌표 안내(10% 간격 점선 그리드 + 커서 위치 % 실시간 표시) 켜짐
+  let lastMouseCanvasPt = null; // {x,y} 캔버스 backing-px — 좌표 안내 커서 표시용
+
+  function uid(){ return 'm'+Math.random().toString(36).slice(2,10)+Date.now().toString(36); }
+  function clamp(v,lo,hi){ return Math.max(lo, Math.min(hi, v)); }
+
+  function getActiveDrawing(){ return drawings.find(d=>d.id===activeDrawingId) || null; }
+
+  // ---------- 도형 그리기 ----------
+  function polygonPathBuild(ctx,cx,cy,r,sides,startDeg){
+    for(let i=0;i<sides;i++){
+      const ang = (startDeg + i*360/sides) * Math.PI/180;
+      const x = cx + r*Math.cos(ang), y = cy + r*Math.sin(ang);
+      if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+    }
+  }
+  // 좌상단 (x,y) 기준 w×h 크기의 둥근 사각형 경로(표제란 라벨 배지용, roundedRectPath와 달리 정사각형 가정 없음)
+  function roundedRectXYWH(ctx,x,y,w,h,r){
+    const rr = Math.min(r, w/2, h/2);
+    ctx.beginPath();
+    ctx.moveTo(x+rr, y);
+    ctx.arcTo(x+w, y, x+w, y+h, rr);
+    ctx.arcTo(x+w, y+h, x, y+h, rr);
+    ctx.arcTo(x, y+h, x, y, rr);
+    ctx.arcTo(x, y, x+w, y, rr);
+    ctx.closePath();
+  }
+  function roundedRectPath(ctx,cx,cy,halfSize,radius){
+    const x = cx-halfSize, y = cy-halfSize, s = halfSize*2, rr = Math.min(radius, halfSize);
+    ctx.moveTo(x+rr, y);
+    ctx.arcTo(x+s, y, x+s, y+s, rr);
+    ctx.arcTo(x+s, y+s, x, y+s, rr);
+    ctx.arcTo(x, y+s, x, y, rr);
+    ctx.arcTo(x, y, x+s, y, rr);
+  }
+  function drawShapePath(ctx, shape, cx, cy, r){
+    ctx.beginPath();
+    switch(shape){
+      case 'circle': ctx.arc(cx,cy,r,0,Math.PI*2); break;
+      case 'square': roundedRectPath(ctx,cx,cy,r*0.82,r*0.28); break;
+      default: ctx.arc(cx,cy,r,0,Math.PI*2);
+    }
+    ctx.closePath();
+  }
+
+  // 흰색 배경 + 유형 색상 테두리(링) + 유형 색상 숫자 — 테두리와 숫자 색이 같고, 그 사이는 흰색으로 비워 도면 위에서도 잘 읽히는 디자인
+  function drawMarker(ctx, type, cx, cy, r, numberLabel, selected, numRot){
+    ctx.save();
+    if(selected){
+      ctx.beginPath();
+      ctx.arc(cx,cy,r*1.6,0,Math.PI*2);
+      ctx.fillStyle = 'rgba(42,120,214,0.16)';
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(cx,cy,r*1.6,0,Math.PI*2);
+      ctx.strokeStyle = 'rgba(42,120,214,0.55)';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    }
+    const ringW = Math.max(1.6, r*0.24);
+    const ringR = Math.max(1, r - ringW/2);
+    ctx.shadowColor = 'rgba(11,11,11,0.30)';
+    ctx.shadowBlur = Math.max(3, r*0.35);
+    ctx.shadowOffsetY = Math.max(1, r*0.1);
+    drawShapePath(ctx, type.shape, cx, cy, ringR);
+    ctx.fillStyle = '#ffffff';
+    ctx.fill();
+    ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+    drawShapePath(ctx, type.shape, cx, cy, ringR);
+    ctx.lineWidth = ringW;
+    ctx.strokeStyle = type.color;
+    ctx.stroke();
+    if(numberLabel !== undefined && numberLabel !== null && numberLabel !== ''){
+      ctx.save();
+      ctx.translate(cx, cy);
+      if(numRot){ ctx.rotate(numRot*Math.PI/180); }
+      ctx.font = `700 ${Math.round(r*1.0)}px system-ui, -apple-system, "Segoe UI", sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = type.color;
+      ctx.fillText(String(numberLabel), 0, r*0.03);
+      ctx.restore();
+    }
+    ctx.restore();
+  }
+
+  // 결함 목록(우측 패널)·표제란 하단 범례에서 공통으로 쓰는 유형 아이콘.
+  // "범위" 유형(endStyle==='rect')은 실제 도면에 그려지는 모양과 똑같이 사각형+빗금으로,
+  // 나머지(화살표/원형 인출선) 유형은 기존 번호 배지와 같은 흰 원+색 테두리로 그려서
+  // 화면 미리보기·인쇄된 표제란 범례·실제 마킹이 서로 다른 모양으로 보이지 않도록 한다.
+  function drawLegendIcon(ctx, type, cx, cy, r){
+    if(type.endStyle === 'rect'){
+      const rx = cx-r, ry = cy-r, rw = r*2, rh = r*2;
+      ctx.save();
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(rx, ry, rw, rh);
+      const rectPath = new Path2D(); rectPath.rect(rx, ry, rw, rh);
+      ctx.save();
+      ctx.clip(rectPath);
+      ctx.strokeStyle = type.color;
+      ctx.lineWidth = Math.max(1, r*0.16);
+      const step = Math.max(3, r*0.5);
+      const diag = Math.hypot(rw,rh)*2 + step*2;
+      ctx.beginPath();
+      for(let off=-diag; off<=diag; off+=step){
+        ctx.moveTo(cx+off-diag, cy-diag);
+        ctx.lineTo(cx+off+diag, cy+diag);
+      }
+      ctx.stroke();
+      ctx.restore();
+      ctx.strokeStyle = type.color;
+      ctx.lineWidth = Math.max(1.4, r*0.22);
+      ctx.strokeRect(rx, ry, rw, rh);
+      ctx.restore();
+    } else {
+      drawMarker(ctx, type, cx, cy, r, '', false);
+    }
+  }
+
+  function typeSwatchSVG(type){
+    const c = document.createElement('canvas'); c.width=32; c.height=32;
+    const ctx = c.getContext('2d');
+    drawLegendIcon(ctx, type, 16, 16, 11);
+    return `<img src="${c.toDataURL()}" alt="${type.label}"/>`;
+  }
+
+  // ---------- 인출선(리더선) : 벽체=삼각형 화살표 끝, 바닥/천장=원형 끝 ----------
+  // 마커별로 다른 인출선 길이(lenMult, 드래그로 지정)를 지원. 지정 안 된 마커는 전역 슬라이더 기본값 사용.
+  function leaderLenForMarker(m, r){
+    const lm = (m && typeof m.lenMult === 'number' && isFinite(m.lenMult) && m.lenMult>0) ? m.lenMult : 1;
+    return r*2.6*leaderLenMult*lm;
+  }
+
+  function drawMarkerWithLeader(ctx, type, cx, cy, r, angleDeg, len, numberLabel, selected, numRot){
+    const rad = (angleDeg||0) * Math.PI/180;
+    const tipX = cx + Math.cos(rad)*len, tipY = cy + Math.sin(rad)*len;
+    const headLen = r*0.85, headAngle = 22*Math.PI/180;
+    // 화살표일 때는 선을 화살촉 밑변 안쪽까지만 그려서, 둥근 선 끝(lineCap round)이
+    // 뾰족한 꼭짓점 밖으로 삐져나와 뭉툭해 보이는 것을 방지한다.
+    const pullback = type.endStyle==='arrow' ? headLen*0.6 : 0;
+    const lineEndX = tipX - Math.cos(rad)*pullback;
+    const lineEndY = tipY - Math.sin(rad)*pullback;
+    ctx.save();
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = type.color;
+    ctx.lineWidth = Math.max(2, r*0.3);
+    ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(lineEndX,lineEndY); ctx.stroke();
+    if(type.endStyle === 'arrow'){
+      // 속이 채워진 삼각형 화살촉 (기존 ">" 두 획보다 깔끔하게)
+      const a1 = rad + Math.PI - headAngle, a2 = rad + Math.PI + headAngle;
+      ctx.beginPath();
+      ctx.moveTo(tipX, tipY);
+      ctx.lineTo(tipX + Math.cos(a1)*headLen, tipY + Math.sin(a1)*headLen);
+      ctx.lineTo(tipX + Math.cos(a2)*headLen, tipY + Math.sin(a2)*headLen);
+      ctx.closePath();
+      ctx.fillStyle = type.color;
+      ctx.fill();
+    } else {
+      ctx.beginPath();
+      ctx.arc(tipX, tipY, r*0.34, 0, Math.PI*2);
+      ctx.fillStyle = type.color;
+      ctx.fill();
+    }
+    ctx.restore();
+    drawMarker(ctx, type, cx, cy, r, numberLabel, selected, numRot);
+    return { tipX, tipY };
+  }
+
+  // ---------- 범위(사각형) 마커의 회전 좌표 변환 ----------
+  // 화살표 마커처럼 사각형 마커도 방향(회전각)을 가질 수 있다. rectXPct/rectYPct/rectWPct/rectHPct는
+  // 항상 "회전 전(로컬)" 축에 나란한 사각형을 정의하고, rectAngle(도)만큼 사각형의 중심을 축으로 돌려서
+  // 그린다 — 즉 중심점은 회전과 무관하게 고정.
+  function rotateAroundPt(px, py, cx, cy, angleDeg){
+    const rad = angleDeg*Math.PI/180;
+    const dx = px-cx, dy = py-cy;
+    const cos = Math.cos(rad), sin = Math.sin(rad);
+    return { x: cx + dx*cos - dy*sin, y: cy + dx*sin + dy*cos };
+  }
+  // 세계 좌표 → 사각형의 로컬(회전 전) 좌표로 (역회전)
+  function toRectLocal(px, py, cx, cy, angleDeg){ return rotateAroundPt(px, py, cx, cy, -(angleDeg||0)); }
+  // 사각형의 로컬(회전 전) 좌표 → 세계 좌표로 (정회전)
+  function toRectWorld(px, py, cx, cy, angleDeg){ return rotateAroundPt(px, py, cx, cy, angleDeg||0); }
+
+  // ---------- 범위(영역) 마커 : 사각형(첫 코너→반대 코너)+빗금, 번호 배지는 별도 위치(3클릭 생성) ----------
+  // 리더선은 사각형 "중심"에서 배지까지 이어지지만, 사각형 내부에 해당하는 구간은 사각형 테두리와
+  // 겹쳐 지저분해 보이므로 그리지 않는다 — 중심→배지 직선이 사각형 경계를 빠져나가는 교차점만 계산해
+  // 그 지점부터 배지까지만 그린다(사각형이 축에 나란하므로 반직선-AABB 교차로 간단히 구해진다).
+  // rectAngle(도)이 있으면 사각형 본체(빗금·테두리)만 중심을 축으로 회전시켜 그리고, 번호 배지 자체는
+  // 회전하지 않는다(화살표 마커의 번호 배지와 동일하게 항상 정방향으로 읽히도록).
+  // 사각형은 (화살표가 번호 배지를 축으로 방향을 바꾸는 것과 같은 조작감을 주기 위해) 자기 자신의 중심이
+  // 아니라 "번호 배지(원)" 위치를 회전축으로 돌아간다 — 회전각이 커질수록 사각형이 배지를 중심으로 함께 돈다.
+  function drawAreaMarker(ctx, type, rx, ry, rw, rh, badgeX, badgeY, r, numberLabel, selected, numRot, rectAngle){
+    ctx.save();
+    const angle = rectAngle||0;
+    const cx = rx+rw/2, cy = ry+rh/2; // 사각형 자체의 중심(로컬 좌표) — 빗금 패턴과 탈출점 계산 기준
+    ctx.save();
+    ctx.translate(badgeX, badgeY);
+    ctx.rotate(angle*Math.PI/180);
+    ctx.translate(-badgeX, -badgeY);
+    const rectPath = new Path2D();
+    rectPath.rect(rx, ry, rw, rh);
+    ctx.save();
+    ctx.clip(rectPath);
+    ctx.strokeStyle = type.color;
+    ctx.lineWidth = Math.max(1.2, r*0.14);
+    const step = Math.max(4, r*0.42);
+    const diag = Math.hypot(rw,rh)*2 + step*2;
+    ctx.beginPath();
+    for(let off=-diag; off<=diag; off+=step){
+      ctx.moveTo(cx+off-diag, cy-diag);
+      ctx.lineTo(cx+off+diag, cy+diag);
+    }
+    ctx.stroke();
+    ctx.restore();
+    ctx.strokeStyle = type.color;
+    ctx.lineWidth = Math.max(1.6, r*0.2);
+    ctx.strokeRect(rx, ry, rw, rh);
+    ctx.restore();
+
+    // 배지까지 이어지는 리더선의 사각형 탈출점: 회전축이 배지 자신이므로, 로컬(회전 전) 좌표계에서 배지의
+    // 좌표값은 세계 좌표값과 같다(축 자신은 회전해도 위치가 바뀌지 않으므로). 그래서 별도 역회전 없이
+    // "사각형 중심→배지" 방향을 그대로 로컬 좌표에서 계산한 뒤, 탈출점만 배지를 축으로 다시 회전시킨다.
+    const dx = badgeX-cx, dy = badgeY-cy;
+    const distToBadge = Math.hypot(dx,dy);
+    if(distToBadge > 0.01){
+      const halfW = rw/2, halfH = rh/2;
+      const tX = dx!==0 ? halfW/Math.abs(dx) : Infinity;
+      const tY = dy!==0 ? halfH/Math.abs(dy) : Infinity;
+      const t = Math.min(tX,tY,1);
+      if(t < 1){ // 사각형 밖으로 배지가 있을 때만 (배지가 사각형 안에 있으면 선을 그리지 않음)
+        const localExitX = cx+dx*t, localExitY = cy+dy*t;
+        const exitPt = toRectWorld(localExitX, localExitY, badgeX, badgeY, angle);
+        ctx.strokeStyle = type.color;
+        ctx.lineWidth = Math.max(2, r*0.3);
+        ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.moveTo(exitPt.x,exitPt.y); ctx.lineTo(badgeX,badgeY); ctx.stroke();
+      }
+    }
+    ctx.restore();
+    drawMarker(ctx, type, badgeX, badgeY, r, numberLabel, selected, numRot);
+  }
+
+  function pointToSegDist(px,py,x1,y1,x2,y2){
+    const dx=x2-x1, dy=y2-y1;
+    const lenSq = dx*dx+dy*dy;
+    let t = lenSq>0 ? ((px-x1)*dx+(py-y1)*dy)/lenSq : 0;
+    t = Math.max(0,Math.min(1,t));
+    const ex = x1+t*dx, ey=y1+t*dy;
+    return Math.hypot(px-ex, py-ey);
+  }
+
+  // 마커 m의 사각형 영역(범위 유형만 해당)을 캔버스 픽셀 좌표로 환산
+  function markerRectPx(m, w, h){
+    return {
+      x: (m.rectXPct||0)/100*w, y: (m.rectYPct||0)/100*h,
+      w: (m.rectWPct||0)/100*w, h: (m.rectHPct||0)/100*h,
+    };
+  }
+
+  // 마커 하나를 화면/내보내기 캔버스 어디에든 일관되게 그리는 디스패처.
+  // endStyle이 'rect'면 사각형+빗금 범위 마커로, 그 외는 기존 화살표/원 인출선 마커로 그린다.
+  function drawMarkerDispatch(ctx, d, m, numberLabel, w, h, r, selected){
+    const type = getType(m.typeKey);
+    if(type.endStyle === 'rect'){
+      const rect = markerRectPx(m, w, h);
+      const badgeX = m.xPct/100*w, badgeY = m.yPct/100*h;
+      drawAreaMarker(ctx, type, rect.x, rect.y, rect.w, rect.h, badgeX, badgeY, r, numberLabel, selected, m.numRot||0, m.rectAngle||0);
+    } else {
+      const cx = m.xPct/100*w, cy = m.yPct/100*h;
+      drawMarkerWithLeader(ctx, type, cx, cy, r, m.angle||0, leaderLenForMarker(m,r), numberLabel, selected, m.numRot||0);
+    }
+  }
+
+  // 선택(러버밴드)에서 "마커 전체가 영역 안에 완전히 들어와야 함" 판정과, 자르기 시 범위 판정에 쓰이는
+  // 마커의 시각적 외곽 핵심 포인트들(배지 원 4모서리 + 사각형 4모서리 또는 인출선 끝점)
+  function markerVisualPoints(d, m, w, h){
+    const r = markerRadiusFor(d, w, h);
+    const badgeX = m.xPct/100*w, badgeY = m.yPct/100*h;
+    const pts = [
+      {x:badgeX-r,y:badgeY-r}, {x:badgeX+r,y:badgeY-r},
+      {x:badgeX-r,y:badgeY+r}, {x:badgeX+r,y:badgeY+r},
+    ];
+    const type = getType(m.typeKey);
+    if(type.endStyle === 'rect'){
+      const rect = markerRectPx(m, w, h);
+      const ra = m.rectAngle||0; // 사각형은 배지(번호 원) 위치를 축으로 회전하므로 회전축도 배지로 맞춘다
+      [[rect.x,rect.y],[rect.x+rect.w,rect.y],[rect.x,rect.y+rect.h],[rect.x+rect.w,rect.y+rect.h]].forEach(([lx,ly])=>{
+        pts.push(toRectWorld(lx, ly, badgeX, badgeY, ra));
+      });
+    } else {
+      const len = leaderLenForMarker(m, r);
+      const rad = (m.angle||0)*Math.PI/180;
+      pts.push({x:badgeX+Math.cos(rad)*len, y:badgeY+Math.sin(rad)*len});
+    }
+    return pts;
+  }
+
+  // 드래그로 마커를 새로 만들 때: 클릭점(시작점)=화살표 끝(tip), 드래그 종료점=번호 배지 중심.
+  // shift가 눌리면 방향을 수직/수평 직각(0/90/180/270°)으로만 고정.
+  function computeCreateGeom(sx, sy, cx, cy, shift){
+    const dx = cx-sx, dy = cy-sy;
+    const dist = Math.hypot(dx,dy);
+    let angle = Math.atan2(dy,dx);
+    if(shift){ angle = Math.round(angle/(Math.PI/2))*(Math.PI/2); }
+    const badgeX = sx + Math.cos(angle)*dist;
+    const badgeY = sy + Math.sin(angle)*dist;
+    // marker.angle은 "배지 중심→화살표 끝" 방향이므로 드래그 방향의 반대(180° 회전)
+    let markerAngleDeg = (angle*180/Math.PI) + 180;
+    markerAngleDeg = ((markerAngleDeg % 360) + 360) % 360;
+    return { tipX: sx, tipY: sy, badgeX, badgeY, markerAngleDeg, dist };
+  }
+
+  // ---------- 도면(이미지) 관리 ----------
+  function fitBaseSize(naturalW, naturalH){
+    const maxW=980, maxH=700;
+    let scale = Math.min(maxW/naturalW, maxH/naturalH);
+    if(naturalW < maxW && naturalH < maxH) scale = Math.min(2, Math.min(maxW/naturalW, maxH/naturalH));
+    return { baseW: Math.max(220, Math.round(naturalW*scale)), baseH: Math.max(160, Math.round(naturalH*scale)) };
+  }
+  function buildDrawingFromImage(img, dataURL, name){
+    const naturalW = img.naturalWidth || 800, naturalH = img.naturalHeight || 600;
+    const {baseW,baseH} = fitBaseSize(naturalW,naturalH);
+    // name(도면 탭 이름)은 업로드한 파일명에서 따오지만, surveyLocation(표제란의 "조사위치")은 이와
+    // 별개로 사용자가 직접 입력하는 값이라 빈 문자열로 시작한다(파일명이 그대로 표제란에 들어가지 않도록).
+    return {id: uid(), name: name || ('도면 '+(drawings.length+1)), surveyLocation: '', imgSrc: dataURL, imgEl: img,
+      naturalW, naturalH, baseW, baseH, markers: []};
+  }
+
+  function renderDrawingTabs(){
+    const wrap = document.getElementById('drawingTabs');
+    wrap.innerHTML = '';
+    drawings.forEach(d=>{
+      const el = document.createElement('div');
+      el.className = 'drawing-tab' + (d.id===activeDrawingId ? ' active':'');
+      el.innerHTML = `<span class="name">${escapeHTML(d.name)}</span>
+        <button class="icon-btn" data-act="rename" title="이름 변경">✎</button>
+        <button class="icon-btn" data-act="del" title="삭제">✕</button>`;
+      el.addEventListener('click', (e)=>{
+        const act = e.target.getAttribute && e.target.getAttribute('data-act');
+        if(act==='rename'){
+          const nn = prompt('도면 이름을 입력하세요', d.name);
+          if(nn){ d.name = nn; renderDrawingTabs(); syncSurveyLocationField(); }
+          e.stopPropagation(); return;
+        }
+        if(act==='del'){
+          if(confirm(`"${d.name}" 도면과 표시된 결함 ${d.markers.length}건을 삭제할까요?`)){
+            drawings = drawings.filter(x=>x.id!==d.id);
+            if(activeDrawingId===d.id){ activeDrawingId = drawings[0]? drawings[0].id : null; }
+            renderDrawingTabs(); setActiveDrawing(activeDrawingId);
+          }
+          e.stopPropagation(); return;
+        }
+        setActiveDrawing(d.id);
+      });
+      wrap.appendChild(el);
+    });
+  }
+
+  function setActiveDrawing(id){
+    if(cropMode) exitCropMode();
+    if(gridViewMode) setGridView(false);
+    pendingRectCreate = null; eraseCursorPt = null; pendingAction = null;
+    activeDrawingId = id;
+    selectedIds = new Set();
+    renderDrawingTabs();
+    renderCanvas();
+    renderTable();
+    syncSurveyLocationField();
+  }
+
+  // 표제란의 "조사위치"는 도면 탭 이름(d.name, 보통 업로드한 파일명에서 옴)과는 별개인, 도면마다
+  // 따로 저장되는 값(d.surveyLocation)이다. 도면을 바꾸면 입력란도 그 도면에 저장된 값으로 갱신된다.
+  function syncSurveyLocationField(){
+    const inp = document.getElementById('surveyLocationInput');
+    if(!inp) return;
+    const d = getActiveDrawing();
+    inp.value = d ? (d.surveyLocation||'') : '';
+    refreshTbPreviewIfOpen();
+  }
+
+  // ---------- 표제란(도곽) 인쇄 미리보기 ----------
+  // "표제란(도곽) 표시" 체크박스를 켜면 buildExportCanvasTitleBlock()로 실제 저장 결과와 똑같은 이미지를
+  // 그려 모달로 보여준다. 입력값이 바뀔 때마다 모달이 열려있으면 다시 그려서 항상 최신 상태를 반영한다.
+  function isTbPreviewOpen(){
+    const el = document.getElementById('tbPreviewBackdrop');
+    return !!el && el.style.display !== 'none';
+  }
+  function renderTbPreview(){
+    const d = getActiveDrawing();
+    const canvasEl = document.getElementById('tbPreviewCanvas');
+    const note = document.getElementById('tbPreviewNote');
+    if(!d){
+      canvasEl.style.display = 'none'; note.style.display = 'block';
+      return;
+    }
+    note.style.display = 'none'; canvasEl.style.display = 'block';
+    const off = buildExportCanvasTitleBlock(d);
+    canvasEl.width = off.width; canvasEl.height = off.height;
+    canvasEl.getContext('2d').drawImage(off, 0, 0);
+  }
+  function refreshTbPreviewIfOpen(){ if(isTbPreviewOpen()) renderTbPreview(); }
+  function openTbPreview(){
+    renderTbPreview();
+    document.getElementById('tbPreviewBackdrop').style.display = 'flex';
+  }
+  function closeTbPreview(){
+    document.getElementById('tbPreviewBackdrop').style.display = 'none';
+  }
+
+  // 표제란 템플릿 — 조사위치(도면마다 다른 값)를 뺀 나머지 3개 항목 + 도면 제목을 이름 붙여 저장/적용한다.
+  function renderTbTemplateSelect(){
+    const sel = document.getElementById('tbTemplateSelect');
+    const cur = sel.value;
+    sel.innerHTML = '<option value="">템플릿 불러오기…</option>' +
+      tbTemplates.map((t,i)=>`<option value="${i}">${escapeAttr(t.name)}</option>`).join('');
+    if(cur && Number(cur)<tbTemplates.length) sel.value = cur;
+  }
+  function applyTbTemplate(){
+    const sel = document.getElementById('tbTemplateSelect');
+    const t = tbTemplates[Number(sel.value)];
+    if(!t){ alert('불러올 템플릿을 먼저 선택해주세요.'); return; }
+    document.getElementById('projectNameInput').value = t.projectName || '';
+    document.getElementById('siteNameInput').value = t.siteName || '';
+    document.getElementById('structureTypeInput').value = t.structureType || '';
+    document.getElementById('docTitleInput').value = t.docTitle || '';
+    refreshTbPreviewIfOpen();
+  }
+  function saveTbTemplate(){
+    const name = prompt('템플릿 이름을 입력하세요 (예: OO아파트 정밀안전점검)');
+    if(!name) return;
+    tbTemplates.push({
+      name,
+      projectName: document.getElementById('projectNameInput').value,
+      siteName: document.getElementById('siteNameInput').value,
+      structureType: document.getElementById('structureTypeInput').value,
+      docTitle: document.getElementById('docTitleInput').value,
+    });
+    saveTbTemplates(tbTemplates);
+    renderTbTemplateSelect();
+    document.getElementById('tbTemplateSelect').value = String(tbTemplates.length-1);
+  }
+  function deleteTbTemplate(){
+    const sel = document.getElementById('tbTemplateSelect');
+    const idx = Number(sel.value);
+    const t = tbTemplates[idx];
+    if(!t){ alert('삭제할 템플릿을 먼저 선택해주세요.'); return; }
+    if(!confirm(`"${t.name}" 템플릿을 삭제할까요?`)) return;
+    tbTemplates.splice(idx,1);
+    saveTbTemplates(tbTemplates);
+    renderTbTemplateSelect();
+  }
+
+  function addImagesFromFiles(fileList){
+    Array.from(fileList||[]).forEach(file=>{
+      const reader = new FileReader();
+      reader.onload = ()=>{
+        const img = new Image();
+        img.onload = ()=>{
+          const nd = buildDrawingFromImage(img, reader.result, file.name.replace(/\.[a-zA-Z0-9]+$/, ''));
+          drawings.push(nd);
+          renderDrawingTabs();
+          setActiveDrawing(nd.id);
+        };
+        img.src = reader.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  // ---------- 캔버스 렌더링 ----------
+  // 마커 반지름을 "도면 원본 이미지 대비 비율"로 한 번만 정의(markerRadiusNatural)하고,
+  // 화면/썸네일/내보내기 등 어디에 그리든 그 캔버스의 실제 배율(자연 이미지 픽셀당 캔버스 픽셀 수)을
+  // 곱해서 구한다. 이렇게 하면 화면에 보이는 크기와 PNG/PDF로 저장했을 때의 크기(도면 대비 비율)가
+  // 항상 똑같다 — 예전에는 화면용 캔버스와 저장용 캔버스가 서로 다른 기준(캔버스 크기 vs 원본 크기)으로
+  // 반지름을 계산해서 큰 사진일수록 저장된 결과의 마커가 상대적으로 작아 보이는 문제가 있었다.
+  function markerRadiusNatural(d){
+    return clamp(Math.min(d.naturalW, d.naturalH)*0.022, 18, 46) * iconSizeMult;
+  }
+  function markerRadiusFor(d, w, h){
+    const scale = (d && d.naturalW>0) ? (w / d.naturalW) : 1;
+    return Math.max(2, markerRadiusNatural(d) * scale);
+  }
+
+  // 화살표/원 인출선 마커의 "배지(번호) 위치" ↔ "화살표 끝(실제 결함 위치)" 상호 변환 —
+  // 표로 좌표를 입력할 때는 배지가 아니라 화살표가 가리키는 지점(끝)을 기준으로 쓰는 게 더 직관적이므로,
+  // 표 입력/불러오기 시에만 이 변환을 거쳐 내부적으로는 기존과 동일하게 배지 좌표(xPct/yPct)로 저장한다.
+  function badgeToTipPct(d, m){
+    const r = markerRadiusNatural(d);
+    const lenMult = (typeof m.lenMult==='number' && isFinite(m.lenMult) && m.lenMult>0) ? m.lenMult : 1;
+    const len = r*2.6*leaderLenMult*lenMult;
+    const rad = (m.angle||0)*Math.PI/180;
+    const tipX = m.xPct/100*d.naturalW + Math.cos(rad)*len;
+    const tipY = m.yPct/100*d.naturalH + Math.sin(rad)*len;
+    return { xPct: clamp(tipX/d.naturalW*100,0,100), yPct: clamp(tipY/d.naturalH*100,0,100) };
+  }
+  function tipToBadgePct(d, xTipPct, yTipPct, angleDeg, lenMult){
+    const r = markerRadiusNatural(d);
+    const lm = (typeof lenMult==='number' && isFinite(lenMult) && lenMult>0) ? lenMult : 1;
+    const len = r*2.6*leaderLenMult*lm;
+    const rad = (angleDeg||0)*Math.PI/180;
+    const badgeX = xTipPct/100*d.naturalW - Math.cos(rad)*len;
+    const badgeY = yTipPct/100*d.naturalH - Math.sin(rad)*len;
+    return { xPct: clamp(badgeX/d.naturalW*100,0,100), yPct: clamp(badgeY/d.naturalH*100,0,100) };
+  }
+  // 범위(사각형) 마커의 범위X/범위Y 칸에 "10~20"처럼 시작~끝 구간으로 바로 입력할 수 있도록 하는 파서.
+  function parseRectRangeField(raw){
+    const s = String(raw||'').trim();
+    const m = s.match(/^(-?\d+(?:\.\d+)?)\s*[~\-]\s*(-?\d+(?:\.\d+)?)$/);
+    if(!m) return null;
+    const a = parseFloat(m[1]), b = parseFloat(m[2]);
+    if(isNaN(a) || isNaN(b)) return null;
+    return { start: Math.min(a,b), end: Math.max(a,b) };
+  }
+
+  // 지우개 브러시 반지름도 마커와 같은 방식(도면 원본 대비 비율)으로 정의 — 화면에서 보이는 브러시 크기와
+  // 실제 이미지에 칠해지는 크기가 항상 같다.
+  function eraseBrushRadiusNatural(d){
+    return clamp(Math.min(d.naturalW, d.naturalH)*0.018, 8, 70) * eraseBrushMult;
+  }
+  function eraseBrushRadiusFor(d, w, h){
+    const scale = (d && d.naturalW>0) ? (w / d.naturalW) : 1;
+    return Math.max(2, eraseBrushRadiusNatural(d) * scale);
+  }
+
+  function renderCanvas(){
+    const canvas = document.getElementById('mainCanvas');
+    const wrap = document.getElementById('canvasWrap');
+    const d = getActiveDrawing();
+    if(!d){
+      canvas.style.display='none';
+      let placeholder = document.getElementById('emptyState');
+      if(!placeholder){
+        placeholder = document.createElement('div');
+        placeholder.id = 'emptyState';
+        placeholder.className = 'empty-state';
+        placeholder.innerHTML = '평면도 또는 입면도 이미지를 추가하면 여기에 표시됩니다.<br/><button class="primary" id="btnEmptyAdd">+ 도면 이미지 추가</button>';
+        wrap.appendChild(placeholder);
+        placeholder.querySelector('#btnEmptyAdd').addEventListener('click', ()=> document.getElementById('addDrawingInput').click());
+      }
+      placeholder.style.display='block';
+      return;
+    }
+    const ph = document.getElementById('emptyState'); if(ph) ph.style.display='none';
+    canvas.style.display='block';
+    // 화면 배율(devicePixelRatio)만큼 실제 캔버스 해상도를 높여 화질 저하(블러/깨짐)를 방지.
+    // 표시 크기(CSS px)는 그대로 두고, 뒷단 픽셀 수(canvas.width/height)만 배율만큼 키운다.
+    const dpr = Math.max(1, Math.min(window.devicePixelRatio || 1, 2.5));
+    canvasDPR = dpr;
+    const cssW = Math.round(d.baseW*zoom), cssH = Math.round(d.baseH*zoom);
+    const w = Math.round(cssW*dpr), h = Math.round(cssH*dpr);
+    canvas.width = w; canvas.height = h;
+    canvas.style.width = cssW+'px'; canvas.style.height = cssH+'px';
+    // 캔버스가 wrap보다 작을 때는 스크롤 여지가 전혀 없어 휠 줌의 커서 고정 보정(scrollLeft/Top)이
+    // 먹지 않는다. shell 오른쪽/아래에 wrap 클라이언트 크기만큼 보이지 않는 여백을 항상 확보해 두면
+    // 캔버스 크기와 무관하게 스크롤 가능한 여유 공간이 항상 존재해, 커서 고정 보정이 항상 동작한다.
+    // (justify-content:center 대신 이렇게 직접 계산하는 이유: 확대되어 wrap보다 커진 상태에서는
+    // flex 가운데 정렬이 스크롤 위치와 얽혀 커서 고정 보정을 깨뜨리기 때문 — 아래 왼쪽/위 여백은
+    // "캔버스가 wrap보다 작을 때만" 값을 가지므로, 그 큰(스크롤이 필요한) 경우엔 항상 0이 되어
+    // 커서 고정 보정에 전혀 영향을 주지 않는다.)
+    const shell = document.getElementById('canvasShell');
+    if(shell){
+      const extraLeft = Math.max(0, (wrap.clientWidth - cssW)/2);
+      const extraTop = Math.max(0, (wrap.clientHeight - cssH)/2);
+      shell.style.marginLeft = extraLeft+'px';
+      shell.style.marginTop = extraTop+'px';
+      shell.style.marginRight = wrap.clientWidth+'px';
+      shell.style.marginBottom = wrap.clientHeight+'px';
+    }
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0,0,w,h);
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(d.imgEl, 0, 0, w, h);
+    const r = markerRadiusFor(d, w, h);
+    d.markers.forEach((m,idx)=>{
+      drawMarkerDispatch(ctx, d, m, idx+1, w, h, r, selectedIds.has(m.id));
+    });
+    renderLegendPreview(d);
+    drawInteractionOverlay(ctx, w, h);
+    drawCoordGuideOverlay(ctx, w, h);
+  }
+
+  function drawInteractionOverlay(ctx, w, h){
+    if(cropMode){
+      let rect = cropRect;
+      if(pendingAction && pendingAction.mode==='crop'){
+        const x0=Math.min(pendingAction.startX,pendingAction.curX), x1=Math.max(pendingAction.startX,pendingAction.curX);
+        const y0=Math.min(pendingAction.startY,pendingAction.curY), y1=Math.max(pendingAction.startY,pendingAction.curY);
+        rect = {x:x0,y:y0,w:x1-x0,h:y1-y0};
+      }
+      ctx.save();
+      ctx.fillStyle = 'rgba(11,11,11,0.45)';
+      if(rect && rect.w>2 && rect.h>2){
+        ctx.fillRect(0,0,w,rect.y);
+        ctx.fillRect(0,rect.y+rect.h,w,Math.max(0,h-(rect.y+rect.h)));
+        ctx.fillRect(0,rect.y,rect.x,rect.h);
+        ctx.fillRect(rect.x+rect.w,rect.y,Math.max(0,w-(rect.x+rect.w)),rect.h);
+        ctx.strokeStyle = '#ffffff'; ctx.lineWidth=1.5; ctx.setLineDash([6,4]);
+        ctx.strokeRect(rect.x+0.5, rect.y+0.5, rect.w, rect.h);
+        ctx.setLineDash([]);
+        const label = `${Math.round(rect.w)} × ${Math.round(rect.h)} px`;
+        ctx.font = '600 12px system-ui, -apple-system, sans-serif';
+        const tw = ctx.measureText(label).width;
+        const ly = Math.max(0, rect.y-20);
+        ctx.fillStyle = 'rgba(0,0,0,0.75)';
+        ctx.fillRect(rect.x, ly, tw+12, 18);
+        ctx.fillStyle = '#fff';
+        ctx.textAlign='left'; ctx.textBaseline='middle';
+        ctx.fillText(label, rect.x+6, ly+9);
+      } else {
+        ctx.fillRect(0,0,w,h);
+        ctx.fillStyle='#fff'; ctx.font='600 14px system-ui, -apple-system, sans-serif';
+        ctx.textAlign='center'; ctx.textBaseline='middle';
+        ctx.fillText('잘라낼 영역을 드래그로 지정하세요', w/2, h/2);
+      }
+      ctx.restore();
+      return;
+    }
+    if(pendingAction && pendingAction.mode==='rubberband' && pendingAction.moved){
+      const x0=Math.min(pendingAction.startX,pendingAction.curX), x1=Math.max(pendingAction.startX,pendingAction.curX);
+      const y0=Math.min(pendingAction.startY,pendingAction.curY), y1=Math.max(pendingAction.startY,pendingAction.curY);
+      ctx.save();
+      ctx.fillStyle = 'rgba(42,120,214,0.12)';
+      ctx.fillRect(x0,y0,x1-x0,y1-y0);
+      ctx.strokeStyle = 'rgba(42,120,214,0.9)';
+      ctx.lineWidth = 1.5; ctx.setLineDash([5,4]);
+      ctx.strokeRect(x0+0.5,y0+0.5,x1-x0,y1-y0);
+      ctx.setLineDash([]);
+      ctx.restore();
+    }
+    if(pendingAction && pendingAction.mode==='create' && pendingAction.moved){
+      const d = getActiveDrawing(); if(!d) return;
+      const r = markerRadiusFor(d, w, h);
+      const geom = computeCreateGeom(pendingAction.startX, pendingAction.startY, pendingAction.curX, pendingAction.curY, !!pendingAction.shiftKey);
+      const type = getType(activeTypeKey);
+      ctx.save();
+      ctx.globalAlpha = 0.62;
+      drawMarkerWithLeader(ctx, type, geom.badgeX, geom.badgeY, r, geom.markerAngleDeg, geom.dist, '', false);
+      ctx.restore();
+      ctx.save();
+      ctx.strokeStyle = 'rgba(11,11,11,0.55)'; ctx.setLineDash([3,3]); ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.arc(geom.tipX, geom.tipY, 4, 0, Math.PI*2); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.restore();
+    }
+    // 범위(사각형) 마커 3클릭 생성 진행 중 미리보기
+    if(pendingRectCreate){
+      const d = getActiveDrawing(); if(!d) return;
+      const type = getType(activeTypeKey);
+      const r = markerRadiusFor(d, w, h);
+      ctx.save();
+      if(pendingRectCreate.stage===1){
+        const x0=Math.min(pendingRectCreate.x1,rectCreateCurX), x1=Math.max(pendingRectCreate.x1,rectCreateCurX);
+        const y0=Math.min(pendingRectCreate.y1,rectCreateCurY), y1=Math.max(pendingRectCreate.y1,rectCreateCurY);
+        ctx.strokeStyle = type.color; ctx.setLineDash([5,4]); ctx.lineWidth = 1.6;
+        ctx.strokeRect(x0+0.5,y0+0.5,x1-x0,y1-y0);
+        ctx.setLineDash([]);
+        ctx.fillStyle = type.color;
+        ctx.beginPath(); ctx.arc(pendingRectCreate.x1, pendingRectCreate.y1, 4, 0, Math.PI*2); ctx.fill();
+        ctx.font = '600 12px system-ui, -apple-system, sans-serif';
+        ctx.fillStyle = 'rgba(11,11,11,0.75)'; ctx.textAlign='left'; ctx.textBaseline='bottom';
+        ctx.fillText('반대쪽 코너를 클릭하세요', x0+2, Math.max(14,y0-4));
+      } else if(pendingRectCreate.stage===2){
+        const rx = Math.min(pendingRectCreate.x1,pendingRectCreate.x2), ry = Math.min(pendingRectCreate.y1,pendingRectCreate.y2);
+        const rw = Math.abs(pendingRectCreate.x2-pendingRectCreate.x1), rh = Math.abs(pendingRectCreate.y2-pendingRectCreate.y1);
+        ctx.globalAlpha = 0.85;
+        drawAreaMarker(ctx, type, rx, ry, rw, rh, rectCreateCurX, rectCreateCurY, r, '', false, 0, 0);
+        ctx.globalAlpha = 1;
+        ctx.font = '600 12px system-ui, -apple-system, sans-serif';
+        ctx.fillStyle = 'rgba(11,11,11,0.75)'; ctx.textAlign='left'; ctx.textBaseline='bottom';
+        ctx.fillText('번호가 표시될 위치를 클릭하세요', rx+2, Math.max(14,ry-4));
+      }
+      ctx.restore();
+    }
+    // 지우개 모드: 브러시 크기 미리보기 + 진행 중인 스트로크를 흰색으로 실시간 미리 칠함
+    if(eraseMode){
+      const d = getActiveDrawing(); if(!d) return;
+      const rBrush = eraseBrushRadiusFor(d, w, h);
+      if(pendingAction && pendingAction.mode==='erase' && pendingAction.strokePts && pendingAction.strokePts.length){
+        ctx.save();
+        ctx.strokeStyle = '#ffffff'; ctx.fillStyle = '#ffffff';
+        ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+        ctx.lineWidth = rBrush*2;
+        const pts = pendingAction.strokePts;
+        ctx.beginPath();
+        pts.forEach((pt,i)=>{ if(i===0) ctx.moveTo(pt.x,pt.y); else ctx.lineTo(pt.x,pt.y); });
+        ctx.stroke();
+        if(pts.length===1){ ctx.beginPath(); ctx.arc(pts[0].x,pts[0].y,rBrush,0,Math.PI*2); ctx.fill(); }
+        ctx.restore();
+      }
+      if(eraseCursorPt){
+        ctx.save();
+        ctx.strokeStyle = 'rgba(167,46,46,0.85)'; ctx.lineWidth = 1.5; ctx.setLineDash([3,3]);
+        ctx.beginPath(); ctx.arc(eraseCursorPt.x, eraseCursorPt.y, rBrush, 0, Math.PI*2); ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.restore();
+      }
+    }
+    // 선택된 범위(사각형) 마커의 리사이즈 핸들(네 모서리 + 네 변 중점) + 회전 손잡이 — 드래그로 크기·방향 조절 가능
+    if(!cropMode && !eraseMode){
+      const d = getActiveDrawing();
+      if(d){
+        const r = markerRadiusFor(d, w, h);
+        const hs = Math.max(5, r*0.32);
+        d.markers.forEach(m=>{
+          const type = getType(m.typeKey);
+          if(type.endStyle==='rect' && selectedIds.has(m.id)){
+            const rect = markerRectPx(m, w, h);
+            const angle = m.rectAngle||0;
+            const badgeX = m.xPct/100*w, badgeY = m.yPct/100*h; // 회전축(배지) — 리사이즈 핸들·회전 손잡이 모두 이 점을 기준으로 회전
+            const corners = rectResizeHandles(rect, angle, badgeX, badgeY).map(c=>[c.x,c.y]);
+            ctx.save();
+            corners.forEach(([hx,hy])=>{
+              ctx.fillStyle = '#ffffff';
+              ctx.strokeStyle = type.color;
+              ctx.lineWidth = 1.8;
+              ctx.beginPath(); ctx.rect(hx-hs, hy-hs, hs*2, hs*2); ctx.fill(); ctx.stroke();
+            });
+            // 회전 손잡이: 사각형 상단 중앙에서 뻗어나온 자루 끝의 원 — 화살표 마커의 방향 손잡이와 같은 조작감
+            const rotHandle = rectRotateHandleWorld(rect, angle, r, badgeX, badgeY);
+            const topMid = toRectWorld(rect.x+rect.w/2, rect.y, badgeX, badgeY, angle);
+            ctx.strokeStyle = type.color; ctx.lineWidth = 1.4; ctx.setLineDash([3,3]);
+            ctx.beginPath(); ctx.moveTo(topMid.x, topMid.y); ctx.lineTo(rotHandle.x, rotHandle.y); ctx.stroke();
+            ctx.setLineDash([]);
+            ctx.beginPath(); ctx.arc(rotHandle.x, rotHandle.y, Math.max(5,r*0.4), 0, Math.PI*2);
+            ctx.fillStyle = '#ffffff'; ctx.fill(); ctx.strokeStyle = type.color; ctx.lineWidth = 1.8; ctx.stroke();
+            ctx.restore();
+          }
+        });
+      }
+    }
+  }
+
+  // ---------- 좌표 안내(Q): CSV에 쓸 % 좌표를 가늠하기 쉽도록 10% 간격 점선 그리드 + 커서 위치의
+  // 정확한 % 값을 실시간으로 함께 보여준다. 세로선은 x1~x9, 가로선은 y1~y9로 표시(각 10%씩).
+  function drawCoordGuideOverlay(ctx, w, h){
+    if(!coordGuideOn) return;
+    ctx.save();
+    ctx.strokeStyle = 'rgba(42,120,214,0.38)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4,4]);
+    ctx.font = '600 10px system-ui, -apple-system, sans-serif';
+    ctx.fillStyle = 'rgba(42,120,214,0.9)';
+    const STEP = 5; // 5% 간격
+    for(let pct=STEP; pct<100; pct+=STEP){
+      const i = pct/STEP;
+      const gx = w*pct/100;
+      ctx.beginPath(); ctx.moveTo(gx,0); ctx.lineTo(gx,h); ctx.stroke();
+      ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+      ctx.fillText(`x${i} (${pct}%)`, gx, 3);
+    }
+    for(let pct=STEP; pct<100; pct+=STEP){
+      const i = pct/STEP;
+      const gy = h*pct/100;
+      ctx.beginPath(); ctx.moveTo(0,gy); ctx.lineTo(w,gy); ctx.stroke();
+      ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+      ctx.fillText(`y${i} (${pct}%)`, 3, gy);
+    }
+    ctx.setLineDash([]);
+    ctx.restore();
+    if(lastMouseCanvasPt && lastMouseCanvasPt.x>=0 && lastMouseCanvasPt.x<=w && lastMouseCanvasPt.y>=0 && lastMouseCanvasPt.y<=h){
+      const px = lastMouseCanvasPt.x, py = lastMouseCanvasPt.y;
+      const xPct = (px/w*100).toFixed(1), yPct = (py/h*100).toFixed(1);
+      ctx.save();
+      ctx.strokeStyle = 'rgba(167,46,46,0.85)'; ctx.lineWidth = 1; ctx.setLineDash([5,3]);
+      ctx.beginPath(); ctx.moveTo(px,0); ctx.lineTo(px,h); ctx.moveTo(0,py); ctx.lineTo(w,py); ctx.stroke();
+      ctx.setLineDash([]);
+      const label = `X: ${xPct}%  Y: ${yPct}%`;
+      ctx.font = '700 12px system-ui, -apple-system, sans-serif';
+      const tw = ctx.measureText(label).width;
+      let lx = px+10, ly = py-24;
+      if(lx+tw+12 > w) lx = px-tw-22;
+      if(ly < 0) ly = py+10;
+      ctx.fillStyle = 'rgba(11,11,11,0.8)';
+      ctx.fillRect(lx, ly, tw+12, 20);
+      ctx.fillStyle = '#fff';
+      ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+      ctx.fillText(label, lx+6, ly+10);
+      ctx.restore();
+    }
+  }
+
+  // ---------- 전체 도면 미리보기(썸네일 그리드) ----------
+  function renderThumbGrid(){
+    const grid = document.getElementById('thumbGrid');
+    grid.innerHTML = '';
+    if(drawings.length===0){
+      grid.innerHTML = '<div class="thumb-empty">추가된 도면이 없습니다.</div>';
+      return;
+    }
+    drawings.forEach(d=>{
+      const card = document.createElement('div');
+      card.className = 'thumb-card' + (d.id===activeDrawingId ? ' active' : '');
+      const cnv = document.createElement('canvas');
+      const thumbMaxW = 480, thumbMaxH = 380;
+      const scale = Math.min(thumbMaxW/d.naturalW, thumbMaxH/d.naturalH, 1);
+      const tw = Math.max(80, Math.round(d.naturalW*scale));
+      const th = Math.max(60, Math.round(d.naturalH*scale));
+      cnv.width = tw; cnv.height = th;
+      const tctx = cnv.getContext('2d');
+      tctx.fillStyle = '#ffffff'; tctx.fillRect(0,0,tw,th);
+      tctx.drawImage(d.imgEl, 0, 0, tw, th);
+      const tr = clamp(Math.min(tw,th)*0.05, 5, 14);
+      d.markers.forEach((m, idx)=>{
+        drawMarkerDispatch(tctx, d, m, idx+1, tw, th, tr, false);
+      });
+      const label = document.createElement('div');
+      label.className = 'thumb-label';
+      label.innerHTML = `<span class="name">${escapeHTML(d.name)}</span><span class="count">${d.markers.length}건</span>`;
+      card.appendChild(cnv);
+      card.appendChild(label);
+      card.addEventListener('click', ()=> setActiveDrawing(d.id));
+      grid.appendChild(card);
+    });
+  }
+
+  function setGridView(v){
+    gridViewMode = !!v;
+    const shell = document.getElementById('canvasShell');
+    const grid = document.getElementById('thumbGrid');
+    const btn = document.getElementById('btnGridView');
+    const empty = document.getElementById('emptyState');
+    if(gridViewMode){
+      if(cropMode) exitCropMode();
+      renderThumbGrid();
+      shell.style.display = 'none';
+      if(empty) empty.style.display = 'none';
+      grid.style.display = 'grid';
+      if(btn) btn.classList.add('active');
+    } else {
+      shell.style.display = '';
+      grid.style.display = 'none';
+      if(btn) btn.classList.remove('active');
+      renderCanvas();
+    }
+  }
+  function toggleGridView(){ setGridView(!gridViewMode); }
+
+  function usedTypes(d){
+    return DEFECT_TYPES.map(type=>({type, count: d.markers.filter(m=>m.typeKey===type.key).length}))
+      .filter(x=>x.count>0);
+  }
+
+  function renderLegendPreview(d){
+    const wrap = document.getElementById('legendPreview');
+    wrap.innerHTML = '';
+    usedTypes(d).forEach(({type,count})=>{
+      const chip = document.createElement('div');
+      chip.className = 'legend-chip';
+      chip.innerHTML = `${typeSwatchSVG(type)}<span>${type.label} (${count})</span>`;
+      wrap.appendChild(chip);
+    });
+  }
+
+  // ---------- 선택 관리 (다중 선택 지원) ----------
+  function selectOnly(id){
+    selectedIds = new Set([id]);
+    renderCanvas(); renderTable();
+    const row = document.querySelector(`.marker-card[data-id="${id}"]`);
+    if(row){ row.scrollIntoView({block:'nearest'}); }
+    const canvas = document.getElementById('mainCanvas');
+    if(canvas) canvas.focus({preventScroll:true});
+  }
+  function toggleSelect(id){
+    if(selectedIds.has(id)) selectedIds.delete(id); else selectedIds.add(id);
+    renderCanvas(); renderTable();
+  }
+  function clearSelection(){
+    selectedIds = new Set();
+    renderCanvas(); renderTable();
+  }
+
+  // ---------- 마커 조작 ----------
+  function canvasPointFromEvent(e){
+    const canvas = document.getElementById('mainCanvas');
+    const rect = canvas.getBoundingClientRect();
+    // touchend/touchcancel 시점에는 e.touches가 비어있으므로(손가락이 이미 떨어짐) changedTouches를 사용.
+    const touch = (e.touches && e.touches[0]) || (e.changedTouches && e.changedTouches[0]);
+    const cx = (touch ? touch.clientX : e.clientX) - rect.left;
+    const cy = (touch ? touch.clientY : e.clientY) - rect.top;
+    return { x: cx * (canvas.width/rect.width), y: cy * (canvas.height/rect.height) };
+  }
+
+  // 배지(번호 원)뿐 아니라 인출선(화살표·선)이나 범위 마커의 사각형 몸통을 클릭해도 그 마커가
+  // 잡히도록(선택/이동) 확장 — "화살표, 선, 원 모두 각각 클릭만으로도 선택 가능"
+  function hitTestMarker(d, x, y){
+    const canvas = document.getElementById('mainCanvas');
+    const w = canvas.width, h = canvas.height;
+    const r = markerRadiusFor(d, w, h);
+    for(let i=d.markers.length-1;i>=0;i--){
+      const m = d.markers[i];
+      const type = getType(m.typeKey);
+      const badgeX = m.xPct/100*w, badgeY = m.yPct/100*h;
+      if(Math.hypot(x-badgeX, y-badgeY) <= r*1.35) return m;
+      if(type.endStyle === 'rect'){
+        const rect = markerRectPx(m, w, h);
+        const angle = m.rectAngle||0;
+        // 회전된 사각형은 클릭 지점을 (배지를 축으로) 사각형의 로컬(회전 전) 좌표로 되돌려서 축 정렬 판정을 그대로 쓴다.
+        const local = toRectLocal(x, y, badgeX, badgeY, angle);
+        if(local.x>=rect.x && local.x<=rect.x+rect.w && local.y>=rect.y && local.y<=rect.y+rect.h) return m;
+        const worldCenter = toRectWorld(rect.x+rect.w/2, rect.y+rect.h/2, badgeX, badgeY, angle);
+        if(pointToSegDist(x,y,worldCenter.x,worldCenter.y,badgeX,badgeY) <= Math.max(6,r*0.3)) return m;
+      } else {
+        const len = leaderLenForMarker(m, r);
+        const rad = (m.angle||0) * Math.PI/180;
+        const tipX = badgeX+Math.cos(rad)*len, tipY = badgeY+Math.sin(rad)*len;
+        if(pointToSegDist(x,y,badgeX,badgeY,tipX,tipY) <= Math.max(6,r*0.3)) return m;
+      }
+    }
+    return null;
+  }
+
+  // 인출선 끝(화살표/원) 손잡이 — 드래그하면 방향(각도)·길이를 조절. 범위(사각형) 마커는 3클릭으로
+  // 생성하며 별도 핸들이 없으므로 대상에서 제외한다.
+  function hitTestHandle(d, x, y){
+    const canvas = document.getElementById('mainCanvas');
+    const w = canvas.width, h = canvas.height;
+    const r = markerRadiusFor(d, w, h);
+    for(let i=d.markers.length-1;i>=0;i--){
+      const m = d.markers[i];
+      const type = getType(m.typeKey);
+      if(type.endStyle === 'rect') continue;
+      const len = leaderLenForMarker(m, r);
+      const cx = m.xPct/100*w, cy = m.yPct/100*h;
+      const rad = (m.angle||0) * Math.PI/180;
+      const tipX = cx + Math.cos(rad)*len, tipY = cy + Math.sin(rad)*len;
+      if(Math.hypot(x-tipX, y-tipY) <= Math.max(9, r*0.95)) return m;
+    }
+    return null;
+  }
+
+  // 범위(사각형) 마커의 리사이즈 핸들 8개(네 모서리 + 네 변의 중점) 좌표 — 로컬(회전 전) 좌표.
+  // 모서리는 가로·세로를 함께, 변의 중점은 그 방향의 폭/높이만 조절한다.
+  function rectResizeHandlesLocal(rect){
+    return [
+      {corner:'nw', x:rect.x, y:rect.y}, {corner:'ne', x:rect.x+rect.w, y:rect.y},
+      {corner:'sw', x:rect.x, y:rect.y+rect.h}, {corner:'se', x:rect.x+rect.w, y:rect.y+rect.h},
+      {corner:'n', x:rect.x+rect.w/2, y:rect.y}, {corner:'s', x:rect.x+rect.w/2, y:rect.y+rect.h},
+      {corner:'w', x:rect.x, y:rect.y+rect.h/2}, {corner:'e', x:rect.x+rect.w, y:rect.y+rect.h/2},
+    ];
+  }
+  // 화면에 실제로 표시/클릭되는 세계 좌표의 리사이즈 핸들 — 사각형이 rectAngle만큼 회전되어 있으면
+  // 로컬 핸들 좌표도 (사각형 자체 중심이 아니라) 배지를 축으로 함께 회전시켜서 돌려진 사각형의 모서리/변 위에 오도록 한다.
+  function rectResizeHandles(rect, angle, badgeX, badgeY){
+    return rectResizeHandlesLocal(rect).map(c=>{
+      const p = toRectWorld(c.x, c.y, badgeX, badgeY, angle||0);
+      return { corner:c.corner, x:p.x, y:p.y };
+    });
+  }
+  // 범위(사각형) 마커를 회전시키는 손잡이 — 사각형 위쪽(회전 전 기준 상단 중앙)에서 살짝 떨어진 위치에
+  // 놓이며, 배지를 축으로 사각형과 함께 회전된 위치에 나타난다.
+  function rectRotateHandleWorld(rect, angle, r, badgeX, badgeY){
+    const cx = rect.x+rect.w/2;
+    const offset = Math.max(22, r*1.8);
+    const localX = cx, localY = rect.y - offset;
+    return toRectWorld(localX, localY, badgeX, badgeY, angle||0);
+  }
+  // 범위(사각형) 마커의 리사이즈 핸들 히트테스트 — 현재 선택된 범위 마커에만 적용.
+  function hitTestRectResizeHandle(d, x, y){
+    const canvas = document.getElementById('mainCanvas');
+    const w = canvas.width, h = canvas.height;
+    const r = markerRadiusFor(d, w, h);
+    const hitR = Math.max(10, r*0.55);
+    for(let i=d.markers.length-1;i>=0;i--){
+      const m = d.markers[i];
+      if(!selectedIds.has(m.id)) continue;
+      const type = getType(m.typeKey);
+      if(type.endStyle !== 'rect') continue;
+      const rect = markerRectPx(m, w, h);
+      const badgeX = m.xPct/100*w, badgeY = m.yPct/100*h;
+      for(const c of rectResizeHandles(rect, m.rectAngle||0, badgeX, badgeY)){
+        if(Math.hypot(x-c.x, y-c.y) <= hitR) return { marker:m, corner:c.corner };
+      }
+    }
+    return null;
+  }
+  // 범위(사각형) 마커의 회전 손잡이 히트테스트 — 현재 선택된 범위 마커에만 적용.
+  function hitTestRectRotateHandle(d, x, y){
+    const canvas = document.getElementById('mainCanvas');
+    const w = canvas.width, h = canvas.height;
+    const r = markerRadiusFor(d, w, h);
+    const hitR = Math.max(11, r*0.6);
+    for(let i=d.markers.length-1;i>=0;i--){
+      const m = d.markers[i];
+      if(!selectedIds.has(m.id)) continue;
+      const type = getType(m.typeKey);
+      if(type.endStyle !== 'rect') continue;
+      const rect = markerRectPx(m, w, h);
+      const badgeX = m.xPct/100*w, badgeY = m.yPct/100*h;
+      const hp = rectRotateHandleWorld(rect, m.rectAngle||0, r, badgeX, badgeY);
+      if(Math.hypot(x-hp.x, y-hp.y) <= hitR) return { marker:m };
+    }
+    return null;
+  }
+
+  // 스택 안의 'image' 타입 항목(이미지 Data URL을 통째로 들고 있어 무거움) 개수를 최근 8개로 제한한다.
+  // 'markers' 타입 항목은 가벼우므로 건드리지 않고, 오래된 'image' 항목만 골라서 제거한다.
+  function trimImageEntries(stack){
+    let count = 0;
+    for(let i=stack.length-1;i>=0;i--){
+      if(stack[i].type==='image'){
+        count++;
+        if(count>8) stack.splice(i,1);
+      }
+    }
+  }
+  function pushUndo(){
+    const d = getActiveDrawing(); if(!d) return;
+    undoStack.push({type:'markers', drawingId:d.id, markers: JSON.parse(JSON.stringify(d.markers))});
+    if(undoStack.length>60) undoStack.shift();
+    redoStack = []; // 새 작업이 일어나면 그 이전의 "다시하기" 기록은 더 이상 의미가 없으므로 비운다
+  }
+  // 이미지 자체가 바뀌는 작업(자르기·회전·지우개브러시) 직전에 호출 — 이미지+그 시점의 마커를 통째로 기록한다.
+  // pushUndo()와 같은 undoStack에 함께 쌓이므로 "실행취소" 버튼 하나로 마커 작업과 순서대로 되돌릴 수 있다.
+  function pushImageUndo(d){
+    undoStack.push({
+      type:'image',
+      drawingId: d.id,
+      imgSrc: d.imgSrc,
+      naturalW: d.naturalW,
+      naturalH: d.naturalH,
+      baseW: d.baseW,
+      baseH: d.baseH,
+      markers: JSON.parse(JSON.stringify(d.markers)),
+    });
+    if(undoStack.length>60) undoStack.shift();
+    trimImageEntries(undoStack);
+    redoStack = [];
+  }
+  function undo(){
+    const last = undoStack.pop(); if(!last) return;
+    const d = drawings.find(x=>x.id===last.drawingId); if(!d){ undo(); return; }
+    if(last.type==='image'){
+      redoStack.push({ type:'image', drawingId:d.id, imgSrc:d.imgSrc, naturalW:d.naturalW, naturalH:d.naturalH,
+        baseW:d.baseW, baseH:d.baseH, markers: JSON.parse(JSON.stringify(d.markers)) });
+      trimImageEntries(redoStack);
+      if(redoStack.length>60) redoStack.shift();
+      const img = new Image();
+      img.onload = ()=>{
+        d.imgSrc = last.imgSrc; d.imgEl = img;
+        d.naturalW = last.naturalW; d.naturalH = last.naturalH;
+        d.baseW = last.baseW; d.baseH = last.baseH;
+        d.markers = last.markers;
+        if(d.id===activeDrawingId){ selectedIds = new Set(); renderCanvas(); renderTable(); }
+      };
+      img.src = last.imgSrc;
+    } else {
+      redoStack.push({type:'markers', drawingId:d.id, markers: JSON.parse(JSON.stringify(d.markers))});
+      if(redoStack.length>60) redoStack.shift();
+      d.markers = last.markers;
+      if(d.id===activeDrawingId){ renderCanvas(); renderTable(); }
+    }
+  }
+  function redo(){
+    const next = redoStack.pop(); if(!next) return;
+    const d = drawings.find(x=>x.id===next.drawingId); if(!d){ redo(); return; }
+    if(next.type==='image'){
+      undoStack.push({ type:'image', drawingId:d.id, imgSrc:d.imgSrc, naturalW:d.naturalW, naturalH:d.naturalH,
+        baseW:d.baseW, baseH:d.baseH, markers: JSON.parse(JSON.stringify(d.markers)) });
+      trimImageEntries(undoStack);
+      if(undoStack.length>60) undoStack.shift();
+      const img = new Image();
+      img.onload = ()=>{
+        d.imgSrc = next.imgSrc; d.imgEl = img;
+        d.naturalW = next.naturalW; d.naturalH = next.naturalH;
+        d.baseW = next.baseW; d.baseH = next.baseH;
+        d.markers = next.markers;
+        if(d.id===activeDrawingId){ selectedIds = new Set(); renderCanvas(); renderTable(); }
+      };
+      img.src = next.imgSrc;
+    } else {
+      undoStack.push({type:'markers', drawingId:d.id, markers: JSON.parse(JSON.stringify(d.markers))});
+      if(undoStack.length>60) undoStack.shift();
+      d.markers = next.markers;
+      if(d.id===activeDrawingId){ renderCanvas(); renderTable(); }
+    }
+  }
+
+  function addMarkerAt(x,y){
+    const d = getActiveDrawing(); if(!d) return;
+    const canvas = document.getElementById('mainCanvas');
+    const w = canvas.width, h = canvas.height;
+    pushUndo();
+    const marker = { id: uid(), typeKey: activeTypeKey, xPct: clamp(x/w*100,0,100), yPct: clamp(y/h*100,0,100), angle: 0, lenMult: 1, numRot: 0, note:'' };
+    d.markers.push(marker);
+    selectOnly(marker.id);
+  }
+
+  // 드래그로 방향·길이를 지정해 마커 생성 (클릭점=화살표 끝, 드래그 종료점=번호 배지)
+  function addMarkerWithGesture(geom){
+    const d = getActiveDrawing(); if(!d) return;
+    const canvas = document.getElementById('mainCanvas');
+    const w = canvas.width, h = canvas.height;
+    const r = markerRadiusFor(d, w, h);
+    pushUndo();
+    const baseLen = r*2.6*leaderLenMult;
+    let lenMult = baseLen>0 ? geom.dist/baseLen : 1;
+    if(!isFinite(lenMult) || lenMult<=0) lenMult = 1;
+    const marker = { id: uid(), typeKey: activeTypeKey,
+      xPct: clamp(geom.badgeX/w*100,0,100), yPct: clamp(geom.badgeY/h*100,0,100),
+      angle: geom.markerAngleDeg, lenMult, numRot: 0, note:'' };
+    d.markers.push(marker);
+    selectOnly(marker.id);
+  }
+
+  // ---------- 범위(사각형) 마커 3클릭 생성: ①첫 코너 → ②반대쪽 코너 → ③번호 배지 위치 ----------
+  function cancelRectCreate(){
+    if(pendingRectCreate){ pendingRectCreate = null; renderCanvas(); }
+  }
+  // 중심점(cx,cy) 기준으로 (x,y)를 Shift가 눌렸을 때 수직/수평(0/90/180/270°) 방향으로만 고정 —
+  // 다른 마커 유형의 "Shift: 수직/수평 고정"과 동일한 동작을 범위 마커의 인출선(중심→번호)에도 적용.
+  function snapAroundCenter(cx, cy, x, y, shift){
+    if(!shift) return { x, y };
+    const dx = x-cx, dy = y-cy;
+    const dist = Math.hypot(dx,dy);
+    if(dist < 0.01) return { x, y };
+    const angle = Math.round(Math.atan2(dy,dx)/(Math.PI/2))*(Math.PI/2);
+    return { x: cx+Math.cos(angle)*dist, y: cy+Math.sin(angle)*dist };
+  }
+  function handleRectCreateClick(x, y, shift){
+    const d = getActiveDrawing(); if(!d) return;
+    if(!pendingRectCreate){
+      pendingRectCreate = { stage:1, x1:x, y1:y };
+    } else if(pendingRectCreate.stage===1){
+      pendingRectCreate = { stage:2, x1:pendingRectCreate.x1, y1:pendingRectCreate.y1, x2:x, y2:y };
+    } else if(pendingRectCreate.stage===2){
+      const canvas = document.getElementById('mainCanvas');
+      const w = canvas.width, h = canvas.height;
+      const rx = Math.min(pendingRectCreate.x1, pendingRectCreate.x2);
+      const ry = Math.min(pendingRectCreate.y1, pendingRectCreate.y2);
+      const rw = Math.abs(pendingRectCreate.x2 - pendingRectCreate.x1);
+      const rh = Math.abs(pendingRectCreate.y2 - pendingRectCreate.y1);
+      if(rw < 6 || rh < 6){ pendingRectCreate = null; renderCanvas(); return; } // 너무 작으면 취소
+      const snapped = snapAroundCenter(rx+rw/2, ry+rh/2, x, y, shift);
+      pushUndo();
+      const marker = { id: uid(), typeKey: activeTypeKey,
+        rectXPct: rx/w*100, rectYPct: ry/h*100, rectWPct: rw/w*100, rectHPct: rh/h*100,
+        xPct: clamp(snapped.x/w*100,0,100), yPct: clamp(snapped.y/h*100,0,100),
+        angle: 0, lenMult: 1, numRot: 0, note:'' };
+      d.markers.push(marker);
+      pendingRectCreate = null;
+      selectOnly(marker.id);
+      return;
+    }
+    renderCanvas();
+  }
+
+  // ---------- 지우개 브러시로 이미지 자체를 흰색으로 칠하기(마커 삭제와 별개) ----------
+  // strokePts는 화면 캔버스 backing-px 좌표 목록. 실제 도면 원본 해상도 캔버스에 흰 선/점으로 합성한 뒤
+  // d.imgSrc/d.imgEl을 교체한다(자르기·회전과 같은 "이미지 자체 변경" — 일반 Ctrl+Z가 아닌 이미지 실행취소 대상).
+  function commitEraseStroke(d, strokePts, canvasW, canvasH){
+    if(!strokePts || strokePts.length===0) return;
+    const scaleX = d.naturalW/canvasW, scaleY = d.naturalH/canvasH;
+    const off = document.createElement('canvas');
+    off.width = d.naturalW; off.height = d.naturalH;
+    const octx = off.getContext('2d');
+    octx.drawImage(d.imgEl, 0, 0, d.naturalW, d.naturalH);
+    const rNatural = eraseBrushRadiusNatural(d);
+    octx.strokeStyle = '#ffffff'; octx.fillStyle = '#ffffff';
+    octx.lineCap = 'round'; octx.lineJoin = 'round';
+    octx.lineWidth = rNatural*2;
+    octx.beginPath();
+    strokePts.forEach((pt,i)=>{
+      const nx = pt.x*scaleX, ny = pt.y*scaleY;
+      if(i===0) octx.moveTo(nx,ny); else octx.lineTo(nx,ny);
+    });
+    octx.stroke();
+    if(strokePts.length===1){
+      octx.beginPath(); octx.arc(strokePts[0].x*scaleX, strokePts[0].y*scaleY, rNatural, 0, Math.PI*2); octx.fill();
+    }
+    const newSrc = off.toDataURL('image/png');
+    const newImg = new Image();
+    newImg.onload = ()=>{
+      d.imgSrc = newSrc; d.imgEl = newImg;
+      renderCanvas();
+    };
+    newImg.src = newSrc;
+  }
+
+  function deleteMarker(id){
+    const d = getActiveDrawing(); if(!d) return;
+    pushUndo();
+    d.markers = d.markers.filter(m=>m.id!==id);
+    selectedIds.delete(id);
+    renderCanvas(); renderTable();
+  }
+
+  function deleteSelected(){
+    const d = getActiveDrawing(); if(!d || selectedIds.size===0) return;
+    pushUndo();
+    d.markers = d.markers.filter(m=>!selectedIds.has(m.id));
+    selectedIds = new Set();
+    renderCanvas(); renderTable();
+  }
+
+  // ---------- 표(테이블) 렌더링 ----------
+  // 유형(부위)/부재명/결함명 드롭다운 한 칸(select + "직접입력…" 텍스트칸)의 HTML을 만든다.
+  // 값이 선택지 목록에 없으면(=사용자가 직접 입력한 값) select는 "직접입력…"을 선택한 채로 텍스트칸을 보여준다.
+  function buildReportSelectHTML(fieldKey, value, label){
+    const opts = reportFieldOptions[fieldKey] || [];
+    const val = value || '';
+    const isCustom = val!=='' && !opts.includes(val);
+    const optionsHTML = ['<option value="">-</option>']
+      .concat(opts.map(o=>`<option value="${escapeAttr(o)}" ${!isCustom && val===o ? 'selected':''}>${escapeHTML(o)}</option>`))
+      .concat([`<option value="__custom__" ${isCustom?'selected':''}>직접입력…</option>`])
+      .join('');
+    return `<span class="mc-field" title="${label}">
+        <select data-role="${fieldKey}" title="${label}">${optionsHTML}</select>
+        <input type="text" class="mc-custom" data-role="${fieldKey}_custom" placeholder="${label} 입력" title="${label}" value="${escapeAttr(isCustom?val:'')}" style="display:${isCustom?'inline-block':'none'};" />
+      </span>`;
+  }
+  // 위에서 만든 select+커스텀입력 한 쌍에 변경 이벤트를 연결 — select에서 "직접입력…"을 고르면 텍스트칸이
+  // 나타나 포커스되고, 텍스트칸에 입력하는 값이 곧 그 마커의 실제 값이 된다.
+  function wireReportSelect(card, fieldKey, m){
+    const sel = card.querySelector(`[data-role="${fieldKey}"]`);
+    const custom = card.querySelector(`[data-role="${fieldKey}_custom"]`);
+    sel.addEventListener('change', ()=>{
+      if(sel.value==='__custom__'){
+        custom.style.display = 'block'; custom.value = ''; custom.focus();
+        m[fieldKey] = '';
+      } else {
+        custom.style.display = 'none';
+        m[fieldKey] = sel.value;
+      }
+    });
+    custom.addEventListener('input', ()=>{ m[fieldKey] = custom.value; });
+  }
+  function renderTable(){
+    const d = getActiveDrawing();
+    const list = document.getElementById('markerList');
+    const countEl = document.getElementById('markerCount');
+    const emptyNote = document.getElementById('emptyMarkerNote');
+    list.innerHTML = '';
+    if(!d || d.markers.length===0){
+      countEl.textContent = '0';
+      emptyNote.style.display = 'block';
+      list.style.display = 'none';
+      return;
+    }
+    emptyNote.style.display = 'none';
+    list.style.display = 'flex';
+    countEl.textContent = String(d.markers.length);
+    d.markers.forEach((m, idx)=>{
+      const card = document.createElement('div');
+      card.className = 'marker-card' + (selectedIds.has(m.id) ? ' selected' : '');
+      card.dataset.id = m.id;
+      const typeOptions = DEFECT_TYPES.map(t=>`<option value="${t.key}" ${t.key===m.typeKey?'selected':''}>${t.label}</option>`).join('');
+      // 마킹유형/번호/사진/삭제는 tabindex=-1로 빼서, Tab 키가 유형→부재명→결함명→폭→길이→개수→#
+      // 순서로만 흐르다가 자연스럽게 다음 카드의 "유형" 칸으로 넘어가도록 한다(빠른 연속 입력용).
+      card.innerHTML = `
+        <input type="text" class="mc-num" data-role="pos" tabindex="-1" value="${idx+1}" title="번호 — 값을 바꾸면 도면·목록의 순서(번호)가 그 위치로 바뀝니다"/>
+        <select data-role="type" class="mc-marktype" tabindex="-1" title="마킹 색상·모양(도면에 표시되는 유형)">${typeOptions}</select>
+        ${buildReportSelectHTML('rptType', m.rptType, '유형')}
+        ${buildReportSelectHTML('rptMember', m.rptMember, '부재명')}
+        ${buildReportSelectHTML('rptDefect', m.rptDefect, '결함명')}
+        <input type="text" class="mc-num2" data-role="rptWidth" placeholder="폭" title="폭" value="${escapeAttr(m.rptWidth||'')}"/>
+        <input type="text" class="mc-num2" data-role="rptLength" placeholder="길이" title="길이" value="${escapeAttr(m.rptLength||'')}"/>
+        <span class="mc-suffix"><input type="text" class="mc-num2" data-role="rptCount" placeholder="개수" title="개수" value="${escapeAttr(m.rptCount||'')}"/><span>개</span></span>
+        <input type="text" class="mc-num2" data-role="rptTag" placeholder="#" title="#" value="${escapeAttr(m.rptTag||'')}"/>
+        <button class="mc-photo" data-role="photo" tabindex="-1" title="사진 첨부">📷${(m.photos&&m.photos.length)?`<span class="photo-count">${m.photos.length}</span>`:''}</button>
+        <button class="row-del" data-role="del" tabindex="-1" title="삭제">✕</button>
+      `;
+      card.addEventListener('click', (e)=>{
+        if(e.target.closest('select,input,button')) return;
+        selectOnly(m.id);
+      });
+      card.querySelector('[data-role="type"]').addEventListener('change', (e)=>{
+        pushUndo(); m.typeKey = e.target.value; renderCanvas(); renderLegendPreview(d);
+      });
+      card.querySelector('[data-role="photo"]').addEventListener('click', ()=> openPhotoModal(m.id));
+      card.querySelector('[data-role="del"]').addEventListener('click', ()=> deleteMarker(m.id));
+      // 번호 칸: 값을 바꾸면 그 결함을 목록/도면 번호 순서상 해당 위치로 옮긴다(다른 결함들은 자동으로 밀림).
+      card.querySelector('[data-role="pos"]').addEventListener('change', (e)=>{
+        const dd = getActiveDrawing(); if(!dd) return;
+        let n = parseInt(e.target.value, 10);
+        const curIdx = dd.markers.findIndex(x=>x.id===m.id);
+        if(isNaN(n) || curIdx<0){ e.target.value = idx+1; return; }
+        n = clamp(n, 1, dd.markers.length);
+        if(n===curIdx+1){ e.target.value = idx+1; return; }
+        pushUndo();
+        const [item] = dd.markers.splice(curIdx, 1);
+        dd.markers.splice(n-1, 0, item);
+        renderCanvas(); renderTable();
+      });
+      wireReportSelect(card, 'rptType', m);
+      wireReportSelect(card, 'rptMember', m);
+      wireReportSelect(card, 'rptDefect', m);
+      ['rptWidth','rptLength','rptCount','rptTag'].forEach(key=>{
+        card.querySelector(`[data-role="${key}"]`).addEventListener('input', (e)=>{ m[key] = e.target.value; });
+      });
+      list.appendChild(card);
+    });
+  }
+
+  // ---------- 유형 팔레트 / 모드 전환 (추가 / 이동 / 지우개, 서로 배타적) ----------
+  function setActiveType(key){
+    if(gridViewMode) setGridView(false);
+    activeTypeKey = key;
+    moveMode = false; selectMode = false; eraseMode = false; // 유형을 고르면 추가 모드로 자동 전환
+    pendingRectCreate = null;
+    renderTypeGrid();
+    updateModeButtonsUI();
+    updateModeHint();
+  }
+
+  function updateModeButtonsUI(){
+    const mv = document.getElementById('btnMoveMode'); if(mv) mv.classList.toggle('active', moveMode);
+    const sel = document.getElementById('btnSelectMode'); if(sel) sel.classList.toggle('active', selectMode);
+    const er = document.getElementById('btnEraseMode'); if(er) er.classList.toggle('active', eraseMode);
+    const brushGroup = document.getElementById('eraseBrushGroup');
+    if(brushGroup) brushGroup.style.display = eraseMode ? '' : 'none';
+  }
+  function updateModeHint(){
+    const hint = document.getElementById('modeHint');
+    if(!hint) return;
+    if(eraseMode){
+      hint.innerHTML = '<b>지우개 모드</b> (단축키 d) — 마커 위는 클릭하면 삭제, 그 외 도면 위를 드래그하면 브러시처럼 흰색으로 지워집니다';
+    } else if(selectMode){
+      hint.innerHTML = '<b>선택 모드</b> (단축키 s) — 빈 곳을 드래그하면 완전히 안에 들어온 마커만 선택됩니다(Shift: 추가/해제). 마커를 직접 클릭해도 선택됩니다';
+    } else if(moveMode){
+      hint.innerHTML = '<b>이동 모드</b> (단축키 m) — 마커를 드래그해 이동만 합니다. 빈 곳을 클릭·드래그해도 아무 일도 일어나지 않습니다';
+    } else if(getType(activeTypeKey).endStyle==='rect'){
+      hint.innerHTML = `현재 선택된 유형: <b id="activeTypeLabel">${getType(activeTypeKey).label}</b> — <b>클릭 3번</b>으로 생성: ① 사각형 첫 코너 → ② 반대쪽 코너 → ③ 번호가 표시될 위치${pendingRectCreate ? ` <b>(${pendingRectCreate.stage}/2단계 완료, 계속 클릭하세요 · Esc로 취소)</b>` : ''}`;
+    } else {
+      hint.innerHTML = `현재 선택된 유형: <b id="activeTypeLabel">${getType(activeTypeKey).label}</b> (단축키 1~4) — 클릭해 추가, 드래그로 방향·길이 지정 (Shift: 수직/수평 고정) · <b>s</b>: 선택 · <b>m</b>: 이동 · <b>d</b>: 지우개`;
+    }
+  }
+  function setMoveMode(v){
+    if(v && gridViewMode) setGridView(false);
+    moveMode = !!v;
+    if(moveMode){ selectMode = false; eraseMode = false; pendingRectCreate = null; }
+    updateModeButtonsUI();
+    updateModeHint();
+    renderCanvas();
+  }
+  function toggleMoveMode(){ setMoveMode(!moveMode); }
+
+  function setSelectMode(v){
+    if(v && gridViewMode) setGridView(false);
+    selectMode = !!v;
+    if(selectMode){ moveMode = false; eraseMode = false; pendingRectCreate = null; }
+    updateModeButtonsUI();
+    updateModeHint();
+    renderCanvas();
+  }
+  function toggleSelectMode(){ setSelectMode(!selectMode); }
+
+  function setEraseMode(v){
+    if(v && gridViewMode) setGridView(false);
+    eraseMode = !!v;
+    if(eraseMode){ moveMode = false; selectMode = false; pendingRectCreate = null; }
+    eraseCursorPt = null;
+    updateModeButtonsUI();
+    updateModeHint();
+    renderCanvas();
+  }
+  function toggleEraseMode(){ setEraseMode(!eraseMode); }
+
+  function setCoordGuide(v){
+    coordGuideOn = !!v;
+    const btn = document.getElementById('btnCoordGuide');
+    if(btn) btn.classList.toggle('active', coordGuideOn);
+    if(!coordGuideOn) lastMouseCanvasPt = null;
+    renderCanvas();
+  }
+  function toggleCoordGuide(){ setCoordGuide(!coordGuideOn); }
+
+  // 지우개 모드: 지정한 캔버스 좌표(backing-px)에 마커가 있으면 삭제. 드래그 중 여러 번 호출됨.
+  function eraseAtPoint(d, x, y){
+    const m = hitTestMarker(d, x, y);
+    if(!m) return false;
+    d.markers = d.markers.filter(mm=>mm.id!==m.id);
+    selectedIds.delete(m.id);
+    renderTable();
+    return true;
+  }
+
+  function renderTypeGrid(){
+    const grid = document.getElementById('typeGrid');
+    grid.innerHTML = '';
+    DEFECT_TYPES.forEach(type=>{
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'type-btn' + (type.key===activeTypeKey ? ' active':'');
+      btn.style.setProperty('--type-color', type.color);
+      btn.innerHTML = `<span class="type-swatch">${typeSwatchSVG(type)}</span><span>${type.label}</span><span class="kbd-hint">${type.shortcut}</span>`;
+      btn.addEventListener('click', ()=> setActiveType(type.key));
+      grid.appendChild(btn);
+    });
+  }
+
+  // ---------- 이미지 자르기(크롭) ----------
+  function enterCropMode(){
+    const d = getActiveDrawing();
+    if(!d){ alert('먼저 도면 이미지를 추가해주세요.'); return; }
+    if(gridViewMode) setGridView(false);
+    cropMode = true; cropRect = null; pendingAction = null;
+    moveMode = false; selectMode = false; eraseMode = false; pendingRectCreate = null;
+    updateModeButtonsUI();
+    clearSelection();
+    document.getElementById('btnCropMode').style.display='none';
+    document.getElementById('cropActions').style.display='inline-flex';
+    document.getElementById('zoomSelect').disabled = true;
+    renderCanvas();
+  }
+  function exitCropMode(){
+    cropMode = false; cropRect = null; pendingAction = null;
+    document.getElementById('btnCropMode').style.display='';
+    document.getElementById('cropActions').style.display='none';
+    document.getElementById('zoomSelect').disabled = false;
+    renderCanvas();
+  }
+  function performCropApply(){
+    const d = getActiveDrawing();
+    if(!d || !cropRect){ alert('먼저 도면 위를 드래그해 자를 영역을 지정해주세요.'); return; }
+    const canvas = document.getElementById('mainCanvas');
+    const scaleX = d.naturalW/canvas.width, scaleY = d.naturalH/canvas.height;
+    const nx = Math.round(cropRect.x*scaleX), ny = Math.round(cropRect.y*scaleY);
+    const nw = Math.round(cropRect.w*scaleX), nh = Math.round(cropRect.h*scaleY);
+    if(nw<10 || nh<10){ alert('잘라낼 영역이 너무 작습니다.'); return; }
+    // 확인 알림 없이 바로 자른다(되돌리고 싶으면 헤더의 "🖼↶ 이미지 실행취소"로 언제든 복구 가능).
+    pushImageUndo(d);
+
+    const off = document.createElement('canvas');
+    off.width = nw; off.height = nh;
+    const octx = off.getContext('2d');
+    octx.drawImage(d.imgEl, nx, ny, nw, nh, 0, 0, nw, nh);
+    const newSrc = off.toDataURL('image/png');
+    const newImg = new Image();
+    newImg.onload = ()=>{
+      d.markers = d.markers.filter(m=>{
+        const ax = m.xPct/100*d.naturalW, ay = m.yPct/100*d.naturalH;
+        return !(ax<nx || ax>nx+nw || ay<ny || ay>ny+nh);
+      }).map(m=>{
+        const ax = m.xPct/100*d.naturalW, ay = m.yPct/100*d.naturalH;
+        const out = Object.assign({}, m, { xPct: (ax-nx)/nw*100, yPct: (ay-ny)/nh*100 });
+        if(getType(m.typeKey).endStyle==='rect'){
+          const rx = (m.rectXPct||0)/100*d.naturalW, ry = (m.rectYPct||0)/100*d.naturalH;
+          const rw = (m.rectWPct||0)/100*d.naturalW, rh = (m.rectHPct||0)/100*d.naturalH;
+          out.rectXPct = (rx-nx)/nw*100; out.rectYPct = (ry-ny)/nh*100;
+          out.rectWPct = rw/nw*100; out.rectHPct = rh/nh*100;
+        }
+        return out;
+      });
+      d.imgSrc = newSrc; d.imgEl = newImg; d.naturalW = nw; d.naturalH = nh;
+      const fit = fitBaseSize(nw, nh);
+      d.baseW = fit.baseW; d.baseH = fit.baseH;
+      selectedIds = new Set();
+      exitCropMode();
+      renderTable();
+    };
+    newImg.src = newSrc;
+  }
+
+  // ---------- 이미지 회전 (90° 단위) ----------
+  // 회전은 도면 자체(이미지)를 바꾸는 작업이라 pushImageUndo로 기록하며, 통합된 실행취소(Ctrl+Z)로 되돌릴 수 있다(자르기와 동일).
+  // 마커는 삭제되지 않고 새 방향에 맞게 좌표·인출선 각도가 함께 회전된다.
+  function rotateDrawing(deltaDeg){
+    const d = getActiveDrawing();
+    if(!d){ alert('먼저 도면 이미지를 추가해주세요.'); return; }
+    if(cropMode) exitCropMode();
+    pushImageUndo(d);
+    const nw = d.naturalH, nh = d.naturalW; // 90°/-90° 회전이므로 가로·세로가 바뀜
+    const off = document.createElement('canvas');
+    off.width = nw; off.height = nh;
+    const octx = off.getContext('2d');
+    octx.save();
+    octx.translate(nw/2, nh/2);
+    octx.rotate(deltaDeg*Math.PI/180);
+    octx.drawImage(d.imgEl, -d.naturalW/2, -d.naturalH/2);
+    octx.restore();
+    const newSrc = off.toDataURL('image/png');
+    const newImg = new Image();
+    newImg.onload = ()=>{
+      function rotPt(ux, uy){
+        return deltaDeg===90 ? { x: 1-uy, y: ux } : { x: uy, y: 1-ux }; // -90
+      }
+      d.markers = d.markers.map(m=>{
+        const p = rotPt(m.xPct/100, m.yPct/100);
+        const angle = ((m.angle||0) + deltaDeg + 720) % 360;
+        const numRot = ((m.numRot||0) + deltaDeg + 720) % 360;
+        const out = Object.assign({}, m, { xPct: p.x*100, yPct: p.y*100, angle, numRot });
+        if(getType(m.typeKey).endStyle==='rect'){
+          const corners = [
+            rotPt((m.rectXPct||0)/100, (m.rectYPct||0)/100),
+            rotPt(((m.rectXPct||0)+(m.rectWPct||0))/100, (m.rectYPct||0)/100),
+            rotPt((m.rectXPct||0)/100, ((m.rectYPct||0)+(m.rectHPct||0))/100),
+            rotPt(((m.rectXPct||0)+(m.rectWPct||0))/100, ((m.rectYPct||0)+(m.rectHPct||0))/100),
+          ];
+          const xs = corners.map(c=>c.x), ys = corners.map(c=>c.y);
+          const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
+          out.rectXPct = x0*100; out.rectYPct = y0*100; out.rectWPct = (x1-x0)*100; out.rectHPct = (y1-y0)*100;
+          // 사각형 자체가 이미 기울어져(rectAngle) 있어도 도면이 90°/-90° 회전한 만큼 함께 회전시킨다.
+          out.rectAngle = ((m.rectAngle||0) + deltaDeg + 720) % 360;
+        }
+        return out;
+      });
+      d.imgSrc = newSrc; d.imgEl = newImg; d.naturalW = nw; d.naturalH = nh;
+      const fit = fitBaseSize(nw, nh);
+      d.baseW = fit.baseW; d.baseH = fit.baseH;
+      renderCanvas(); renderTable();
+    };
+    newImg.src = newSrc;
+  }
+
+  // ---------- PNG 내보내기 ----------
+  function sanitizeFilename(s){ return String(s||'').replace(/[\\/:*?"<>|]/g,'_').trim() || 'untitled'; }
+  function filenameBase(){
+    const site = document.getElementById('siteNameInput').value.trim();
+    const proj = document.getElementById('projectNameInput').value.trim();
+    const base = site || proj || '결함마킹';
+    const dt = new Date(); const ymd = dt.toISOString().slice(0,10).replace(/-/g,'');
+    return sanitizeFilename(base) + '_' + ymd;
+  }
+  function wrapText(ctx, text, maxWidth){
+    if(!text) return [];
+    const words = String(text).split('');  // 한글은 글자 단위로 줄바꿈
+    const lines = []; let line = '';
+    words.forEach(ch=>{
+      const test = line + ch;
+      if(ctx.measureText(test).width > maxWidth && line){ lines.push(line); line = ch; }
+      else line = test;
+    });
+    if(line) lines.push(line);
+    return lines;
+  }
+  function computeLegendLayout(d, exportW, legendMargin, legendFont, rowHeight){
+    const used = usedTypes(d);
+    const measure = document.createElement('canvas').getContext('2d');
+    measure.font = legendFont;
+    const items = used.map(({type,count})=>{
+      const label = `${type.label} (${count})`;
+      return { type, label, itemW: 28 + measure.measureText(label).width + 26 };
+    });
+    const rows = [];
+    let cur = [], curW = legendMargin;
+    items.forEach(it=>{
+      if(cur.length && curW + it.itemW > exportW - legendMargin){ rows.push(cur); cur=[]; curW=legendMargin; }
+      cur.push(it); curW += it.itemW;
+    });
+    if(cur.length) rows.push(cur);
+    if(rows.length===0) rows.push([]);
+    return { items, rows, measure, legendH: rows.length*rowHeight + 22 };
+  }
+  function drawLegendBlock(ctx, rows, measure, legendFont, x0, y0, legendMargin, rowHeight, emptyText){
+    ctx.textAlign='left'; ctx.textBaseline='middle';
+    if(rows.length===1 && rows[0].length===0){
+      ctx.fillStyle = '#898781'; ctx.font = '14px system-ui, -apple-system, "Segoe UI", sans-serif';
+      ctx.fillText(emptyText, x0+legendMargin, y0+rowHeight/2);
+      return;
+    }
+    rows.forEach((row, ri)=>{
+      let lx = x0 + legendMargin;
+      const ly = y0 + 18 + ri*rowHeight;
+      row.forEach(({type,label})=>{
+        drawLegendIcon(ctx, type, lx+12, ly, 12);
+        lx += 28;
+        ctx.font = legendFont;
+        ctx.fillStyle = '#0b0b0b';
+        ctx.fillText(label, lx, ly);
+        lx += measure.measureText(label).width + 26;
+      });
+    });
+  }
+
+  function exportPNG(){
+    const d = getActiveDrawing();
+    if(!d){ alert('먼저 도면 이미지를 추가해주세요.'); return; }
+    const useTitleBlock = document.getElementById('titleBlockToggle').checked;
+    const off = useTitleBlock ? buildExportCanvasTitleBlock(d) : buildExportCanvasSimple(d);
+    const format = document.getElementById('exportFormatSelect').value;
+    if(format==='pdf'){
+      const pageSizeKey = document.getElementById('pdfPageSizeSelect').value;
+      triggerPdfDownload(off, d, pageSizeKey);
+    } else {
+      triggerPngDownload(off, d);
+    }
+  }
+
+  function triggerPngDownload(off, d){
+    off.toBlob(blob=>{
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = filenameBase() + '_' + sanitizeFilename(d.name) + '.png';
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(()=>URL.revokeObjectURL(url), 3000);
+    }, 'image/png');
+  }
+
+  // 표제란 없이 저장: 위·아래 글자/여백 없이 도면 원본 크기 그대로 + 마커만 찍은 깨끗한 이미지
+  function buildExportCanvasSimple(d){
+    const w = d.naturalW, h = d.naturalH;
+    const off = document.createElement('canvas');
+    off.width = w; off.height = h;
+    const ctx = off.getContext('2d');
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(d.imgEl, 0, 0, w, h);
+
+    const r = markerRadiusNatural(d);
+    d.markers.forEach((m, idx)=>{
+      drawMarkerDispatch(ctx, d, m, idx+1, w, h, r, false);
+    });
+
+    return off;
+  }
+
+  // CAD 도곽(표제란) 스타일 — 외곽 사각 테두리 + 상단 가로 표제란(용역명·구분·조사위치·구조형식, 4칸,
+  // 눕히지 않은 정방향 글씨) + 그 아래 도면. 페이지 전체 비율은 A4 가로(297:210)에 맞추고, 도면은
+  // 항상 "현재 회전 상태 그대로"(d.imgEl 픽셀 그대로) 축소/확대만 해서 배치하므로 표제란은 도면 회전과
+  // 무관하게 항상 정방향으로 표시된다.
+  function buildExportCanvasTitleBlock(d){
+    const w = d.naturalW, h = d.naturalH;
+
+    const projName = document.getElementById('projectNameInput').value.trim() || '-';
+    const siteName = document.getElementById('siteNameInput').value.trim() || '-';
+    const structureType = document.getElementById('structureTypeInput').value.trim() || '-';
+
+    const legendMargin = 18;
+    const legendFont = '600 14px system-ui, -apple-system, "Segoe UI", sans-serif';
+    const legendRowH = 30;
+
+    // ---- 페이지 전체 비율을 A4 가로(297:210)에 맞춘다 ----
+    const A4_RATIO = 297/210;
+    const pageMargin = 26;
+    // 도면 폭을 기준으로 페이지 폭을 정하되, 너무 작은 도면도 인쇄용으로 충분한 크기가 되도록 최소값을 둔다.
+    const outerW = Math.max(w + pageMargin*2, 1400);
+    const outerH = Math.round(outerW / A4_RATIO);
+
+    const off = document.createElement('canvas');
+    off.width = outerW; off.height = outerH;
+    const ctx = off.getContext('2d');
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(0,0,outerW,outerH);
+
+    const contentW = outerW - pageMargin*2;
+
+    // ---- 상단 표제란: 실무 도면 표제란처럼 "라벨 배지 + 값" 2행×2열 구성
+    // (①용역명·②구분 한 줄, ③조사위치·④구조형식 한 줄), 눕히지 않은 정방향 글씨.
+    const titleBarH = clamp(outerH*0.135, 109, 169);
+    const rowH = titleBarH/2, colW = contentW/2;
+    const tbCells = [
+      { r:0, c:0, label:'용 역 명', value: projName },
+      { r:0, c:1, label:'구   분',  value: siteName },
+      { r:1, c:0, label:'조사위치', value: d.surveyLocation||'' },
+      { r:1, c:1, label:'구조형식', value: structureType },
+    ];
+    const badgeW = clamp(colW*0.22, 78, 137);
+    const badgeH = clamp(rowH*0.52, 27, 48);
+    const badgeMarginX = clamp(colW*0.035, 9, 20);
+    const titleFontScale = 1.1; // 도곽 상단 표제란 글자 크기(라벨/값)를 기존보다 1.1배 키움
+    const labelFont = `700 ${Math.round(clamp(badgeH*0.42,13,22)*titleFontScale)}px system-ui, -apple-system, "Segoe UI", sans-serif`;
+    const valueFont = `600 ${Math.round(clamp(badgeH*0.46,14,23)*titleFontScale)}px system-ui, -apple-system, "Segoe UI", sans-serif`;
+
+    ctx.strokeStyle = '#000000'; ctx.lineWidth = 2.2;
+    ctx.strokeRect(pageMargin+1.1, pageMargin+1.1, contentW-2.2, titleBarH-2.2);
+    ctx.lineWidth = 1.4;
+    ctx.beginPath(); ctx.moveTo(pageMargin+colW, pageMargin); ctx.lineTo(pageMargin+colW, pageMargin+titleBarH); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(pageMargin, pageMargin+rowH); ctx.lineTo(pageMargin+contentW, pageMargin+rowH); ctx.stroke();
+
+    tbCells.forEach(cell=>{
+      const cellX = pageMargin + cell.c*colW;
+      const cellY = pageMargin + cell.r*rowH;
+      const badgeX = cellX + badgeMarginX;
+      const badgeY = cellY + (rowH-badgeH)/2;
+      roundedRectXYWH(ctx, badgeX, badgeY, badgeW, badgeH, 8);
+      ctx.fillStyle = '#ffffff'; ctx.fill();
+      ctx.strokeStyle = '#000000'; ctx.lineWidth = 1.6; ctx.stroke();
+      ctx.fillStyle = '#0b0b0b'; ctx.font = labelFont;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(cell.label, badgeX+badgeW/2, badgeY+badgeH/2+1);
+
+      const valueX0 = badgeX + badgeW + clamp(colW*0.03,10,22);
+      const valueMaxW = Math.max(20, cellX+colW - valueX0 - badgeMarginX);
+      ctx.font = valueFont; ctx.fillStyle = '#0b0b0b';
+      ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+      const lines = wrapText(ctx, cell.value || '-', valueMaxW).slice(0,2);
+      if(lines.length<=1){
+        ctx.fillText(lines[0]||'-', valueX0, cellY+rowH/2);
+      } else {
+        const lh = Math.round(clamp(badgeH*0.52,20,34));
+        const startY = cellY+rowH/2 - lh*(lines.length-1)/2;
+        lines.forEach((ln,li)=> ctx.fillText(ln, valueX0, startY+li*lh));
+      }
+    });
+
+    // ---- 도면(표제란 아래, contain으로 배치 — 현재 회전 상태의 이미지를 그대로 축소/확대만 함) ----
+    const { rows, measure, legendH } = computeLegendLayout(d, contentW, legendMargin, legendFont, legendRowH);
+    const contentY0 = pageMargin + titleBarH;
+    const contentAreaH = outerH - pageMargin*2 - titleBarH - legendH;
+    // 이미지가 표제란/범례/외곽 테두리에 딱 붙지 않도록 도면 배치 영역 안쪽으로 약간의 여백을 둔다.
+    const imageMargin = clamp(Math.min(contentW, contentAreaH)*0.02, 10, 26);
+    const availW = Math.max(10, contentW - imageMargin*2);
+    const availH = Math.max(10, contentAreaH - imageMargin*2);
+    // 페이지가 원본 도면보다 넓어도(작은 이미지를 인쇄용 최소 크기로 맞추는 경우 등) 원본 해상도 이상으로
+    // 확대하지 않는다 — 화질이 흐려지거나 깨지는 것을 막기 위함. 원본보다 페이지가 크면 남는 공간은 여백이 된다.
+    const scale = Math.min(availW/w, availH/h, 1);
+    const drawW = w*scale, drawH = h*scale;
+    const drawX = pageMargin + imageMargin + (availW-drawW)/2;
+    const drawY = contentY0 + imageMargin + Math.max(0, (availH-drawH)/2);
+    ctx.drawImage(d.imgEl, drawX, drawY, drawW, drawH);
+    const r = markerRadiusNatural(d) * scale;
+    d.markers.forEach((m, idx)=>{
+      // drawMarkerDispatch는 xPct/yPct·rectXPct 등 "도면 대비 %" 좌표를 그대로 쓰므로,
+      // 실제 도면이 그려진 (drawX,drawY,drawW,drawH) 영역 기준으로 좌표를 다시 매핑해 그린다.
+      const type = getType(m.typeKey);
+      if(type.endStyle === 'rect'){
+        const rect = markerRectPx(m, drawW, drawH);
+        drawAreaMarker(ctx, type, drawX+rect.x, drawY+rect.y, rect.w, rect.h,
+          drawX+m.xPct/100*drawW, drawY+m.yPct/100*drawH, r, idx+1, false, m.numRot||0, m.rectAngle||0);
+      } else {
+        const cx = drawX + m.xPct/100*drawW, cy = drawY + m.yPct/100*drawH;
+        drawMarkerWithLeader(ctx, type, cx, cy, r, m.angle||0, leaderLenForMarker(m,r), idx+1, false, m.numRot||0);
+      }
+    });
+
+    // ---- 범례 (도면 아래, 페이지 전체 폭) — 배경 없이 흰 바탕 그대로 두어 하단에 회색 줄이 보이지 않게 함 ----
+    const legendY = outerH - pageMargin - legendH;
+    drawLegendBlock(ctx, rows, measure, legendFont, pageMargin, legendY, legendMargin, legendRowH, '표시된 결함이 없습니다');
+
+    // ---- 외곽 굵은 테두리(도곽) — 용지 가장자리와 살짝 떨어뜨려서 도면 전체를 감싸는 굵은 사각형 하나 ----
+    const frameMargin = 18;
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(frameMargin, frameMargin, outerW-frameMargin*2, outerH-frameMargin*2);
+
+    return off;
+  }
+
+  // ---------- PDF 내보내기 (외부 라이브러리 없이 최소 PDF를 직접 생성) ----------
+  // 캔버스를 JPEG로 인코딩해 한 페이지짜리 PDF에 이미지로 삽입한다.
+  const PDF_PAGE_SIZES = { // [width, height] in pt (1pt = 1/72in), A4/A3
+    a4l: [841.89, 595.28], a4p: [595.28, 841.89],
+    a3l: [1190.55, 841.89], a3p: [841.89, 1190.55],
+  };
+  // 캔버스 1개짜리 배열을 넘기면 기존과 동일한 1페이지 PDF, 여러 개를 넘기면 도면 수만큼 페이지가
+  // 이어진 PDF 1개를 만든다("전체 도면 일괄 저장"에서 사용). 페이지마다 이미지·내용 스트림 객체를
+  // 3개씩(페이지/이미지/콘텐츠) 순서대로 번호를 매겨 이어붙이는 방식이라 페이지 수에 제한이 없다.
+  function buildPDFFromCanvases(canvases, pageSizeKey){
+    const parts = [];
+    const offsets = [];
+    let pos = 0;
+    function pushStr(s){ parts.push(s); pos += s.length; }
+    function pushBytes(b){ parts.push(b); pos += b.length; }
+    function beginObj(num){ offsets[num] = pos; pushStr(`${num} 0 obj\n`); }
+
+    pushStr('%PDF-1.4\n');
+
+    const n = canvases.length;
+    const pageObjNums = canvases.map((_,i)=> 3 + i*3);
+
+    beginObj(1);
+    pushStr('<< /Type /Catalog /Pages 2 0 R >>\nendobj\n');
+
+    beginObj(2);
+    pushStr(`<< /Type /Pages /Kids [${pageObjNums.map(num=>num+' 0 R').join(' ')}] /Count ${n} >>\nendobj\n`);
+
+    canvases.forEach((canvas, i)=>{
+      const w = canvas.width, h = canvas.height;
+      let pageW, pageH, drawW, drawH, offX, offY;
+      if(pageSizeKey && PDF_PAGE_SIZES[pageSizeKey]){
+        [pageW, pageH] = PDF_PAGE_SIZES[pageSizeKey];
+        const margin = 24;
+        const availW = pageW - margin*2, availH = pageH - margin*2;
+        const scale = Math.min(availW/w, availH/h);
+        drawW = w*scale; drawH = h*scale;
+        offX = margin + (availW-drawW)/2; offY = margin + (availH-drawH)/2;
+      } else {
+        // 원본 비율: 화면 96dpi 기준으로 픽셀을 포인트로 환산 (px * 0.75 = pt)
+        pageW = w*0.75; pageH = h*0.75;
+        drawW = pageW; drawH = pageH; offX = 0; offY = 0;
+      }
+
+      const dataURL = canvas.toDataURL('image/jpeg', 0.98); // 압축률을 낮춰(품질↑) PDF 저장 시 화질 저하를 줄임
+      const base64 = dataURL.split(',')[1];
+      const binStr = atob(base64);
+      const jpegBytes = new Uint8Array(binStr.length);
+      for(let k=0;k<binStr.length;k++) jpegBytes[k] = binStr.charCodeAt(k);
+
+      const pageObjNum = pageObjNums[i], imgObjNum = pageObjNum+1, contentObjNum = pageObjNum+2;
+
+      beginObj(pageObjNum);
+      pushStr(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pageW.toFixed(2)} ${pageH.toFixed(2)}] /Resources << /XObject << /Im0 ${imgObjNum} 0 R >> /ProcSet [/PDF /ImageC] >> /Contents ${contentObjNum} 0 R >>\nendobj\n`);
+
+      beginObj(imgObjNum);
+      pushStr(`<< /Type /XObject /Subtype /Image /Width ${w} /Height ${h} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${jpegBytes.length} >>\nstream\n`);
+      pushBytes(jpegBytes);
+      pushStr('\nendstream\nendobj\n');
+
+      const content = `q ${drawW.toFixed(2)} 0 0 ${drawH.toFixed(2)} ${offX.toFixed(2)} ${offY.toFixed(2)} cm /Im0 Do Q`;
+      beginObj(contentObjNum);
+      pushStr(`<< /Length ${content.length} >>\nstream\n${content}\nendstream\nendobj\n`);
+    });
+
+    const totalObjs = 2 + n*3;
+    const xrefStart = pos;
+    let xref = `xref\n0 ${totalObjs+1}\n0000000000 65535 f \n`;
+    for(let i=1;i<=totalObjs;i++){ xref += String(offsets[i]).padStart(10,'0') + ' 00000 n \n'; }
+    pushStr(xref);
+    pushStr(`trailer\n<< /Size ${totalObjs+1} /Root 1 0 R >>\nstartxref\n${xrefStart}\n%%EOF`);
+
+    return new Blob(parts, { type:'application/pdf' });
+  }
+  function triggerPdfDownload(canvas, d, pageSizeKey){
+    const blob = buildPDFFromCanvases([canvas], pageSizeKey);
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filenameBase() + '_' + sanitizeFilename(d.name) + '.pdf';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url), 3000);
+  }
+  function triggerPdfDownloadMulti(canvases, filename, pageSizeKey){
+    const blob = buildPDFFromCanvases(canvases, pageSizeKey);
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url), 3000);
+  }
+
+  // ---------- 전체 도면 일괄 저장 : 현재 켜진 형식(PNG/PDF)으로 모든 도면을 한 번에 내보낸다 ----------
+  // PDF는 도면 수만큼 페이지가 이어진 파일 1개로 저장, PNG는 형식 특성상 파일을 하나로 합칠 수 없어
+  // 도면별로 순서대로 저장 대화상자를 띄운다(저장 대화상자가 겹치지 않도록 약간의 지연을 둔다).
+  function exportAllDrawings(){
+    if(drawings.length===0){ alert('저장할 도면이 없습니다.'); return; }
+    const useTitleBlock = document.getElementById('titleBlockToggle').checked;
+    const format = document.getElementById('exportFormatSelect').value;
+    const canvasList = drawings.map(d => useTitleBlock ? buildExportCanvasTitleBlock(d) : buildExportCanvasSimple(d));
+    if(format === 'pdf'){
+      const pageSizeKey = document.getElementById('pdfPageSizeSelect').value;
+      triggerPdfDownloadMulti(canvasList, filenameBase() + '_전체도면.pdf', pageSizeKey);
+    } else {
+      let i = 0;
+      const next = ()=>{
+        if(i >= drawings.length) return;
+        triggerPngDownload(canvasList[i], drawings[i]);
+        i++;
+        setTimeout(next, 400);
+      };
+      next();
+    }
+  }
+
+  // ---------- CSV 내보내기 / 불러오기 ----------
+  function csvEscape(v){
+    v = String(v==null?'':v);
+    if(/[",\n\r]/.test(v)) return '"' + v.replace(/"/g,'""') + '"';
+    return v;
+  }
+  function downloadBlob(content, filename, mime){
+    const blob = new Blob([content], {type:mime});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url), 3000);
+  }
+  // CSV/xlsx 내보내기가 공유하는 결함 목록 데이터 — 헤더와 각 행의 값(cells) + 색상 구분에 쓰는 typeKey.
+  function buildDefectExportData(){
+    const header = ['도면명','번호','위치유형','X(%)','Y(%)','각도','인출선길이배율','범위X(%)','범위Y(%)','범위폭(%)','범위높이(%)',
+      '유형','부재명','결함명','폭','길이','개수','#','사진','비고'];
+    const rows = [];
+    drawings.forEach(d=>{
+      d.markers.forEach((m, idx)=>{
+        const type = getType(m.typeKey);
+        const lenStr = (typeof m.lenMult==='number' && isFinite(m.lenMult)) ? m.lenMult.toFixed(2) : '';
+        const isRect = type.endStyle==='rect';
+        rows.push({ typeKey: m.typeKey, cells: [d.name, idx+1, type.label, m.xPct.toFixed(1), m.yPct.toFixed(1), Math.round(m.angle||0), lenStr,
+          isRect ? (m.rectXPct||0).toFixed(1) : '', isRect ? (m.rectYPct||0).toFixed(1) : '',
+          isRect ? (m.rectWPct||0).toFixed(1) : '', isRect ? (m.rectHPct||0).toFixed(1) : '',
+          m.rptType||'', m.rptMember||'', m.rptDefect||'', m.rptWidth||'', m.rptLength||'', m.rptCount||'', m.rptTag||'',
+          (m.photos&&m.photos.length) ? `${m.photos.length}장` : '',
+          (m.note||'').replace(/\r?\n/g,' ')] });
+      });
+    });
+    return { header, rows };
+  }
+  function hasAnyMarkers(){
+    return drawings.length>0 && drawings.some(d=>d.markers.length>0);
+  }
+  function exportCSV(){
+    if(!hasAnyMarkers()){ alert('내보낼 결함 데이터가 없습니다.'); return; }
+    const { header, rows } = buildDefectExportData();
+    const csv = '﻿' + [header].concat(rows.map(r=>r.cells)).map(r=>r.map(csvEscape).join(',')).join('\r\n');
+    downloadBlob(csv, filenameBase() + '_결함목록.csv', 'text/csv;charset=utf-8');
+  }
+
+  // ---------- 엑셀(xlsx) 내보내기 : 외부 라이브러리 없이 ZIP(저장방식, 무압축)을 직접 만들어 최소 OOXML 통합문서를 생성 ----------
+  // 표 틀(테두리) + 헤더 굵게/회색 배경 + 벽체계/바닥·천장계 결함은 옅은 빨강/파랑으로 행 배경을 구분한다.
+  function crc32(bytes){
+    let crc = ~0;
+    for(let i=0;i<bytes.length;i++){
+      crc ^= bytes[i];
+      for(let j=0;j<8;j++){ crc = (crc>>>1) ^ (0xEDB88320 & -(crc & 1)); }
+    }
+    return (~crc) >>> 0;
+  }
+  function strToBytes(s){ return new TextEncoder().encode(s); }
+  // files: [{name, data:Uint8Array}] → ZIP 파일 하나(Blob). 저장(store, 무압축) 방식이라 압축 라이브러리가 필요 없다.
+  function buildZipBlob(files){
+    const parts = [];
+    const centralParts = [];
+    let offset = 0;
+    files.forEach(f=>{
+      const nameBytes = strToBytes(f.name);
+      const data = f.data;
+      const crc = crc32(data);
+      const local = new Uint8Array(30 + nameBytes.length);
+      const ldv = new DataView(local.buffer);
+      ldv.setUint32(0, 0x04034b50, true);
+      ldv.setUint16(4, 20, true);
+      ldv.setUint16(6, 0, true);
+      ldv.setUint16(8, 0, true);
+      ldv.setUint16(10, 0, true);
+      ldv.setUint16(12, 0x21, true);
+      ldv.setUint32(14, crc, true);
+      ldv.setUint32(18, data.length, true);
+      ldv.setUint32(22, data.length, true);
+      ldv.setUint16(26, nameBytes.length, true);
+      ldv.setUint16(28, 0, true);
+      local.set(nameBytes, 30);
+      parts.push(local, data);
+
+      const central = new Uint8Array(46 + nameBytes.length);
+      const cdv = new DataView(central.buffer);
+      cdv.setUint32(0, 0x02014b50, true);
+      cdv.setUint16(4, 20, true);
+      cdv.setUint16(6, 20, true);
+      cdv.setUint16(8, 0, true);
+      cdv.setUint16(10, 0, true);
+      cdv.setUint16(12, 0, true);
+      cdv.setUint16(14, 0x21, true);
+      cdv.setUint32(16, crc, true);
+      cdv.setUint32(20, data.length, true);
+      cdv.setUint32(24, data.length, true);
+      cdv.setUint16(28, nameBytes.length, true);
+      cdv.setUint16(30, 0, true);
+      cdv.setUint16(32, 0, true);
+      cdv.setUint16(34, 0, true);
+      cdv.setUint16(36, 0, true);
+      cdv.setUint32(38, 0, true);
+      cdv.setUint32(42, offset, true);
+      central.set(nameBytes, 46);
+      centralParts.push(central);
+
+      offset += local.length + data.length;
+    });
+    const centralSize = centralParts.reduce((s,p)=>s+p.length,0);
+    const centralOffset = offset;
+    const end = new Uint8Array(22);
+    const edv = new DataView(end.buffer);
+    edv.setUint32(0, 0x06054b50, true);
+    edv.setUint16(4, 0, true);
+    edv.setUint16(6, 0, true);
+    edv.setUint16(8, files.length, true);
+    edv.setUint16(10, files.length, true);
+    edv.setUint32(12, centralSize, true);
+    edv.setUint32(16, centralOffset, true);
+    edv.setUint16(20, 0, true);
+    return new Blob([...parts, ...centralParts, end], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+  }
+  function xmlEscape(s){
+    return String(s==null?'':s).replace(/[&<>]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])).replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g,'');
+  }
+  function xlsxColLetter(n){ // 1-based 열 번호 → A, B, … Z, AA …
+    let s = '';
+    while(n>0){ const r = (n-1)%26; s = String.fromCharCode(65+r) + s; n = Math.floor((n-1)/26); }
+    return s;
+  }
+  function buildXLSXBlob(header, rows){
+    const colCount = header.length;
+    // 스타일: 0=기본, 1=헤더(굵게+회색배경+테두리), 2=일반 데이터(테두리만), 3=벽체계(옅은 빨강), 4=바닥/천장계(옅은 파랑)
+    const stylesXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+  <fonts count="2"><font><sz val="10"/><name val="맑은 고딕"/></font><font><b/><sz val="10"/><name val="맑은 고딕"/></font></fonts>
+  <fills count="5">
+    <fill><patternFill patternType="none"/></fill>
+    <fill><patternFill patternType="gray125"/></fill>
+    <fill><patternFill patternType="solid"><fgColor rgb="FFE7E6E1"/><bgColor indexed="64"/></patternFill></fill>
+    <fill><patternFill patternType="solid"><fgColor rgb="FFFCE4E4"/><bgColor indexed="64"/></patternFill></fill>
+    <fill><patternFill patternType="solid"><fgColor rgb="FFE3ECFB"/><bgColor indexed="64"/></patternFill></fill>
+  </fills>
+  <borders count="2">
+    <border><left/><right/><top/><bottom/><diagonal/></border>
+    <border><left style="thin"><color rgb="FFCCCCCC"/></left><right style="thin"><color rgb="FFCCCCCC"/></right><top style="thin"><color rgb="FFCCCCCC"/></top><bottom style="thin"><color rgb="FFCCCCCC"/></bottom><diagonal/></border>
+  </borders>
+  <cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
+  <cellXfs count="5">
+    <xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>
+    <xf numFmtId="0" fontId="1" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1"/>
+    <xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1"/>
+    <xf numFmtId="0" fontId="0" fillId="3" borderId="1" xfId="0" applyFill="1" applyBorder="1"/>
+    <xf numFmtId="0" fontId="0" fillId="4" borderId="1" xfId="0" applyFill="1" applyBorder="1"/>
+  </cellXfs>
+  <cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>
+</styleSheet>`;
+    const colsXml = `<cols>${header.map((h,i)=>`<col min="${i+1}" max="${i+1}" width="${Math.min(30, Math.max(8, h.length*1.6+4))}" customWidth="1"/>`).join('')}</cols>`;
+    const headerRow = `<row r="1">${header.map((h,i)=>`<c r="${xlsxColLetter(i+1)}1" t="inlineStr" s="1"><is><t>${xmlEscape(h)}</t></is></c>`).join('')}</row>`;
+    const dataRows = rows.map((row,ri)=>{
+      const type = getType(row.typeKey);
+      const style = type.endStyle==='dot' || row.typeKey==='flat' || row.typeKey==='flat_area' ? 4
+        : (row.typeKey==='wall' || row.typeKey==='wall_area') ? 3 : 2;
+      const r = ri+2;
+      const cells = row.cells.map((v,ci)=>`<c r="${xlsxColLetter(ci+1)}${r}" t="inlineStr" s="${style}"><is><t>${xmlEscape(v)}</t></is></c>`).join('');
+      return `<row r="${r}">${cells}</row>`;
+    }).join('');
+    const sheetXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+  <sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>
+  ${colsXml}
+  <sheetData>${headerRow}${dataRows}</sheetData>
+  <autoFilter ref="A1:${xlsxColLetter(colCount)}${rows.length+1}"/>
+</worksheet>`;
+    const contentTypesXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
+  <Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
+  <Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>
+</Types>`;
+    const rootRelsXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>
+</Relationships>`;
+    const workbookXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+  <sheets><sheet name="결함목록" sheetId="1" r:id="rId1"/></sheets>
+</workbook>`;
+    const workbookRelsXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>
+  <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
+</Relationships>`;
+    const files = [
+      { name:'[Content_Types].xml', data: strToBytes(contentTypesXml) },
+      { name:'_rels/.rels', data: strToBytes(rootRelsXml) },
+      { name:'xl/workbook.xml', data: strToBytes(workbookXml) },
+      { name:'xl/_rels/workbook.xml.rels', data: strToBytes(workbookRelsXml) },
+      { name:'xl/styles.xml', data: strToBytes(stylesXml) },
+      { name:'xl/worksheets/sheet1.xml', data: strToBytes(sheetXml) },
+    ];
+    return buildZipBlob(files);
+  }
+  function exportXLSX(){
+    if(!hasAnyMarkers()){ alert('내보낼 결함 데이터가 없습니다.'); return; }
+    const { header, rows } = buildDefectExportData();
+    const blob = buildXLSXBlob(header, rows);
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filenameBase() + '_결함목록.xlsx';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url), 3000);
+  }
+
+  function parseCSV(text){
+    const rows = []; let row = []; let field=''; let inQuotes=false;
+    for(let i=0;i<text.length;i++){
+      const c = text[i];
+      if(inQuotes){
+        if(c==='"'){ if(text[i+1]==='"'){ field+='"'; i++; } else inQuotes=false; }
+        else field += c;
+      } else {
+        if(c==='"') inQuotes = true;
+        else if(c===','){ row.push(field); field=''; }
+        else if(c==='\r'){ /* skip */ }
+        else if(c==='\n'){ row.push(field); rows.push(row); row=[]; field=''; }
+        else field += c;
+      }
+    }
+    if(field.length || row.length){ row.push(field); rows.push(row); }
+    return rows.filter(r => !(r.length===1 && r[0].trim()===''));
+  }
+
+  function matchTypeKeyByLabel(label){
+    const s = String(label||'').trim().toLowerCase();
+    const isArea = /범위|영역|area|range/.test(s);
+    if(/벽/.test(s) || /wall/.test(s)) return isArea ? 'wall_area' : 'wall';
+    if(/바닥|천장|천정|floor|ceiling/.test(s)) return isArea ? 'flat_area' : 'flat';
+    const found = DEFECT_TYPES.find(t => t.label===label || s.includes(t.label.toLowerCase()) || t.key===s);
+    return found ? found.key : DEFECT_TYPES[0].key;
+  }
+
+  function importCSVText(text){
+    const d = getActiveDrawing();
+    if(!d){ alert('먼저 도면을 추가하고 선택해주세요.'); return; }
+    const rows = parseCSV(text);
+    if(rows.length < 2){ alert('CSV에서 데이터 행을 찾지 못했습니다.'); return; }
+    const header = rows[0].map(h=>h.trim());
+    const idx = {
+      type: header.findIndex(h=>/유형|종류|type/i.test(h)),
+      x: header.findIndex(h=>/^x/i.test(h)),
+      y: header.findIndex(h=>/^y/i.test(h)),
+      angle: header.findIndex(h=>/각도|angle/i.test(h)),
+      len: header.findIndex(h=>/길이|배율|length/i.test(h)),
+      rectX: header.findIndex(h=>/범위x|rectx/i.test(h)),
+      rectY: header.findIndex(h=>/범위y|recty/i.test(h)),
+      rectW: header.findIndex(h=>/범위폭|범위너비|rectw/i.test(h)),
+      rectH: header.findIndex(h=>/범위높이|recth/i.test(h)),
+      note: header.findIndex(h=>/비고|설명|메모|note/i.test(h)),
+    };
+    if(idx.x<0 || idx.y<0){ alert('CSV 헤더에서 X, Y 좌표 열을 찾지 못했습니다. "위치유형,X(%),Y(%),각도,비고" 형식을 확인해주세요.'); return; }
+    pushUndo();
+    let added = 0;
+    for(let i=1;i<rows.length;i++){
+      const r = rows[i];
+      if(!r || r.length===0) continue;
+      const xVal = parseFloat(r[idx.x]);
+      const yVal = parseFloat(r[idx.y]);
+      if(isNaN(xVal) || isNaN(yVal)) continue;
+      const typeLabel = idx.type>=0 ? r[idx.type] : '';
+      const angleVal = idx.angle>=0 ? parseFloat(r[idx.angle]) : 0;
+      const lenVal = idx.len>=0 ? parseFloat(r[idx.len]) : NaN;
+      const note = idx.note>=0 ? r[idx.note] : '';
+      const typeKey = matchTypeKeyByLabel(typeLabel);
+      const marker = { id: uid(), typeKey, xPct: clamp(xVal,0,100), yPct: clamp(yVal,0,100), angle: isNaN(angleVal)?0:angleVal, numRot: 0, note: note||'' };
+      if(!isNaN(lenVal) && lenVal>0) marker.lenMult = lenVal;
+      if(getType(typeKey).endStyle==='rect'){
+        const rx = idx.rectX>=0 ? parseFloat(r[idx.rectX]) : NaN;
+        const ry = idx.rectY>=0 ? parseFloat(r[idx.rectY]) : NaN;
+        const rw = idx.rectW>=0 ? parseFloat(r[idx.rectW]) : NaN;
+        const rh = idx.rectH>=0 ? parseFloat(r[idx.rectH]) : NaN;
+        // CSV에 범위 좌표가 없으면(구버전 형식 등) 배지 위치를 중심으로 한 기본 사각형을 만들어준다.
+        marker.rectXPct = !isNaN(rx) ? rx : clamp(xVal-4,0,100);
+        marker.rectYPct = !isNaN(ry) ? ry : clamp(yVal-3,0,100);
+        marker.rectWPct = !isNaN(rw) && rw>0 ? rw : 8;
+        marker.rectHPct = !isNaN(rh) && rh>0 ? rh : 6;
+      }
+      d.markers.push(marker);
+      added++;
+    }
+    renderCanvas(); renderTable();
+    if(added===0) alert('추가된 항목이 없습니다. 좌표 값(X, Y, 0~100 범위의 %)을 확인해주세요.');
+  }
+
+  // ---------- 표로 좌표 입력(모달) : CSV 파일 없이 표 UI에서 바로 입력, 엑셀에서 표를 복사해 붙여넣기 가능 ----------
+  // X(%)/Y(%) 칸은 한 칸으로 통일하되 그 행의 "유형"이 무엇이냐에 따라 의미가 바뀐다 —
+  // 화살표/원 유형이면 화살표 끝(실제 결함 위치), "범위" 유형이면 사각형의 시작 좌표로 쓰인다.
+  // 범위의 크기는 별도 칸 없이 X/Y에 "10~20"처럼 물결(~)로 시작~끝을 함께 적어 지정한다(생략 시 기본 크기).
+  const INPUT_TABLE_COLS = ['type','x','y','angle','len','note'];
+  // null = "추가" 모드(모두 새 마커로 추가). Set = "편집" 모드(현재 도면의 마커를 불러와 표에서 고친 뒤
+  // 적용 — 표에 남아있는 기존 마커는 값이 갱신되고, 표에서 지워버린(행 삭제) 기존 마커는 실제로도 삭제된다.
+  let tableInputLoadedIds = null;
+  // 행의 유형(화살표류/범위류)에 따라 X/Y 칸의 placeholder를 바꿔서 그 칸이 지금 무엇을 의미하는지 보여준다.
+  function updateRowXYMode(tr){
+    const typeKey = tr.querySelector('[data-col="type"]').value;
+    const isRect = getType(typeKey).endStyle==='rect';
+    const xInput = tr.querySelector('[data-col="x"]');
+    const yInput = tr.querySelector('[data-col="y"]');
+    if(isRect){
+      xInput.placeholder = '범위 X (예: 10~20)';
+      yInput.placeholder = '범위 Y (예: 20~30)';
+    } else {
+      xInput.placeholder = '화살표 끝 X';
+      yInput.placeholder = '화살표 끝 Y';
+    }
+  }
+  function buildInputRow(rowNum, markerId){
+    const tr = document.createElement('tr');
+    if(markerId) tr.dataset.markerId = markerId;
+    const typeOptions = DEFECT_TYPES.map(t=>`<option value="${t.key}">${t.label}</option>`).join('');
+    tr.innerHTML = `
+      <td style="color:var(--muted);text-align:center;">${rowNum}</td>
+      <td><select data-col="type">${typeOptions}</select></td>
+      <td><input type="text" data-col="x" placeholder="화살표 끝 X"/></td>
+      <td><input type="text" data-col="y" placeholder="화살표 끝 Y"/></td>
+      <td><input type="text" data-col="angle" placeholder="0"/></td>
+      <td><input type="text" data-col="len" placeholder="1.0"/></td>
+      <td><input type="text" data-col="note" placeholder="비고"/></td>
+      <td><button type="button" class="row-del" title="행 삭제">✕</button></td>
+    `;
+    tr.querySelector('.row-del').addEventListener('click', ()=>{ tr.remove(); renumberInputTable(); });
+    tr.querySelector('[data-col="type"]').addEventListener('change', ()=> updateRowXYMode(tr));
+    updateRowXYMode(tr);
+    return tr;
+  }
+  function renumberInputTable(){
+    Array.from(document.getElementById('inputTableBody').children).forEach((tr,i)=>{ tr.firstElementChild.textContent = i+1; });
+  }
+  function addInputRow(){
+    const tbody = document.getElementById('inputTableBody');
+    tbody.appendChild(buildInputRow(tbody.children.length+1));
+  }
+  function updateTableInputModeUI(){
+    const sub = document.getElementById('tableInputSub');
+    const applyBtn = document.getElementById('btnTableInputApply');
+    const foot = document.getElementById('tableInputFootNote');
+    if(tableInputLoadedIds){
+      sub.textContent = `편집 모드 — 현재 도면의 마커 ${tableInputLoadedIds.size}개를 불러왔습니다. 값을 고치거나 행을 지워 삭제하고, 빈 행에 새로 추가할 수도 있습니다.`;
+      applyBtn.textContent = '변경사항 적용';
+      foot.textContent = 'X/Y를 비워두면 그 행은 건드리지 않습니다. 표에서 지운 행(✕)의 기존 마커는 실제로도 삭제됩니다. 범위 마커의 번호 배지 위치는 캔버스에서 옮긴 그대로 유지됩니다.';
+    } else {
+      sub.textContent = '엑셀 표를 복사해 첫 칸에 붙여넣으면(Ctrl+V) 한 번에 채워집니다.';
+      applyBtn.textContent = '현재 도면에 추가';
+      foot.textContent = 'X/Y는 % 좌표(0~100). "범위" 유형은 "10~20"처럼 시작~끝을 물결(~)로 함께 입력하세요(생략 시 기본 크기로 생성).';
+    }
+  }
+  function openTableInputModal(){
+    if(!getActiveDrawing()){ alert('먼저 도면을 추가하고 선택해주세요.'); return; }
+    tableInputLoadedIds = null;
+    const tbody = document.getElementById('inputTableBody');
+    tbody.innerHTML = '';
+    for(let i=0;i<6;i++) tbody.appendChild(buildInputRow(i+1));
+    updateTableInputModeUI();
+    document.getElementById('tableInputBackdrop').style.display = 'flex';
+  }
+  // 현재 도면에 이미 찍힌 마커들을 표로 불러와 표에서 값을 고친 뒤 "변경사항 적용"으로 한 번에 반영("편집 모드").
+  function loadCurrentMarkersIntoTable(){
+    const d = getActiveDrawing();
+    if(!d){ alert('먼저 도면을 추가하고 선택해주세요.'); return; }
+    if(d.markers.length===0){ alert('이 도면에는 아직 마커가 없습니다.'); return; }
+    if(!confirm(`현재 표의 내용을 지우고, 이 도면의 마커 ${d.markers.length}개를 불러와 편집할까요?`)) return;
+    const tbody = document.getElementById('inputTableBody');
+    tbody.innerHTML = '';
+    tableInputLoadedIds = new Set();
+    d.markers.forEach((m,i)=>{
+      const tr = buildInputRow(i+1, m.id);
+      tableInputLoadedIds.add(m.id);
+      const type = getType(m.typeKey);
+      tr.querySelector('[data-col="type"]').value = m.typeKey;
+      if(type.endStyle==='rect'){
+        // 범위 마커는 X/Y칸에 "시작~끝" 범위를 채운다(번호 배지 위치는 표에서 다루지 않고 그대로 유지).
+        const rx = m.rectXPct||0, ry = m.rectYPct||0, rw = m.rectWPct||0, rh = m.rectHPct||0;
+        tr.querySelector('[data-col="x"]').value = `${rx.toFixed(1)}~${(rx+rw).toFixed(1)}`;
+        tr.querySelector('[data-col="y"]').value = `${ry.toFixed(1)}~${(ry+rh).toFixed(1)}`;
+      } else {
+        const tip = badgeToTipPct(d, m);
+        tr.querySelector('[data-col="x"]').value = tip.xPct.toFixed(1);
+        tr.querySelector('[data-col="y"]').value = tip.yPct.toFixed(1);
+      }
+      tr.querySelector('[data-col="angle"]').value = Math.round(m.angle||0);
+      tr.querySelector('[data-col="len"]').value = (typeof m.lenMult==='number' && isFinite(m.lenMult)) ? m.lenMult.toFixed(2) : '';
+      tr.querySelector('[data-col="note"]').value = m.note||'';
+      updateRowXYMode(tr);
+      tbody.appendChild(tr);
+    });
+    updateTableInputModeUI();
+  }
+  function closeTableInputModal(){
+    document.getElementById('tableInputBackdrop').style.display = 'none';
+    // 다음에 열 때는 다시 화면 가운데에서 시작하도록 드래그로 옮긴 위치를 초기화한다.
+    const panel = document.getElementById('tableInputPanel');
+    panel.style.position = ''; panel.style.left = ''; panel.style.top = ''; panel.style.margin = '';
+  }
+  function isTableInputOpen(){
+    const el = document.getElementById('tableInputBackdrop');
+    return !!el && el.style.display !== 'none';
+  }
+  // 엑셀 등에서 표를 복사해 표의 한 칸에 붙여넣으면(Ctrl+V) 탭/줄바꿈으로 구분된 값을
+  // 그 칸을 기준으로 표 전체에 자동으로 채워 넣는다(부족한 행은 자동 추가).
+  document.getElementById('inputTableBody').addEventListener('paste', e=>{
+    const target = e.target;
+    if(!target || !target.dataset || !target.dataset.col) return;
+    const text = (e.clipboardData || window.clipboardData).getData('text');
+    if(!text || !/[\t\n]/.test(text)) return; // 값 하나만 붙여넣는 경우는 기본 동작에 맡김
+    e.preventDefault();
+    const rows = text.replace(/\r/g,'').split('\n').filter((r,i,arr)=> !(i===arr.length-1 && r===''));
+    const tbody = document.getElementById('inputTableBody');
+    const trAll = Array.from(tbody.children);
+    const startTr = target.closest('tr');
+    const startRowIdx = trAll.indexOf(startTr);
+    const startColIdx = INPUT_TABLE_COLS.indexOf(target.dataset.col);
+    rows.forEach((rowText, ri)=>{
+      const cells = rowText.split('\t');
+      let tr = trAll[startRowIdx+ri];
+      if(!tr){ tr = buildInputRow(startRowIdx+ri+1); tbody.appendChild(tr); trAll.push(tr); }
+      cells.forEach((cellText, ci)=>{
+        const colKey = INPUT_TABLE_COLS[startColIdx+ci];
+        if(!colKey) return;
+        const el = tr.querySelector(`[data-col="${colKey}"]`);
+        if(!el) return;
+        if(el.tagName==='SELECT'){ el.value = matchTypeKeyByLabel(cellText.trim()); }
+        else { el.value = cellText.trim(); }
+      });
+    });
+    renumberInputTable();
+  });
+  // "추가" 모드에서는 유효한 행을 모두 새 마커로 추가. "편집" 모드(tableInputLoadedIds)에서는 불러왔던
+  // 마커를 표의 값으로 갱신하고, 표에서 지워진(행 삭제) 기존 마커는 실제로도 삭제, 새로 채운 빈 행은 추가한다.
+  function applyTableInputRows(){
+    const d = getActiveDrawing();
+    if(!d){ alert('먼저 도면을 추가하고 선택해주세요.'); return; }
+    const rows = Array.from(document.getElementById('inputTableBody').children);
+    pushUndo();
+    const keepIds = new Set();
+    let added = 0, updated = 0;
+    rows.forEach(tr=>{
+      const get = col => tr.querySelector(`[data-col="${col}"]`).value;
+      const xVal = parseFloat(get('x'));
+      const yVal = parseFloat(get('y'));
+      const markerId = tr.dataset.markerId || null;
+      if(isNaN(xVal) || isNaN(yVal)){
+        if(markerId) keepIds.add(markerId); // 좌표를 비워둔 기존 행은 건드리지 않고 그대로 둔다
+        return;
+      }
+      const typeKey = tr.querySelector('[data-col="type"]').value || DEFECT_TYPES[0].key;
+      const angleVal = parseFloat(get('angle'));
+      const lenVal = parseFloat(get('len'));
+      const note = get('note');
+      const angleFinal = isNaN(angleVal)?0:angleVal;
+      const lenFinal = (!isNaN(lenVal) && lenVal>0) ? lenVal : 1;
+      const isRect = getType(typeKey).endStyle==='rect';
+      const fields = { typeKey, angle: angleFinal, note: note||'' };
+      if(!isNaN(lenVal) && lenVal>0) fields.lenMult = lenVal;
+      if(isRect){
+        // "범위" 유형: X/Y칸이 범위 시작 좌표로 쓰인다 — "10~20"처럼 시작~끝을 함께 입력했으면 그 범위를,
+        // 아니면 X/Y를 시작 값으로 보고 기본 크기(가로 8%, 세로 6%)의 사각형을 만든다.
+        const rangeX = parseRectRangeField(get('x'));
+        const rangeY = parseRectRangeField(get('y'));
+        if(rangeX){
+          fields.rectXPct = clamp(rangeX.start,0,100);
+          fields.rectWPct = Math.max(0.5, rangeX.end-rangeX.start);
+        } else {
+          fields.rectXPct = clamp(xVal,0,100);
+          fields.rectWPct = 8;
+        }
+        if(rangeY){
+          fields.rectYPct = clamp(rangeY.start,0,100);
+          fields.rectHPct = Math.max(0.5, rangeY.end-rangeY.start);
+        } else {
+          fields.rectYPct = clamp(yVal,0,100);
+          fields.rectHPct = 6;
+        }
+        // 번호 배지 위치(xPct/yPct)는 기존 마커라면 캔버스에서 옮겨둔 그대로 유지하고(여기서 손대지 않음),
+        // 새로 추가하는 마커만 사각형 우측 하단 바깥쪽에 기본 배치한다(3클릭 생성과 비슷한 위치감).
+        if(!markerId){
+          fields.xPct = clamp(fields.rectXPct+fields.rectWPct, 0, 100);
+          fields.yPct = clamp(fields.rectYPct+fields.rectHPct, 0, 100);
+        }
+      } else {
+        // 화살표/원 마커: 표에 입력한 X/Y는 화살표 끝(실제 결함 위치) 기준이므로 배지 좌표로 환산
+        const badge = tipToBadgePct(d, xVal, yVal, angleFinal, lenFinal);
+        fields.xPct = badge.xPct;
+        fields.yPct = badge.yPct;
+      }
+      if(markerId){
+        const m = d.markers.find(x=>x.id===markerId);
+        if(m){ Object.assign(m, fields); keepIds.add(markerId); updated++; }
+        else {
+          // 편집 모드인데 원본 마커를 찾지 못한 예외적인 경우(예: 다른 조작으로 먼저 삭제됨) — 새로 만들되
+          // 범위 마커는 배지 위치가 비어있으면 기본 위치를 채워준다.
+          if(isRect && fields.xPct===undefined){
+            fields.xPct = clamp(fields.rectXPct+fields.rectWPct, 0, 100);
+            fields.yPct = clamp(fields.rectYPct+fields.rectHPct, 0, 100);
+          }
+          d.markers.push(Object.assign({id:markerId, numRot:0}, fields));
+          keepIds.add(markerId); added++;
+        }
+      } else {
+        d.markers.push(Object.assign({id:uid(), numRot:0}, fields));
+        added++;
+      }
+    });
+    let deleted = 0;
+    if(tableInputLoadedIds){
+      // 편집 모드: 불러왔던 마커 중 표에서 행 자체가 사라진 것은 실제 도면에서도 삭제
+      deleted = [...tableInputLoadedIds].filter(id => !keepIds.has(id)).length;
+      d.markers = d.markers.filter(m => !tableInputLoadedIds.has(m.id) || keepIds.has(m.id));
+    }
+    // 편집 모드에서는 "행 삭제"만 하고 적용해도(추가/수정 0건) 삭제 자체는 유효한 변경이므로 진행한다.
+    if(added===0 && updated===0 && deleted===0){ alert('추가되거나 수정된 항목이 없습니다. X, Y 좌표(0~100의 %)를 확인해주세요.'); return; }
+    renderCanvas(); renderTable();
+    closeTableInputModal();
+  }
+  document.getElementById('btnTableInput').addEventListener('click', openTableInputModal);
+  document.getElementById('btnTableInputClose').addEventListener('click', closeTableInputModal);
+  document.getElementById('btnTableInputCancel').addEventListener('click', closeTableInputModal);
+  document.getElementById('btnTableInputApply').addEventListener('click', applyTableInputRows);
+  document.getElementById('btnAddInputRow').addEventListener('click', addInputRow);
+  document.getElementById('btnLoadCurrentMarkers').addEventListener('click', loadCurrentMarkersIntoTable);
+  document.getElementById('tableInputBackdrop').addEventListener('mousedown', e=>{
+    if(e.target.id === 'tableInputBackdrop') closeTableInputModal();
+  });
+
+  // ---------- "표로 좌표 입력" 창을 제목줄을 드래그해 옮길 수 있게 ----------
+  (function setupTableInputDrag(){
+    const handle = document.getElementById('tableInputDragHandle');
+    const panel = document.getElementById('tableInputPanel');
+    let dragState = null;
+    handle.addEventListener('mousedown', e=>{
+      if(e.target.closest('button')) return; // 닫기(✕) 버튼 클릭은 드래그로 취급하지 않음
+      const rect = panel.getBoundingClientRect();
+      panel.style.position = 'fixed';
+      panel.style.margin = '0';
+      panel.style.left = rect.left+'px';
+      panel.style.top = rect.top+'px';
+      dragState = { startX:e.clientX, startY:e.clientY, startLeft:rect.left, startTop:rect.top, w:rect.width, h:rect.height };
+      e.preventDefault();
+    });
+    window.addEventListener('mousemove', e=>{
+      if(!dragState) return;
+      const maxLeft = window.innerWidth - Math.min(60, dragState.w);
+      const maxTop = window.innerHeight - Math.min(40, dragState.h);
+      const left = clamp(dragState.startLeft + (e.clientX-dragState.startX), -dragState.w+80, maxLeft);
+      const top = clamp(dragState.startTop + (e.clientY-dragState.startY), 0, maxTop);
+      panel.style.left = left+'px';
+      panel.style.top = top+'px';
+    });
+    window.addEventListener('mouseup', ()=>{ dragState = null; });
+  })();
+
+  // ---------- 결함 목록 카드의 유형/부재명/결함명 선택지 목록 수정(모달) ----------
+  function openFieldOptionsModal(){
+    document.getElementById('optFieldType').value = reportFieldOptions.rptType.join('\n');
+    document.getElementById('optFieldMember').value = reportFieldOptions.rptMember.join('\n');
+    document.getElementById('optFieldDefect').value = reportFieldOptions.rptDefect.join('\n');
+    document.getElementById('fieldOptionsBackdrop').style.display = 'flex';
+  }
+  function closeFieldOptionsModal(){
+    document.getElementById('fieldOptionsBackdrop').style.display = 'none';
+  }
+  function linesToList(text){
+    return String(text||'').split('\n').map(s=>s.trim()).filter(Boolean);
+  }
+  function applyFieldOptions(){
+    reportFieldOptions = {
+      rptType: linesToList(document.getElementById('optFieldType').value),
+      rptMember: linesToList(document.getElementById('optFieldMember').value),
+      rptDefect: linesToList(document.getElementById('optFieldDefect').value),
+    };
+    saveReportFieldOptions();
+    renderTable();
+    closeFieldOptionsModal();
+  }
+  document.getElementById('btnEditFieldOptions').addEventListener('click', openFieldOptionsModal);
+  document.getElementById('btnFieldOptionsClose').addEventListener('click', closeFieldOptionsModal);
+  document.getElementById('btnFieldOptionsCancel').addEventListener('click', closeFieldOptionsModal);
+  document.getElementById('btnFieldOptionsApply').addEventListener('click', applyFieldOptions);
+  document.getElementById('btnFieldOptionsReset').addEventListener('click', ()=>{
+    if(!confirm('선택지 목록을 기본값으로 되돌릴까요? (이미 입력된 결함의 값은 유지됩니다)')) return;
+    document.getElementById('optFieldType').value = REPORT_FIELD_DEFAULTS.rptType.join('\n');
+    document.getElementById('optFieldMember').value = REPORT_FIELD_DEFAULTS.rptMember.join('\n');
+    document.getElementById('optFieldDefect').value = REPORT_FIELD_DEFAULTS.rptDefect.join('\n');
+  });
+  document.getElementById('fieldOptionsBackdrop').addEventListener('mousedown', e=>{
+    if(e.target.id === 'fieldOptionsBackdrop') closeFieldOptionsModal();
+  });
+
+  // ---------- 결함(마커)별 사진 첨부 ----------
+  // 사진은 마커 객체(m.photos, base64 dataURL 배열)에 그대로 저장되어 "프로젝트 저장"에 자동으로 포함된다.
+  let photoModalMarkerId = null;
+  let photoPreviewIndex = -1; // -1 = 썸네일 목록 화면, 0 이상 = 그 인덱스 사진 확대 화면
+  function currentPhotoMarker(){
+    const d = getActiveDrawing(); if(!d) return null;
+    return d.markers.find(x=>x.id===photoModalMarkerId) || null;
+  }
+  function openPhotoModal(markerId){
+    photoModalMarkerId = markerId;
+    photoPreviewIndex = -1;
+    renderPhotoModal();
+    document.getElementById('photoBackdrop').style.display = 'flex';
+  }
+  function closePhotoModal(){
+    closeCameraView();
+    document.getElementById('photoBackdrop').style.display = 'none';
+    photoModalMarkerId = null;
+  }
+  function renderPhotoModal(){
+    const m = currentPhotoMarker();
+    const photos = (m && m.photos) || [];
+    const gridView = document.getElementById('photoGridView');
+    const previewView = document.getElementById('photoPreviewView');
+    const delBtn = document.getElementById('btnPhotoDeleteCurrent');
+    if(photoPreviewIndex>=0 && photoPreviewIndex<photos.length){
+      gridView.style.display = 'none'; previewView.style.display = 'block';
+      document.getElementById('photoPreviewImg').src = photos[photoPreviewIndex];
+      document.getElementById('photoModalFoot').textContent = `${photoPreviewIndex+1} / ${photos.length}`;
+      delBtn.style.display = 'inline-block';
+    } else {
+      photoPreviewIndex = -1;
+      gridView.style.display = 'block'; previewView.style.display = 'none';
+      delBtn.style.display = 'none';
+      const grid = document.getElementById('photoGrid');
+      grid.innerHTML = '';
+      document.getElementById('photoEmptyNote').style.display = photos.length ? 'none' : 'block';
+      photos.forEach((src, i)=>{
+        const thumb = document.createElement('div');
+        thumb.className = 'photo-thumb';
+        thumb.innerHTML = `<img src="${src}" alt="사진 ${i+1}"/><button type="button" class="photo-del" title="삭제">✕</button>`;
+        thumb.querySelector('img').addEventListener('click', ()=>{ photoPreviewIndex = i; renderPhotoModal(); });
+        thumb.querySelector('.photo-del').addEventListener('click', (e)=>{ e.stopPropagation(); removePhotoAt(i); });
+        grid.appendChild(thumb);
+      });
+      document.getElementById('photoModalFoot').textContent = photos.length ? `${photos.length}장` : '';
+    }
+  }
+  function removePhotoAt(i){
+    const m = currentPhotoMarker(); if(!m || !m.photos) return;
+    m.photos.splice(i,1);
+    if(photoPreviewIndex>=m.photos.length) photoPreviewIndex = m.photos.length-1;
+    renderPhotoModal();
+    renderTable(); // 카드의 사진 개수 배지 갱신
+  }
+  function addPhotoFiles(fileList){
+    const m = currentPhotoMarker(); if(!m) return;
+    const files = Array.from(fileList||[]).filter(f=>f.type && f.type.startsWith('image/'));
+    if(files.length===0) return;
+    if(!m.photos) m.photos = [];
+    let remaining = files.length;
+    files.forEach(f=>{
+      const reader = new FileReader();
+      reader.onload = ()=>{
+        m.photos.push(reader.result);
+        remaining--;
+        if(remaining===0){ renderPhotoModal(); renderTable(); }
+      };
+      reader.readAsDataURL(f);
+    });
+  }
+
+  // 웹캠 등으로 직접 촬영해 바로 추가 — navigator.mediaDevices.getUserMedia로 실시간 영상을 보여주고
+  // "촬영해서 추가"를 누르면 그 순간의 화면을 캡처해 파일 첨부와 동일하게 dataURL로 저장한다.
+  let cameraStream = null;
+  function openCameraView(){
+    if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+      alert('이 환경에서는 카메라 촬영을 사용할 수 없습니다. "+ 사진 추가"로 파일을 선택해주세요.');
+      return;
+    }
+    document.getElementById('photoGridView').style.display = 'none';
+    document.getElementById('photoPreviewView').style.display = 'none';
+    document.getElementById('photoCameraView').style.display = 'block';
+    navigator.mediaDevices.getUserMedia({ video: true, audio: false }).then(stream=>{
+      cameraStream = stream;
+      document.getElementById('photoCameraVideo').srcObject = stream;
+    }).catch(err=>{
+      alert('카메라를 열 수 없습니다: ' + err.message);
+      closeCameraView();
+    });
+  }
+  function closeCameraView(){
+    if(cameraStream){ cameraStream.getTracks().forEach(t=>t.stop()); cameraStream = null; }
+    const video = document.getElementById('photoCameraVideo');
+    if(video) video.srcObject = null;
+    document.getElementById('photoCameraView').style.display = 'none';
+    if(photoModalMarkerId) renderPhotoModal();
+  }
+  function captureFromCamera(){
+    const video = document.getElementById('photoCameraVideo');
+    const m = currentPhotoMarker();
+    if(!video || !video.videoWidth || !m) return;
+    const off = document.createElement('canvas');
+    off.width = video.videoWidth; off.height = video.videoHeight;
+    off.getContext('2d').drawImage(video, 0, 0);
+    if(!m.photos) m.photos = [];
+    m.photos.push(off.toDataURL('image/jpeg', 0.92));
+    closeCameraView();
+    renderTable();
+  }
+  document.getElementById('btnPhotoModalClose').addEventListener('click', closePhotoModal);
+  document.getElementById('btnPhotoModalCloseFooter').addEventListener('click', closePhotoModal);
+  document.getElementById('photoBackdrop').addEventListener('mousedown', e=>{
+    if(e.target.id === 'photoBackdrop') closePhotoModal();
+  });
+  document.getElementById('btnAddPhotos').addEventListener('click', ()=> document.getElementById('photoFileInput').click());
+  document.getElementById('btnOpenCamera').addEventListener('click', openCameraView);
+  document.getElementById('btnCameraCancel').addEventListener('click', closeCameraView);
+  document.getElementById('btnCameraCapture').addEventListener('click', captureFromCamera);
+  document.getElementById('photoFileInput').addEventListener('change', e=>{ addPhotoFiles(e.target.files); e.target.value=''; });
+  document.getElementById('btnPhotoBack').addEventListener('click', ()=>{ photoPreviewIndex = -1; renderPhotoModal(); });
+  document.getElementById('btnPhotoPrev').addEventListener('click', ()=>{
+    const m = currentPhotoMarker(); if(!m || !m.photos || !m.photos.length) return;
+    photoPreviewIndex = (photoPreviewIndex-1+m.photos.length)%m.photos.length; renderPhotoModal();
+  });
+  document.getElementById('btnPhotoNext').addEventListener('click', ()=>{
+    const m = currentPhotoMarker(); if(!m || !m.photos || !m.photos.length) return;
+    photoPreviewIndex = (photoPreviewIndex+1)%m.photos.length; renderPhotoModal();
+  });
+  document.getElementById('btnPhotoDeleteCurrent').addEventListener('click', ()=>{
+    if(photoPreviewIndex>=0) removePhotoAt(photoPreviewIndex);
+  });
+
+  // ---------- 결함 통계 요약 ----------
+  // 이름별 개수를 세는 작은 헬퍼 — 빈 값은 "(미입력)"으로 묶고, 개수 내림차순으로 정렬해 돌려준다.
+  function tallyBy(items, getKey, emptyLabel){
+    const counts = new Map();
+    items.forEach(it=>{
+      let key = getKey(it);
+      key = (key===undefined || key===null || key==='') ? emptyLabel : key;
+      counts.set(key, (counts.get(key)||0)+1);
+    });
+    return Array.from(counts.entries()).sort((a,b)=> b[1]-a[1]);
+  }
+  function statsTableHTML(title, pairs, total){
+    if(pairs.length===0) return '';
+    const rows = pairs.map(([label,count])=>{
+      const pct = total>0 ? Math.round(count/total*100) : 0;
+      return `<tr><td><span class="bar" style="width:${Math.max(4,pct)}px;"></span>${escapeHTML(String(label))}</td><td class="n">${count}</td></tr>`;
+    }).join('');
+    return `<div class="stats-section"><h4>${title}</h4><table class="stats-table"><thead><tr><th>항목</th><th style="text-align:right;">개수</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+  }
+  function renderStatsModal(){
+    const allMarkers = [];
+    drawings.forEach(d=> d.markers.forEach(m=> allMarkers.push(Object.assign({__drawingName:d.name}, m))));
+    const total = allMarkers.length;
+    const body = document.getElementById('statsBody');
+    if(total===0){
+      body.innerHTML = `<div class="empty-marker-note">아직 표시된 결함이 없습니다.</div>`;
+      return;
+    }
+    const byDrawing = tallyBy(allMarkers, m=>m.__drawingName, '(이름없음)');
+    const byMarkType = tallyBy(allMarkers, m=>getType(m.typeKey).label, '(미지정)');
+    const byRptType = tallyBy(allMarkers, m=>m.rptType, '(미입력)');
+    const byMember = tallyBy(allMarkers, m=>m.rptMember, '(미입력)');
+    const byDefect = tallyBy(allMarkers, m=>m.rptDefect, '(미입력)');
+    const photoCount = allMarkers.reduce((s,m)=> s + ((m.photos&&m.photos.length)||0), 0);
+    body.innerHTML = `
+      <div class="stats-summary">
+        <div class="stat-box"><div class="n">${total}</div><div class="l">전체 결함 수</div></div>
+        <div class="stat-box"><div class="n">${drawings.length}</div><div class="l">도면 수</div></div>
+        <div class="stat-box"><div class="n">${photoCount}</div><div class="l">첨부 사진 수</div></div>
+      </div>
+      ${statsTableHTML('도면별 개수', byDrawing, total)}
+      ${statsTableHTML('마킹 유형별 개수', byMarkType, total)}
+      ${statsTableHTML('유형(부위)별 개수', byRptType, total)}
+      ${statsTableHTML('부재명별 개수', byMember, total)}
+      ${statsTableHTML('결함명별 개수', byDefect, total)}
+    `;
+  }
+  function openStatsModal(){ renderStatsModal(); document.getElementById('statsBackdrop').style.display = 'flex'; }
+  function closeStatsModal(){ document.getElementById('statsBackdrop').style.display = 'none'; }
+  document.getElementById('btnShowStats').addEventListener('click', openStatsModal);
+  document.getElementById('btnStatsClose').addEventListener('click', closeStatsModal);
+  document.getElementById('btnStatsCloseFooter').addEventListener('click', closeStatsModal);
+  document.getElementById('statsBackdrop').addEventListener('mousedown', e=>{
+    if(e.target.id === 'statsBackdrop') closeStatsModal();
+  });
+
+  // ---------- 프로젝트 저장 / 불러오기 ----------
+  function saveProject(){
+    if(drawings.length===0){ alert('저장할 도면이 없습니다.'); return; }
+    const data = buildProjectSnapshot();
+    downloadBlob(JSON.stringify(data), filenameBase()+'_project.json', 'application/json');
+  }
+
+  function loadProjectFile(file){
+    const reader = new FileReader();
+    reader.onload = ()=>{
+      let data;
+      try{ data = JSON.parse(reader.result); }
+      catch(err){ alert('프로젝트 파일을 읽을 수 없습니다: ' + err.message); return; }
+      applyProjectData(data);
+    };
+    reader.readAsText(file);
+  }
+
+  // 프로젝트 데이터(파일에서 읽었든, 자동저장 스냅샷에서 읽었든)를 실제 화면 상태에 반영한다.
+  // File 저장/불러오기와 자동저장 복구가 이 함수 하나를 공유한다.
+  function applyProjectData(data, opts){
+    opts = opts || {};
+    if(!data || !Array.isArray(data.drawings)){ if(!opts.silent) alert('올바른 프로젝트 파일이 아닙니다.'); return; }
+    document.getElementById('projectNameInput').value = data.projectName || '';
+    document.getElementById('siteNameInput').value = data.siteName || '';
+    document.getElementById('structureTypeInput').value = data.structureType || '';
+    document.getElementById('docTitleInput').value = data.docTitle || '';
+    drawings = [];
+    activeDrawingId = null;
+    selectedIds = new Set();
+    undoStack = [];
+    redoStack = [];
+    if(data.drawings.length===0){ renderDrawingTabs(); renderCanvas(); renderTable(); return; }
+    let loaded = 0;
+    data.drawings.forEach(dd=>{
+      const img = new Image();
+      img.onload = ()=>{
+        const nd = buildDrawingFromImage(img, dd.imgSrc, dd.name);
+        nd.id = dd.id || nd.id;
+        nd.surveyLocation = dd.surveyLocation || '';
+        nd.markers = Array.isArray(dd.markers) ? dd.markers : [];
+        drawings.push(nd);
+        loaded++;
+        if(loaded === data.drawings.length){
+          drawings.sort((a,b)=> data.drawings.findIndex(x=>x.id===a.id) - data.drawings.findIndex(x=>x.id===b.id));
+          activeDrawingId = drawings[0].id;
+          renderDrawingTabs(); renderCanvas(); renderTable(); syncSurveyLocationField();
+          if(opts.onDone) opts.onDone();
+        }
+      };
+      img.src = dd.imgSrc;
+    });
+  }
+
+  // 저장 파일과 동일한 형태로 현재 작업 상태를 스냅샷 객체로 만든다 (자동저장용, 다운로드는 하지 않음).
+  function buildProjectSnapshot(){
+    return {
+      version: 2,
+      projectName: document.getElementById('projectNameInput').value,
+      siteName: document.getElementById('siteNameInput').value,
+      structureType: document.getElementById('structureTypeInput').value,
+      docTitle: document.getElementById('docTitleInput').value,
+      drawings: drawings.map(d=>({ id:d.id, name:d.name, surveyLocation:d.surveyLocation||'', imgSrc:d.imgSrc, markers:d.markers }))
+    };
+  }
+
+  // ---------- 유틸 ----------
+  function escapeHTML(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+  function escapeAttr(s){ return escapeHTML(s); }
+
+  // ---------- 이벤트 바인딩 ----------
+  document.getElementById('addDrawingInput').addEventListener('change', e=>{ addImagesFromFiles(e.target.files); e.target.value=''; });
+  document.getElementById('btnAddDrawing').addEventListener('click', ()=> document.getElementById('addDrawingInput').click());
+
+  function updateZoomIndicator(){
+    const label = document.getElementById('zoomPctLabel');
+    if(label) label.textContent = Math.round(zoom*100)+'%';
+  }
+  document.getElementById('zoomSelect').addEventListener('change', e=>{
+    zoom = parseFloat(e.target.value); renderCanvas(); updateZoomIndicator();
+    const wrap = document.getElementById('canvasWrap'); wrap.scrollLeft = 0; wrap.scrollTop = 0;
+  });
+
+  // 캐드처럼 도면 위에서 마우스 휠로 확대/축소(휠 위치를 기준으로 확대되도록 스크롤 위치도 함께 보정).
+  // canvas-wrap이 flex로 캔버스를 가운데 정렬하기 때문에(확대 전 캔버스가 뷰포트보다 작으면 스크롤이
+  // 아예 발생하지 않는다) "스크롤량 + 커서 오프셋"만으로 콘텐츠 좌표를 추정하면 어긋난다. 대신 확대
+  // 전/후 캔버스의 실제 화면상 위치(getBoundingClientRect)를 직접 비교해, 커서 아래 있던 지점이 확대
+  // 후에도 같은 화면 위치에 오도록 스크롤을 보정한다 — 가운데 정렬 여부와 무관하게 항상 정확하다.
+  document.getElementById('canvasWrap').addEventListener('wheel', e=>{
+    const d = getActiveDrawing(); if(!d) return;
+    if(cropMode) return; // 자르기 모드에서는 기본 페이지 스크롤을 그대로 사용
+    e.preventDefault();
+    pendingAction = null; // 휠 확대 중 드래그 좌표가 어긋나지 않도록 진행 중이던 동작은 취소
+    const wrap = document.getElementById('canvasWrap');
+    const factor = Math.exp(-e.deltaY * 0.0015);
+    const newZoom = clamp(zoom * factor, 0.1, 4);
+    if(Math.abs(newZoom - zoom) < 0.0005) return;
+
+    const beforeRect = canvas.getBoundingClientRect();
+    const fracX = beforeRect.width>0 ? (e.clientX - beforeRect.left) / beforeRect.width : 0.5;
+    const fracY = beforeRect.height>0 ? (e.clientY - beforeRect.top) / beforeRect.height : 0.5;
+
+    zoom = newZoom;
+    renderCanvas();
+    updateZoomIndicator();
+
+    const afterRect = canvas.getBoundingClientRect();
+    const nowClientX = afterRect.left + fracX*afterRect.width;
+    const nowClientY = afterRect.top + fracY*afterRect.height;
+    wrap.scrollLeft += (nowClientX - e.clientX);
+    wrap.scrollTop += (nowClientY - e.clientY);
+  }, { passive: false });
+
+  document.getElementById('sizeSlider').addEventListener('input', e=>{
+    iconSizeMult = parseFloat(e.target.value);
+    document.getElementById('sizeVal').textContent = Math.round(iconSizeMult*100)+'%';
+    renderCanvas();
+  });
+  document.getElementById('btnSelectMode').addEventListener('click', toggleSelectMode);
+  document.getElementById('btnMoveMode').addEventListener('click', toggleMoveMode);
+  document.getElementById('btnEraseMode').addEventListener('click', toggleEraseMode);
+  document.getElementById('eraseBrushSlider').addEventListener('input', e=>{
+    eraseBrushMult = parseFloat(e.target.value);
+    document.getElementById('eraseBrushVal').textContent = Math.round(eraseBrushMult*100)+'%';
+    renderCanvas();
+  });
+  document.getElementById('btnRotateCCW').addEventListener('click', ()=> rotateDrawing(-90));
+  document.getElementById('btnRotateCW').addEventListener('click', ()=> rotateDrawing(90));
+
+  document.getElementById('btnCropMode').addEventListener('click', ()=> { if(cropMode) exitCropMode(); else enterCropMode(); });
+  document.getElementById('btnCropCancel').addEventListener('click', exitCropMode);
+  document.getElementById('btnCropApply').addEventListener('click', performCropApply);
+
+  document.getElementById('btnGridView').addEventListener('click', toggleGridView);
+  document.getElementById('btnCoordGuide').addEventListener('click', toggleCoordGuide);
+
+  document.getElementById('exportFormatSelect').addEventListener('change', e=>{
+    const isPdf = e.target.value === 'pdf';
+    document.getElementById('pdfPageSizeSelect').style.display = isPdf ? '' : 'none';
+    document.getElementById('btnExportPNG').textContent = isPdf ? '📄 마킹 도면 PDF로 저장' : '🖼 마킹 도면 PNG로 저장';
+  });
+
+  document.getElementById('btnExportPNG').addEventListener('click', exportPNG);
+  document.getElementById('btnExportAll').addEventListener('click', exportAllDrawings);
+  document.getElementById('btnExportCSV').addEventListener('click', exportCSV);
+  document.getElementById('btnExportXLSX').addEventListener('click', exportXLSX);
+
+  document.getElementById('btnImportCSVVisual').addEventListener('click', ()=> document.getElementById('importCSVInput').click());
+  document.getElementById('importCSVInput').addEventListener('change', e=>{
+    const file = e.target.files[0]; if(!file) return;
+    const reader = new FileReader();
+    reader.onload = ()=> importCSVText(reader.result);
+    reader.readAsText(file);
+    e.target.value='';
+  });
+
+  document.getElementById('surveyLocationInput').addEventListener('input', e=>{
+    const d = getActiveDrawing();
+    if(!d) return;
+    d.surveyLocation = e.target.value;
+    refreshTbPreviewIfOpen();
+  });
+  document.getElementById('titleBlockToggle').addEventListener('change', e=>{
+    document.getElementById('btnReopenTbPreview').style.display = e.target.checked ? 'inline-block' : 'none';
+    if(e.target.checked) openTbPreview(); else closeTbPreview();
+  });
+  document.getElementById('btnReopenTbPreview').addEventListener('click', openTbPreview);
+  document.getElementById('btnTbPreviewClose').addEventListener('click', closeTbPreview);
+  document.getElementById('btnTbPreviewCloseFooter').addEventListener('click', closeTbPreview);
+  document.getElementById('tbPreviewBackdrop').addEventListener('mousedown', e=>{
+    if(e.target.id === 'tbPreviewBackdrop') closeTbPreview();
+  });
+  ['projectNameInput','siteNameInput','structureTypeInput'].forEach(id=>{
+    document.getElementById(id).addEventListener('input', refreshTbPreviewIfOpen);
+  });
+  document.getElementById('btnApplyTemplate').addEventListener('click', applyTbTemplate);
+  document.getElementById('btnSaveTemplate').addEventListener('click', saveTbTemplate);
+  document.getElementById('btnDeleteTemplate').addEventListener('click', deleteTbTemplate);
+  renderTbTemplateSelect();
+
+  document.getElementById('btnSaveProject').addEventListener('click', saveProject);
+  document.getElementById('btnLoadProjectVisual').addEventListener('click', ()=> document.getElementById('loadProjectInput').click());
+  document.getElementById('loadProjectInput').addEventListener('change', e=>{
+    const file = e.target.files[0]; if(!file) return;
+    loadProjectFile(file);
+    e.target.value='';
+  });
+
+  document.getElementById('btnUndo').addEventListener('click', undo);
+  document.getElementById('btnRedo').addEventListener('click', redo);
+  document.getElementById('helpToggle').addEventListener('click', ()=>{
+    const box = document.getElementById('helpBox');
+    box.style.display = (box.style.display==='none') ? 'block' : 'none';
+  });
+
+  window.addEventListener('keydown', e=>{
+    const tag = document.activeElement && document.activeElement.tagName;
+    const isEditing = tag==='INPUT' || tag==='TEXTAREA' || tag==='SELECT';
+    if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='z' && e.shiftKey && !isEditing){ e.preventDefault(); redo(); return; }
+    if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='y' && !isEditing){ e.preventDefault(); redo(); return; }
+    if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='z' && !isEditing){ e.preventDefault(); undo(); return; }
+    if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='s'){ e.preventDefault(); saveProject(); return; }
+    if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='a' && !isEditing){
+      e.preventDefault();
+      const d = getActiveDrawing();
+      if(d){ selectedIds = new Set(d.markers.map(m=>m.id)); renderCanvas(); renderTable(); }
+      return;
+    }
+    if((e.key==='Delete' || e.key==='Backspace') && selectedIds.size>0 && !isEditing){ e.preventDefault(); deleteSelected(); return; }
+    if(e.key==='Enter' && cropMode && cropRect && !isEditing){ e.preventDefault(); performCropApply(); return; }
+    if(e.key==='Escape'){
+      if(isTableInputOpen()){ e.preventDefault(); closeTableInputModal(); return; }
+      if(cropMode){ e.preventDefault(); exitCropMode(); return; }
+      if(pendingRectCreate){ e.preventDefault(); cancelRectCreate(); return; }
+      if(!isEditing && selectedIds.size>0){ e.preventDefault(); clearSelection(); return; }
+      return;
+    }
+    if(isEditing) return;
+    if(e.key==='s' || e.key==='S'){
+      if(!cropMode){ e.preventDefault(); toggleSelectMode(); }
+      return;
+    }
+    if(e.key==='m' || e.key==='M'){
+      if(!cropMode){ e.preventDefault(); toggleMoveMode(); }
+      return;
+    }
+    if(e.key==='d' || e.key==='D'){
+      if(!cropMode){ e.preventDefault(); toggleEraseMode(); }
+      return;
+    }
+    if(e.key==='c' || e.key==='C'){
+      e.preventDefault();
+      if(cropMode) exitCropMode(); else enterCropMode();
+      return;
+    }
+    if(e.key==='g' || e.key==='G'){
+      if(!cropMode){ e.preventDefault(); toggleGridView(); }
+      return;
+    }
+    if(e.key==='q' || e.key==='Q'){
+      e.preventDefault(); toggleCoordGuide(); return;
+    }
+    const typeByShortcut = DEFECT_TYPES.find(t=>t.shortcut===e.key);
+    if(typeByShortcut){ e.preventDefault(); setActiveType(typeByShortcut.key); return; }
+    if((e.key==='ArrowLeft' || e.key==='ArrowRight') && selectedIds.size>0){
+      e.preventDefault();
+      const step = e.shiftKey ? 45 : 10;
+      const delta = e.key==='ArrowLeft' ? -step : step;
+      const d = getActiveDrawing();
+      if(d){
+        d.markers.forEach(m=>{
+          if(!selectedIds.has(m.id)) return;
+          if(getType(m.typeKey).endStyle==='rect'){ m.rectAngle = ((m.rectAngle||0)+delta+360)%360; }
+          else { m.angle = ((m.angle||0)+delta)%360; }
+        });
+        renderCanvas();
+      }
+      return;
+    }
+  });
+
+  const canvas = document.getElementById('mainCanvas');
+
+  canvas.addEventListener('mouseleave', ()=>{
+    if(eraseCursorPt){ eraseCursorPt = null; renderCanvas(); }
+  });
+
+  function onPointerDown(e){
+    if(e.button === 1){
+      // 휠(가운데) 버튼을 누른 채 드래그 = 어떤 모드에서든 도면 화면 이동(패닝) — 캐드 프로그램과 동일한 조작
+      e.preventDefault();
+      const wrap = document.getElementById('canvasWrap');
+      pendingAction = { mode:'pan', startClientX:e.clientX, startClientY:e.clientY,
+        startScrollLeft:wrap.scrollLeft, startScrollTop:wrap.scrollTop };
+      canvas.style.cursor = 'grabbing';
+      return;
+    }
+    const d = getActiveDrawing(); if(!d) return;
+    const p = canvasPointFromEvent(e);
+
+    if(cropMode){
+      pendingAction = { mode:'crop', startX:p.x, startY:p.y, curX:p.x, curY:p.y };
+      return;
+    }
+
+    if(eraseMode){
+      pushImageUndo(d); // 브러시로 이미지·마커를 함께 지울 수 있으므로 스트로크 시작 시 한 번만 기록(마커 상태도 함께 담김)
+      pendingAction = { mode:'erase', strokePts:[{x:p.x,y:p.y}] };
+      eraseAtPoint(d, p.x, p.y);
+      renderCanvas();
+      return;
+    }
+
+    const rectRotHit = hitTestRectRotateHandle(d, p.x, p.y);
+    if(rectRotHit){
+      pushUndo();
+      const m = rectRotHit.marker;
+      selectOnly(m.id);
+      const w = canvas.width, h = canvas.height;
+      // 화살표가 배지(번호 원)를 축으로 방향을 바꾸는 것과 같은 조작감을 주기 위해, 사각형도 배지를 회전축으로 삼는다.
+      pendingAction = { mode:'rotateRect', hitId: m.id, cx: m.xPct/100*w, cy: m.yPct/100*h };
+      return;
+    }
+
+    const rectHandleHit = hitTestRectResizeHandle(d, p.x, p.y);
+    if(rectHandleHit){
+      pushUndo();
+      const m = rectHandleHit.marker;
+      const w = canvas.width, h = canvas.height;
+      pendingAction = { mode:'resizeRect', hitId: m.id, corner: rectHandleHit.corner, startX:p.x, startY:p.y,
+        pivotX: m.xPct/100*w, pivotY: m.yPct/100*h, angle: m.rectAngle||0,
+        startRect: { rectXPct:m.rectXPct, rectYPct:m.rectYPct, rectWPct:m.rectWPct, rectHPct:m.rectHPct } };
+      return;
+    }
+
+    const handleHit = hitTestHandle(d, p.x, p.y);
+    if(handleHit){
+      pushUndo();
+      selectOnly(handleHit.id);
+      pendingAction = { mode:'rotate', hitId: handleHit.id, startX:p.x, startY:p.y, moved:false };
+      return;
+    }
+
+    const hit = hitTestMarker(d, p.x, p.y);
+    if(hit){
+      if(e.shiftKey){ toggleSelect(hit.id); pendingAction = null; return; }
+      if(!selectedIds.has(hit.id)) selectOnly(hit.id);
+      pushUndo();
+      const groupStart = {};
+      selectedIds.forEach(id=>{
+        const mm = d.markers.find(x=>x.id===id);
+        if(mm) groupStart[id] = { xPct: mm.xPct, yPct: mm.yPct, rectXPct: mm.rectXPct, rectYPct: mm.rectYPct };
+      });
+      pendingAction = { mode:'move', hitId: hit.id, startX:p.x, startY:p.y, moved:false, groupStart };
+      return;
+    }
+
+    if(selectMode){
+      // 선택 모드: 빈 곳 드래그 = 사각형 영역에 완전히 들어온 마커만 다중 선택, 빈 곳 클릭 = 선택 해제
+      pendingAction = { mode:'rubberband', startX:p.x, startY:p.y, curX:p.x, curY:p.y, moved:false };
+    } else if(moveMode){
+      // 이동 모드: 마커 이동 전용이므로 빈 곳 클릭/드래그는 아무 동작도 하지 않음(실수 방지)
+      pendingAction = null;
+    } else if(getType(activeTypeKey).endStyle === 'rect'){
+      // 범위(사각형) 마커: 드래그가 아니라 3번의 클릭으로 생성 (Shift: 중심→번호 방향 수직/수평 고정)
+      handleRectCreateClick(p.x, p.y, e.shiftKey);
+    } else {
+      // 추가 모드: 빈 곳 클릭 = 즉시 추가, 빈 곳 드래그 = 클릭점에 화살표 끝을 찍고 드래그로 방향·길이 지정
+      pendingAction = { mode:'create', startX:p.x, startY:p.y, curX:p.x, curY:p.y, moved:false, shiftKey:e.shiftKey };
+    }
+  }
+  canvas.addEventListener('mousedown', onPointerDown);
+
+  const RESIZE_CURSORS = { nw:'nwse-resize', se:'nwse-resize', ne:'nesw-resize', sw:'nesw-resize', n:'ns-resize', s:'ns-resize', e:'ew-resize', w:'ew-resize' };
+
+  function onPointerMove(e){
+    if(pendingAction && pendingAction.mode==='pan'){
+      const wrap = document.getElementById('canvasWrap');
+      wrap.scrollLeft = pendingAction.startScrollLeft - (e.clientX - pendingAction.startClientX);
+      wrap.scrollTop = pendingAction.startScrollTop - (e.clientY - pendingAction.startClientY);
+      return;
+    }
+    if(!pendingAction){
+      if(cropMode){ canvas.style.cursor = 'crosshair'; return; }
+      const d0 = getActiveDrawing(); if(!d0) return;
+      const p0 = canvasPointFromEvent(e);
+      if(coordGuideOn){ lastMouseCanvasPt = { x:p0.x, y:p0.y }; }
+      if(eraseMode){
+        canvas.style.cursor = 'crosshair';
+        eraseCursorPt = { x:p0.x, y:p0.y };
+        renderCanvas();
+        return;
+      }
+      if(pendingRectCreate){
+        const snapped = (pendingRectCreate.stage===2)
+          ? snapAroundCenter((pendingRectCreate.x1+pendingRectCreate.x2)/2, (pendingRectCreate.y1+pendingRectCreate.y2)/2, p0.x, p0.y, e.shiftKey)
+          : { x:p0.x, y:p0.y };
+        rectCreateCurX = snapped.x; rectCreateCurY = snapped.y;
+        canvas.style.cursor = 'crosshair';
+        renderCanvas();
+        return;
+      }
+      const rectRotHover = hitTestRectRotateHandle(d0, p0.x, p0.y);
+      const rectHandleHover = hitTestRectResizeHandle(d0, p0.x, p0.y);
+      if(rectRotHover) canvas.style.cursor = 'grab';
+      else if(rectHandleHover) canvas.style.cursor = RESIZE_CURSORS[rectHandleHover.corner] || 'pointer';
+      else if(hitTestHandle(d0, p0.x, p0.y)) canvas.style.cursor = 'alias';
+      else if(hitTestMarker(d0, p0.x, p0.y)) canvas.style.cursor = 'move';
+      else canvas.style.cursor = 'crosshair';
+      if(coordGuideOn) renderCanvas();
+      return;
+    }
+    const d = getActiveDrawing(); if(!d) return;
+    const p = canvasPointFromEvent(e);
+    if(coordGuideOn){ lastMouseCanvasPt = { x:p.x, y:p.y }; }
+
+    if(pendingAction.mode==='crop'){
+      pendingAction.curX = p.x; pendingAction.curY = p.y;
+      renderCanvas();
+      return;
+    }
+
+    if(!pendingAction.moved && Math.hypot(p.x-pendingAction.startX, p.y-pendingAction.startY) > 4){
+      pendingAction.moved = true;
+    }
+
+    if(pendingAction.mode==='move' && pendingAction.moved){
+      const w = canvas.width, h = canvas.height;
+      const dxPct = (p.x-pendingAction.startX)/w*100;
+      const dyPct = (p.y-pendingAction.startY)/h*100;
+      Object.keys(pendingAction.groupStart).forEach(id=>{
+        const mm = d.markers.find(x=>x.id===id);
+        const st = pendingAction.groupStart[id];
+        if(mm){
+          mm.xPct = clamp(st.xPct+dxPct,0,100); mm.yPct = clamp(st.yPct+dyPct,0,100);
+          if(st.rectXPct!==undefined && st.rectXPct!==null){
+            mm.rectXPct = st.rectXPct+dxPct; mm.rectYPct = st.rectYPct+dyPct;
+          }
+        }
+      });
+      renderCanvas();
+    } else if(pendingAction.mode==='rotate'){
+      const m = d.markers.find(mm=>mm.id===pendingAction.hitId);
+      if(m){
+        const w = canvas.width, h = canvas.height;
+        const cx = m.xPct/100*w, cy = m.yPct/100*h;
+        let ang = Math.atan2(p.y-cy, p.x-cx) * 180/Math.PI;
+        if(e.shiftKey) ang = Math.round(ang/90)*90; // 수직/수평 직각으로만 고정
+        m.angle = ang;
+        const r = markerRadiusFor(d, w, h);
+        const dist = Math.hypot(p.x-cx, p.y-cy);
+        const baseLen = r*2.6*leaderLenMult;
+        if(baseLen>0){
+          const lm = dist/baseLen;
+          if(isFinite(lm) && lm>0.05) m.lenMult = lm;
+        }
+        renderCanvas();
+      }
+    } else if(pendingAction.mode==='resizeRect'){
+      const m = d.markers.find(mm=>mm.id===pendingAction.hitId);
+      if(m){
+        const w = canvas.width, h = canvas.height;
+        const sr = pendingAction.startRect;
+        const rx0 = (sr.rectXPct||0)/100*w, ry0 = (sr.rectYPct||0)/100*h;
+        const rw0 = (sr.rectWPct||0)/100*w, rh0 = (sr.rectHPct||0)/100*h;
+        // 사각형이 회전되어 있으면 마우스 좌표를 사각형의 로컬(회전 전) 좌표로 되돌린 뒤 기존 축 정렬 리사이즈
+        // 로직을 그대로 적용한다(회전축은 사각형 중심이 아니라 배지이며, 드래그 시작 시점 위치로 고정).
+        const lp = toRectLocal(p.x, p.y, pendingAction.pivotX, pendingAction.pivotY, pendingAction.angle||0);
+        let left = rx0, top = ry0, right = rx0+rw0, bottom = ry0+rh0;
+        if(pendingAction.corner==='nw'){ left = lp.x; top = lp.y; }
+        else if(pendingAction.corner==='ne'){ right = lp.x; top = lp.y; }
+        else if(pendingAction.corner==='sw'){ left = lp.x; bottom = lp.y; }
+        else if(pendingAction.corner==='se'){ right = lp.x; bottom = lp.y; }
+        else if(pendingAction.corner==='n'){ top = lp.y; }
+        else if(pendingAction.corner==='s'){ bottom = lp.y; }
+        else if(pendingAction.corner==='w'){ left = lp.x; }
+        else if(pendingAction.corner==='e'){ right = lp.x; }
+        const nx0 = Math.min(left,right), nx1 = Math.max(left,right);
+        const ny0 = Math.min(top,bottom), ny1 = Math.max(top,bottom);
+        m.rectXPct = clamp(nx0/w*100,0,100);
+        m.rectYPct = clamp(ny0/h*100,0,100);
+        m.rectWPct = clamp((nx1-nx0)/w*100,0.5,100);
+        m.rectHPct = clamp((ny1-ny0)/h*100,0.5,100);
+        renderCanvas();
+      }
+    } else if(pendingAction.mode==='rotateRect'){
+      const m = d.markers.find(mm=>mm.id===pendingAction.hitId);
+      if(m){
+        // 손잡이는 사각형 상단(회전각 0°일 때 12시 방향)에 있으므로, 중심→마우스 각도에서 90°를 더하면
+        // 그대로 사각형의 회전각이 된다 (atan2의 0°는 3시 방향 기준이므로 12시 방향은 -90°).
+        let ang = Math.atan2(p.y-pendingAction.cy, p.x-pendingAction.cx) * 180/Math.PI + 90;
+        if(e.shiftKey) ang = Math.round(ang/15)*15; // 15°씩 스냅
+        m.rectAngle = ((ang%360)+360)%360;
+        renderCanvas();
+      }
+    } else if(pendingAction.mode==='rubberband' && pendingAction.moved){
+      pendingAction.curX = p.x; pendingAction.curY = p.y;
+      renderCanvas();
+    } else if(pendingAction.mode==='create'){
+      pendingAction.curX = p.x; pendingAction.curY = p.y;
+      pendingAction.shiftKey = e.shiftKey;
+      renderCanvas();
+    } else if(pendingAction.mode==='erase'){
+      pendingAction.strokePts.push({x:p.x,y:p.y});
+      eraseAtPoint(d, p.x, p.y);
+      renderCanvas();
+    }
+  }
+  canvas.addEventListener('mousemove', onPointerMove);
+
+  function onPointerUp(e){
+    if(!pendingAction) return;
+    // 먼저 전역 상태를 비우고 로컬 변수로만 마무리 처리를 진행한다 — 그래야 아래에서 호출하는
+    // renderCanvas()가 "드래그 중" 오버레이(러버밴드 점선 사각형 등)를 그리지 않고 즉시 사라진다.
+    // (예전에는 pendingAction을 null로 만들기 전에 renderCanvas()를 호출해서, 선택 드래그가 끝난 뒤에도
+    // 마지막으로 그려진 점선 사각형이 화면에 남아있는 것처럼 보이는 문제가 있었다.)
+    const action = pendingAction;
+    pendingAction = null;
+    if(action.mode==='pan'){
+      canvas.style.cursor = 'crosshair';
+      return;
+    }
+    const d = getActiveDrawing();
+    if(d){
+      if(action.mode==='crop'){
+        const x0=Math.min(action.startX,action.curX), x1=Math.max(action.startX,action.curX);
+        const y0=Math.min(action.startY,action.curY), y1=Math.max(action.startY,action.curY);
+        if(x1-x0>15 && y1-y0>15){ cropRect = {x:x0,y:y0,w:x1-x0,h:y1-y0}; }
+        renderCanvas();
+      } else if(action.mode==='rotate'){
+        renderTable();
+      } else if(action.mode==='move'){
+        if(action.moved) renderTable();
+      } else if(action.mode==='resizeRect'){
+        renderTable();
+      } else if(action.mode==='rotateRect'){
+        renderTable();
+      } else if(action.mode==='rubberband'){
+        if(!action.moved){
+          clearSelection();
+        } else {
+          const x0=Math.min(action.startX,action.curX), x1=Math.max(action.startX,action.curX);
+          const y0=Math.min(action.startY,action.curY), y1=Math.max(action.startY,action.curY);
+          const w = canvas.width, h = canvas.height;
+          // "화살표, 선, 원, 사각형 모두" 마커의 시각적 외곽이 전부 영역 안에 들어와야 선택되도록
+          // (배지 중심점 하나만으로 판정하던 이전 방식보다 엄격한 러버밴드 선택)
+          const matched = d.markers.filter(m=>{
+            return markerVisualPoints(d, m, w, h).every(pt => pt.x>=x0 && pt.x<=x1 && pt.y>=y0 && pt.y<=y1);
+          }).map(m=>m.id);
+          if(e.shiftKey){ matched.forEach(id=>selectedIds.add(id)); }
+          else { selectedIds = new Set(matched); }
+          renderCanvas(); renderTable();
+        }
+      } else if(action.mode==='create'){
+        if(!action.moved){
+          addMarkerAt(action.startX, action.startY);
+        } else {
+          const geom = computeCreateGeom(action.startX, action.startY, action.curX, action.curY, !!(action.shiftKey || e.shiftKey));
+          addMarkerWithGesture(geom);
+        }
+      } else if(action.mode==='erase'){
+        // 스트로크 동안 지나간 마커는 이미 삭제 처리됨. 이제 화이트 브러시 자국을 실제 이미지에 합성한다.
+        commitEraseStroke(d, action.strokePts, canvas.width, canvas.height);
+      }
+    }
+    renderCanvas();
+  }
+  window.addEventListener('mouseup', onPointerUp);
+
+  // ---------- 터치(태블릿) 지원: 손가락 하나는 마우스와 동일하게(그리기·이동·선택·리사이즈),
+  // 손가락 두 개는 핀치로 확대/축소(휠 줌과 동일한 "커서 위치 고정" 로직을 두 손가락 중점 기준으로 적용) ----------
+  let pinchState = null; // {startDist, startZoom}
+  function touchDist(t0,t1){ return Math.hypot(t1.clientX-t0.clientX, t1.clientY-t0.clientY); }
+  function startPinch(e){
+    pendingAction = null;
+    const [t0,t1] = e.touches;
+    pinchState = { startDist: touchDist(t0,t1), startZoom: zoom };
+  }
+  function updatePinch(e){
+    if(!pinchState || !getActiveDrawing()) return;
+    const [t0,t1] = e.touches;
+    const dist = touchDist(t0,t1);
+    if(dist<=0) return;
+    const newZoom = clamp(pinchState.startZoom * (dist/pinchState.startDist), 0.1, 4);
+    if(Math.abs(newZoom-zoom) < 0.0005) return;
+    const wrap = document.getElementById('canvasWrap');
+    const midX = (t0.clientX+t1.clientX)/2, midY = (t0.clientY+t1.clientY)/2;
+    const beforeRect = canvas.getBoundingClientRect();
+    const fracX = beforeRect.width>0 ? (midX-beforeRect.left)/beforeRect.width : 0.5;
+    const fracY = beforeRect.height>0 ? (midY-beforeRect.top)/beforeRect.height : 0.5;
+    zoom = newZoom;
+    renderCanvas(); updateZoomIndicator();
+    const afterRect = canvas.getBoundingClientRect();
+    const nowX = afterRect.left+fracX*afterRect.width, nowY = afterRect.top+fracY*afterRect.height;
+    wrap.scrollLeft += (nowX-midX); wrap.scrollTop += (nowY-midY);
+  }
+  function endPinch(){ pinchState = null; }
+
+  canvas.addEventListener('touchstart', e=>{
+    if(e.touches.length===2){ e.preventDefault(); startPinch(e); return; }
+    if(e.touches.length>1) return;
+    e.preventDefault();
+    onPointerDown(e);
+  }, { passive:false });
+  canvas.addEventListener('touchmove', e=>{
+    if(e.touches.length===2){ e.preventDefault(); updatePinch(e); return; }
+    if(e.touches.length>1) return;
+    e.preventDefault();
+    onPointerMove(e);
+  }, { passive:false });
+  window.addEventListener('touchend', e=>{
+    if(pinchState && e.touches.length<2) endPinch();
+    if(e.touches.length===0) onPointerUp(e);
+  }, { passive:false });
+  window.addEventListener('touchcancel', ()=>{ endPinch(); pendingAction = null; renderCanvas(); });
+
+  // ---------- 자동저장(IndexedDB) ----------
+  // 웹앱 전환: Electron 시절엔 없던 기능. 파일시스템에 의존하지 않고 브라우저 IndexedDB에
+  // 30초 간격으로 현재 작업 전체(도면 이미지 포함)를 스냅샷으로 저장해, 탭을 실수로 닫거나
+  // 새로고침해도 다음에 열었을 때 복구를 제안할 수 있게 한다.
+  const AUTOSAVE_DB_NAME = 'defectMarkerAutosaveDB';
+  const AUTOSAVE_STORE = 'snapshots';
+  const AUTOSAVE_KEY = 'latest';
+  const AUTOSAVE_INTERVAL_MS = 30000;
+  let autosaveDbPromise = null;
+  function openAutosaveDB(){
+    if(autosaveDbPromise) return autosaveDbPromise;
+    autosaveDbPromise = new Promise((resolve, reject)=>{
+      if(!('indexedDB' in window)){ reject(new Error('IndexedDB 미지원')); return; }
+      const req = indexedDB.open(AUTOSAVE_DB_NAME, 1);
+      req.onupgradeneeded = ()=>{ req.result.createObjectStore(AUTOSAVE_STORE); };
+      req.onsuccess = ()=> resolve(req.result);
+      req.onerror = ()=> reject(req.error);
+    });
+    return autosaveDbPromise;
+  }
+  function autosaveWrite(record){
+    return openAutosaveDB().then(db=> new Promise((resolve, reject)=>{
+      const tx = db.transaction(AUTOSAVE_STORE, 'readwrite');
+      tx.objectStore(AUTOSAVE_STORE).put(record, AUTOSAVE_KEY);
+      tx.oncomplete = ()=> resolve();
+      tx.onerror = ()=> reject(tx.error);
+    })).catch(err=>{ /* 저장 실패해도(용량 초과 등) 앱 동작에는 지장 없음 */ console.warn('자동저장 실패:', err); });
+  }
+  function autosaveRead(){
+    return openAutosaveDB().then(db=> new Promise((resolve, reject)=>{
+      const tx = db.transaction(AUTOSAVE_STORE, 'readonly');
+      const req = tx.objectStore(AUTOSAVE_STORE).get(AUTOSAVE_KEY);
+      req.onsuccess = ()=> resolve(req.result || null);
+      req.onerror = ()=> reject(req.error);
+    })).catch(()=> null);
+  }
+  function autosaveClear(){
+    return openAutosaveDB().then(db=> new Promise(resolve=>{
+      const tx = db.transaction(AUTOSAVE_STORE, 'readwrite');
+      tx.objectStore(AUTOSAVE_STORE).delete(AUTOSAVE_KEY);
+      tx.oncomplete = ()=> resolve();
+      tx.onerror = ()=> resolve();
+    })).catch(()=>{});
+  }
+  function runAutosaveTick(){
+    if(drawings.length===0) return; // 빈 프로젝트는 저장할 것이 없음
+    autosaveWrite({ savedAt: Date.now(), data: buildProjectSnapshot() });
+  }
+  setInterval(runAutosaveTick, AUTOSAVE_INTERVAL_MS);
+  window.addEventListener('pagehide', runAutosaveTick);
+
+  function formatAutosaveTime(ts){
+    try{
+      const d = new Date(ts);
+      const pad = n=>String(n).padStart(2,'0');
+      return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    } catch(err){ return ''; }
+  }
+  function showRecoveryBanner(record){
+    const banner = document.createElement('div');
+    banner.className = 'recovery-banner';
+    banner.innerHTML = `
+      <span><b>이전 작업 내역</b>이 있습니다. <span class="rb-time">(${escapeHTML(formatAutosaveTime(record.savedAt))} 자동저장)</span></span>
+      <button type="button" class="primary" id="btnRecoveryRestore">복구하기</button>
+      <button type="button" id="btnRecoveryDismiss">무시</button>
+    `;
+    document.body.appendChild(banner);
+    banner.querySelector('#btnRecoveryRestore').addEventListener('click', ()=>{
+      applyProjectData(record.data);
+      banner.remove();
+    });
+    banner.querySelector('#btnRecoveryDismiss').addEventListener('click', ()=>{
+      banner.remove();
+    });
+  }
+  function checkAutosaveRecovery(){
+    autosaveRead().then(record=>{
+      if(record && record.data && Array.isArray(record.data.drawings) && record.data.drawings.length>0){
+        showRecoveryBanner(record);
+      }
+    });
+  }
+
+  // ---------- PWA: 서비스워커 등록(오프라인 캐시) ----------
+  if('serviceWorker' in navigator){
+    window.addEventListener('load', ()=>{
+      navigator.serviceWorker.register('service-worker.js').catch(err=>{
+        console.warn('서비스워커 등록 실패:', err);
+      });
+    });
+  }
+
+  // ---------- 초기화 ----------
+  renderTypeGrid();
+  renderDrawingTabs();
+  updateModeButtonsUI();
+  updateModeHint();
+  renderCanvas();
+  renderTable();
+  checkAutosaveRecovery();
+})();
+</script>
+</body>
+</html>
