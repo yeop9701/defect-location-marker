@@ -380,7 +380,8 @@
           <button type="button" id="btnTableInput" style="width:100%;">📋 표로 입력</button>
         </div>
         <div style="font-size:10.5px;color:var(--muted);margin-top:5px;line-height:1.5;">
-          CSV 형식: <code>위치유형,X(%),Y(%),각도,비고</code>. 엑셀 저장 시 "CSV UTF-8"을 사용하세요.
+          CSV 형식: <code>위치유형,X(%),Y(%),각도,비고</code>. "도면명" 열이 있으면 도면별로 자동
+          배분됩니다. 일반 "CSV" 저장(CP949/EUC-KR)과 "CSV UTF-8" 모두 자동 판별해 읽습니다.
         </div>
         <div class="sidebar-btn-grid" style="margin-top:10px;">
           <button id="btnExportCSV" style="width:100%;">📤 CSV로 저장</button>
@@ -1727,8 +1728,10 @@
   function cloneMarkersForUndo(markers){
     return markers.map(m=>({...m}));
   }
-  function pushUndo(){
-    const d = getActiveDrawing(); if(!d) return;
+  // targetDrawing을 생략하면 현재 활성 도면을 기록한다. CSV로 여러 도면에 한 번에 결함을 배분할
+  // 때처럼 활성 도면이 아닌 다른 도면을 고쳐야 할 때도 undo 기록이 빠지지 않도록 인자로 받을 수 있다.
+  function pushUndo(targetDrawing){
+    const d = targetDrawing || getActiveDrawing(); if(!d) return;
     undoStack.push({type:'markers', drawingId:d.id, markers: cloneMarkersForUndo(d.markers)});
     if(undoStack.length>60) undoStack.shift();
     redoStack = []; // 새 작업이 일어나면 그 이전의 "다시하기" 기록은 더 이상 의미가 없으므로 비운다
@@ -2496,19 +2499,56 @@
   }
 
   // ---------- PDF 내보내기 (외부 라이브러리 없이 최소 PDF를 직접 생성) ----------
-  // 캔버스를 JPEG로 인코딩해 한 페이지짜리 PDF에 이미지로 삽입한다.
+  // 캔버스 픽셀을 무손실(FlateDecode/zlib)로 압축해 PDF에 이미지로 삽입한다. 예전에는 JPEG로
+  // 인코딩했는데, 품질을 아무리 높여도(0.98) JPEG 자체가 손실 압축이라 가는 선·작은 글씨가 많은
+  // 도면·표제란에서 미세하게 뭉개지는 문제가 있었다 — CompressionStream('deflate')는 표준 브라우저
+  // API로 zlib(RFC1950, PDF FlateDecode와 동일한 포맷) 압축을 라이브러리 없이 그대로 만들어준다.
   const PDF_PAGE_SIZES = { // [width, height] in pt (1pt = 1/72in), A4/A3
     a4l: [841.89, 595.28], a4p: [595.28, 841.89],
     a3l: [1190.55, 841.89], a3p: [841.89, 1190.55],
   };
+  // CompressionStream('deflate')로 zlib 압축. 문서 저장·PDF 삽입 모두 브라우저 표준 API만으로 처리해
+  // 외부 라이브러리 없이도 무손실 압축이 가능하다.
+  async function deflateBytes(bytes){
+    const cs = new CompressionStream('deflate');
+    const writer = cs.writable.getWriter();
+    writer.write(bytes);
+    writer.close();
+    const chunks = [];
+    let total = 0;
+    const reader = cs.readable.getReader();
+    while(true){
+      const { done, value } = await reader.read();
+      if(done) break;
+      chunks.push(value); total += value.length;
+    }
+    const out = new Uint8Array(total);
+    let off = 0;
+    for(const c of chunks){ out.set(c, off); off += c.length; }
+    return out;
+  }
+  // 캔버스 픽셀에서 알파를 뺀 순수 RGB 바이트를 뽑는다(PDF DeviceRGB 이미지용 — 무손실 원본 그대로).
+  function canvasToRGBBytes(canvas){
+    const ctx = canvas.getContext('2d');
+    const { data } = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const out = new Uint8Array(canvas.width * canvas.height * 3);
+    for(let i=0, j=0; i<data.length; i+=4, j+=3){
+      out[j]=data[i]; out[j+1]=data[i+1]; out[j+2]=data[i+2];
+    }
+    return out;
+  }
   // 캔버스 1개짜리 배열을 넘기면 기존과 동일한 1페이지 PDF, 여러 개를 넘기면 도면 수만큼 페이지가
   // 이어진 PDF 1개를 만든다("전체 도면 일괄 저장"에서 사용). 페이지마다 이미지·내용 스트림 객체를
   // 3개씩(페이지/이미지/콘텐츠) 순서대로 번호를 매겨 이어붙이는 방식이라 페이지 수에 제한이 없다.
-  function buildPDFFromCanvases(canvases, pageSizeKey){
+  async function buildPDFFromCanvases(canvases, pageSizeKey){
     const parts = [];
     const offsets = [];
     let pos = 0;
-    function pushStr(s){ parts.push(s); pos += s.length; }
+    // 문자열은 항상 UTF-8 바이트로 변환해서 쌓는다 — .length(유니코드 문자 수)로 위치를 계산하면
+    // 한글처럼 UTF-8에서 여러 바이트를 쓰는 문자가 섞였을 때 xref 오프셋이 실제 바이트 위치와
+    // 어긋나 PDF 전체가 깨질 수 있다. 지금은 구조상 순수 ASCII만 쓰지만, 앞으로 한글이 섞인 문자열이
+    // 들어와도 안전하도록 항상 바이트 기준으로 센다.
+    function pushStr(s){ const b = strToBytes(s); parts.push(b); pos += b.length; }
     function pushBytes(b){ parts.push(b); pos += b.length; }
     function beginObj(num){ offsets[num] = pos; pushStr(`${num} 0 obj\n`); }
 
@@ -2523,7 +2563,8 @@
     beginObj(2);
     pushStr(`<< /Type /Pages /Kids [${pageObjNums.map(num=>num+' 0 R').join(' ')}] /Count ${n} >>\nendobj\n`);
 
-    canvases.forEach((canvas, i)=>{
+    for(let i=0; i<canvases.length; i++){
+      const canvas = canvases[i];
       const w = canvas.width, h = canvas.height;
       let pageW, pageH, drawW, drawH, offX, offY;
       if(pageSizeKey && PDF_PAGE_SIZES[pageSizeKey]){
@@ -2539,11 +2580,8 @@
         drawW = pageW; drawH = pageH; offX = 0; offY = 0;
       }
 
-      const dataURL = canvas.toDataURL('image/jpeg', 0.98); // 압축률을 낮춰(품질↑) PDF 저장 시 화질 저하를 줄임
-      const base64 = dataURL.split(',')[1];
-      const binStr = atob(base64);
-      const jpegBytes = new Uint8Array(binStr.length);
-      for(let k=0;k<binStr.length;k++) jpegBytes[k] = binStr.charCodeAt(k);
+      const rgbBytes = canvasToRGBBytes(canvas);
+      const imgBytes = await deflateBytes(rgbBytes);
 
       const pageObjNum = pageObjNums[i], imgObjNum = pageObjNum+1, contentObjNum = pageObjNum+2;
 
@@ -2551,14 +2589,14 @@
       pushStr(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pageW.toFixed(2)} ${pageH.toFixed(2)}] /Resources << /XObject << /Im0 ${imgObjNum} 0 R >> /ProcSet [/PDF /ImageC] >> /Contents ${contentObjNum} 0 R >>\nendobj\n`);
 
       beginObj(imgObjNum);
-      pushStr(`<< /Type /XObject /Subtype /Image /Width ${w} /Height ${h} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${jpegBytes.length} >>\nstream\n`);
-      pushBytes(jpegBytes);
+      pushStr(`<< /Type /XObject /Subtype /Image /Width ${w} /Height ${h} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /FlateDecode /Length ${imgBytes.length} >>\nstream\n`);
+      pushBytes(imgBytes);
       pushStr('\nendstream\nendobj\n');
 
       const content = `q ${drawW.toFixed(2)} 0 0 ${drawH.toFixed(2)} ${offX.toFixed(2)} ${offY.toFixed(2)} cm /Im0 Do Q`;
       beginObj(contentObjNum);
-      pushStr(`<< /Length ${content.length} >>\nstream\n${content}\nendstream\nendobj\n`);
-    });
+      pushStr(`<< /Length ${strToBytes(content).length} >>\nstream\n${content}\nendstream\nendobj\n`);
+    }
 
     const totalObjs = 2 + n*3;
     const xrefStart = pos;
@@ -2569,16 +2607,16 @@
 
     return new Blob(parts, { type:'application/pdf' });
   }
-  function triggerPdfDownload(canvas, d, pageSizeKey){
-    const blob = buildPDFFromCanvases([canvas], pageSizeKey);
+  async function triggerPdfDownload(canvas, d, pageSizeKey){
+    const blob = await buildPDFFromCanvases([canvas], pageSizeKey);
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url; a.download = filenameBase() + '_' + sanitizeFilename(d.name) + '.pdf';
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(()=>URL.revokeObjectURL(url), 3000);
   }
-  function triggerPdfDownloadMulti(canvases, filename, pageSizeKey){
-    const blob = buildPDFFromCanvases(canvases, pageSizeKey);
+  async function triggerPdfDownloadMulti(canvases, filename, pageSizeKey){
+    const blob = await buildPDFFromCanvases(canvases, pageSizeKey);
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url; a.download = filename;
@@ -2735,6 +2773,13 @@
     while(n>0){ const r = (n-1)%26; s = String.fromCharCode(65+r) + s; n = Math.floor((n-1)/26); }
     return s;
   }
+  // buildDefectExportData()가 만드는 열 순서 기준, "숫자로 봐도 되는" 열의 0-based 인덱스.
+  // (번호·X%·Y%·각도·인출선길이배율·범위X/Y/폭/높이%·폭·길이·개수). 도면명·위치유형·유형·부재명·
+  // 결함명·#(자유 태그)·사진·비고는 사람이 읽는 라벨/자유 텍스트이므로 항상 문자열로 둔다.
+  const XLSX_NUMERIC_COL_IDX = new Set([1,3,4,5,6,7,8,9,10,14,15,16]);
+  function looksNumeric(v){
+    return v!==null && v!==undefined && v!=='' && /^-?\d+(\.\d+)?$/.test(String(v).trim());
+  }
   function buildXLSXBlob(header, rows){
     const colCount = header.length;
     // 스타일: 0=기본, 1=헤더(굵게+회색배경+테두리), 2=일반 데이터(테두리만), 3=벽체계(옅은 빨강), 4=바닥/천장계(옅은 파랑)
@@ -2769,7 +2814,14 @@
       const style = type.endStyle==='dot' || row.typeKey==='flat' || row.typeKey==='flat_area' ? 4
         : (row.typeKey==='wall' || row.typeKey==='wall_area') ? 3 : 2;
       const r = ri+2;
-      const cells = row.cells.map((v,ci)=>`<c r="${xlsxColLetter(ci+1)}${r}" t="inlineStr" s="${style}"><is><t>${xmlEscape(v)}</t></is></c>`).join('');
+      const cells = row.cells.map((v,ci)=>{
+        // 숫자 열이면서 값이 실제로 순수한 숫자 형태일 때만 숫자 셀(t 속성 없음 = 기본 numeric)로 쓴다.
+        // 엑셀에서 계산·정렬·필터가 문자열이 아니라 진짜 숫자로 동작한다.
+        if(XLSX_NUMERIC_COL_IDX.has(ci) && looksNumeric(v)){
+          return `<c r="${xlsxColLetter(ci+1)}${r}" s="${style}"><v>${Number(v)}</v></c>`;
+        }
+        return `<c r="${xlsxColLetter(ci+1)}${r}" t="inlineStr" s="${style}"><is><t>${xmlEscape(v)}</t></is></c>`;
+      }).join('');
       return `<row r="${r}">${cells}</row>`;
     }).join('');
     const sheetXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
@@ -2821,6 +2873,24 @@
     setTimeout(()=>URL.revokeObjectURL(url), 3000);
   }
 
+  // CSV 파일의 인코딩을 자동 판별해 문자열로 디코딩한다. 엑셀에서 "CSV UTF-8"이 아니라 그냥
+  // "CSV(쉼표로 분리)"로 저장하면 한국어 Windows 기준 CP949(EUC-KR 계열)로 저장되는데, 이를 UTF-8로
+  // 읽으면 한글이 깨진다. UTF-8 BOM이 있으면 UTF-8로 간주하고, 없으면 먼저 엄격 모드(fatal:true)로
+  // UTF-8 디코딩을 시도해 실패하면(=순수 UTF-8이 아님) CP949로 다시 디코딩한다 — CP949 한글 바이트
+  // 시퀀스는 대부분 유효한 UTF-8이 아니므로 이 방식으로 안정적으로 구분된다.
+  function decodeCsvBuffer(buffer){
+    const bytes = new Uint8Array(buffer);
+    if(bytes.length>=3 && bytes[0]===0xEF && bytes[1]===0xBB && bytes[2]===0xBF){
+      return new TextDecoder('utf-8').decode(bytes.subarray(3));
+    }
+    try{
+      return new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+    } catch(err){
+      try{ return new TextDecoder('euc-kr').decode(bytes); }
+      catch(err2){ return new TextDecoder('utf-8').decode(bytes); } // 최후 수단: 깨지더라도 최대한 표시
+    }
+  }
+
   function parseCSV(text){
     const rows = []; let row = []; let field=''; let inQuotes=false;
     for(let i=0;i<text.length;i++){
@@ -2850,12 +2920,12 @@
   }
 
   function importCSVText(text){
-    const d = getActiveDrawing();
-    if(!d){ alert('먼저 도면을 추가하고 선택해주세요.'); return; }
+    if(drawings.length===0){ alert('먼저 도면을 추가해주세요.'); return; }
     const rows = parseCSV(text);
     if(rows.length < 2){ alert('CSV에서 데이터 행을 찾지 못했습니다.'); return; }
     const header = rows[0].map(h=>h.trim());
     const idx = {
+      drawing: header.findIndex(h=>/도면명|도면|drawing/i.test(h)),
       type: header.findIndex(h=>/유형|종류|type/i.test(h)),
       x: header.findIndex(h=>/^x/i.test(h)),
       y: header.findIndex(h=>/^y/i.test(h)),
@@ -2868,14 +2938,11 @@
       note: header.findIndex(h=>/비고|설명|메모|note/i.test(h)),
     };
     if(idx.x<0 || idx.y<0){ alert('CSV 헤더에서 X, Y 좌표 열을 찾지 못했습니다. "위치유형,X(%),Y(%),각도,비고" 형식을 확인해주세요.'); return; }
-    pushUndo();
-    let added = 0;
-    for(let i=1;i<rows.length;i++){
-      const r = rows[i];
-      if(!r || r.length===0) continue;
+
+    function buildMarkerFromRow(r){
       const xVal = parseFloat(r[idx.x]);
       const yVal = parseFloat(r[idx.y]);
-      if(isNaN(xVal) || isNaN(yVal)) continue;
+      if(isNaN(xVal) || isNaN(yVal)) return null;
       const typeLabel = idx.type>=0 ? r[idx.type] : '';
       const angleVal = idx.angle>=0 ? parseFloat(r[idx.angle]) : 0;
       const lenVal = idx.len>=0 ? parseFloat(r[idx.len]) : NaN;
@@ -2894,11 +2961,50 @@
         marker.rectWPct = !isNaN(rw) && rw>0 ? rw : 8;
         marker.rectHPct = !isNaN(rh) && rh>0 ? rh : 6;
       }
-      d.markers.push(marker);
-      added++;
+      return marker;
     }
+
+    let added = 0;
+    const touchedIds = new Set();
+    const unmatchedNames = new Set();
+    const activeDrawing = getActiveDrawing();
+
+    if(idx.drawing>=0){
+      // "도면명" 열이 있으면 값으로 도면별 자동 배분한다 — 지금 보고 있는 도면과 무관하게, CSV의
+      // 도면명이 실제 도면 이름과 정확히 일치하는 도면에 각각 배정된다(내보내기 CSV와 형식이 같아
+      // "내보내기 → 엑셀에서 수정 → 다시 불러오기" 왕복이 그대로 된다).
+      for(let i=1;i<rows.length;i++){
+        const r = rows[i];
+        if(!r || r.length===0) continue;
+        const dname = String(r[idx.drawing]||'').trim();
+        const target = dname ? drawings.find(x=>x.name===dname) : activeDrawing;
+        if(!target){ if(dname) unmatchedNames.add(dname); continue; }
+        const marker = buildMarkerFromRow(r);
+        if(!marker) continue;
+        if(!touchedIds.has(target.id)){ pushUndo(target); touchedIds.add(target.id); }
+        target.markers.push(marker);
+        added++;
+      }
+    } else {
+      // 기존 형식(도면명 열 없음): 지금 보고 있는 도면 하나에만 추가한다.
+      if(!activeDrawing){ alert('먼저 도면을 추가하고 선택해주세요.'); return; }
+      pushUndo(activeDrawing); touchedIds.add(activeDrawing.id);
+      for(let i=1;i<rows.length;i++){
+        const r = rows[i];
+        if(!r || r.length===0) continue;
+        const marker = buildMarkerFromRow(r);
+        if(!marker) continue;
+        activeDrawing.markers.push(marker);
+        added++;
+      }
+    }
+
     renderCanvas(); renderTable();
-    if(added===0) alert('추가된 항목이 없습니다. 좌표 값(X, Y, 0~100 범위의 %)을 확인해주세요.');
+    if(added===0){
+      alert('추가된 항목이 없습니다. 좌표 값(X, Y, 0~100 범위의 %)을 확인해주세요.');
+    } else if(unmatchedNames.size>0){
+      alert(added+'건을 추가했지만, 다음 도면명은 현재 프로젝트에 없어 건너뛰었습니다:\n- '+[...unmatchedNames].join('\n- '));
+    }
   }
 
   // ---------- 표로 좌표 입력(모달) : CSV 파일 없이 표 UI에서 바로 입력, 엑셀에서 표를 복사해 붙여넣기 가능 ----------
@@ -3581,8 +3687,10 @@
   document.getElementById('importCSVInput').addEventListener('change', e=>{
     const file = e.target.files[0]; if(!file) return;
     const reader = new FileReader();
-    reader.onload = ()=> importCSVText(reader.result);
-    reader.readAsText(file);
+    // readAsText 대신 readAsArrayBuffer로 원본 바이트를 받아 UTF-8/CP949를 자동 판별해 디코딩한다
+    // (readAsText는 인코딩을 지정하지 않으면 항상 UTF-8로 읽어, CP949로 저장된 CSV의 한글이 깨진다).
+    reader.onload = ()=> importCSVText(decodeCsvBuffer(reader.result));
+    reader.readAsArrayBuffer(file);
     e.target.value='';
   });
 
