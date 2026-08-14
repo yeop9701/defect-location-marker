@@ -1541,16 +1541,44 @@
     renderTbTemplateSelect();
   }
 
+  // 스캔 도면이 지나치게 고해상도(예: 8000px대 스캔본)이면 캔버스 렌더링·저장·내보내기 부하가
+  // 커지므로, 긴 변이 이 값을 넘으면 추가 시점에 한 번만 축소해 저장한다. 표제란 인쇄용 PDF 등은
+  // 어차피 이 정도 해상도면 충분히 선명하다.
+  const MAX_DRAWING_DIM = 4000;
   function addImagesFromFiles(fileList){
     Array.from(fileList||[]).forEach(file=>{
       const reader = new FileReader();
       reader.onload = ()=>{
         const img = new Image();
         img.onload = ()=>{
-          const nd = buildDrawingFromImage(img, reader.result, file.name.replace(/\.[a-zA-Z0-9]+$/, ''));
-          drawings.push(nd);
-          renderDrawingTabs();
-          setActiveDrawing(nd.id);
+          const name = file.name.replace(/\.[a-zA-Z0-9]+$/, '');
+          const w = img.naturalWidth, h = img.naturalHeight;
+          if(Math.max(w,h) <= MAX_DRAWING_DIM){
+            const nd = buildDrawingFromImage(img, reader.result, name);
+            drawings.push(nd);
+            renderDrawingTabs();
+            setActiveDrawing(nd.id);
+            return;
+          }
+          // 긴 변 기준으로 축소. 원본 형식(JPEG/WebP)은 그대로 유지해 화질 손실을 최소화하고,
+          // 그 외(PNG 등)는 선/문자가 많은 도면 특성상 무손실(PNG)로 재인코딩한다.
+          const scale = MAX_DRAWING_DIM / Math.max(w,h);
+          const off = document.createElement('canvas');
+          off.width = Math.max(1, Math.round(w*scale));
+          off.height = Math.max(1, Math.round(h*scale));
+          const ctx = off.getContext('2d');
+          ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+          ctx.drawImage(img, 0, 0, off.width, off.height);
+          const mime = (file.type==='image/jpeg' || file.type==='image/webp') ? file.type : 'image/png';
+          const resizedURL = mime==='image/jpeg' ? off.toDataURL(mime, 0.92) : off.toDataURL(mime);
+          const img2 = new Image();
+          img2.onload = ()=>{
+            const nd = buildDrawingFromImage(img2, resizedURL, name);
+            drawings.push(nd);
+            renderDrawingTabs();
+            setActiveDrawing(nd.id);
+          };
+          img2.src = resizedURL;
         };
         img.src = reader.result;
       };
@@ -4000,19 +4028,38 @@
     renderPhotoModal();
     renderTable(); // 카드의 사진 개수 배지 갱신
   }
+  // 원본 해상도(사진 한 장이 최근 스마트폰 기준 십수 MB)를 그대로 dataURL로 쌓으면 결함 하나당
+  // 사진 여러 장 x 마커 여러 개만으로 수백 MB가 되어 iOS 사파리가 탭을 강제 종료하는 사례가 있었다.
+  // 그래서 추가 시점에 한 번만 캔버스로 긴 변 상한까지 축소하고 JPEG로 재인코딩해 저장한다
+  // (실측 감사 사진은 화질보다 용량이 중요하고, 축소본이라도 인쇄/미리보기에는 충분한 해상도).
+  const MAX_PHOTO_DIM = 2000;
   function addPhotoFiles(fileList){
     const m = currentPhotoMarker(); if(!m) return;
     const files = Array.from(fileList||[]).filter(f=>f.type && f.type.startsWith('image/'));
     if(files.length===0) return;
     if(!m.photos) m.photos = [];
     let remaining = files.length;
+    const done = ()=>{ remaining--; if(remaining===0){ renderPhotoModal(); renderTable(); } };
     files.forEach(f=>{
       const reader = new FileReader();
       reader.onload = ()=>{
-        m.photos.push(reader.result);
-        remaining--;
-        if(remaining===0){ renderPhotoModal(); renderTable(); }
+        const img = new Image();
+        img.onload = ()=>{
+          const w = img.naturalWidth, h = img.naturalHeight;
+          const scale = Math.min(1, MAX_PHOTO_DIM / Math.max(w,h));
+          const off = document.createElement('canvas');
+          off.width = Math.max(1, Math.round(w*scale));
+          off.height = Math.max(1, Math.round(h*scale));
+          const ctx = off.getContext('2d');
+          ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+          ctx.drawImage(img, 0, 0, off.width, off.height);
+          m.photos.push(off.toDataURL('image/jpeg', 0.85));
+          done();
+        };
+        img.onerror = done; // 손상된 이미지는 건너뛰고 나머지는 계속 처리
+        img.src = reader.result;
       };
+      reader.onerror = done;
       reader.readAsDataURL(f);
     });
   }
