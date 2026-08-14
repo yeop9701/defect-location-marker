@@ -1072,9 +1072,16 @@
   // 프로젝트 파일(.json)의 스키마 버전. 이보다 높은 version 값을 가진 파일을 열면(더 상위 버전에서 저장된
   // 파일) applyProjectData()가 경고 후 계속할지 확인한다.
   const PROJECT_FILE_VERSION = 2;
-  // 마지막으로 파일에 저장(또는 파일/자동저장에서 불러오기)된 시점의 스냅샷 JSON.
-  // beforeunload에서 현재 상태와 비교해 "미저장 변경사항"이 있는지 판단하는 기준선이다.
-  let lastSavedSnapshotJSON = null;
+  // "미저장 변경사항이 있는가"를 매번 전체 스냅샷을 JSON.stringify해서 비교하면(특히 사진·도면
+  // 이미지가 많을 때) beforeunload/자동저장 틱마다 무거운 직렬화가 반복된다. 대신 마커·도면·프로젝트
+  // 정보를 실제로 바꾸는 지점에서 markDirty()/markImagesDirty()를 호출해 플래그만 세우고, 파일
+  // 저장·불러오기 시 false로 리셋하는 방식으로 대체한다.
+  let isDirty = false;
+  // 이미지(도면 imgSrc, 결함 사진 photos)만 별도로 추적 — 자동저장에서 이미지는 마커/메타데이터와
+  // 분리된 IndexedDB 키에 "변경이 있을 때만" 저장하기 위한 플래그(30초 주기 틱과 무관하게 동작).
+  let imagesDirty = false;
+  function markDirty(){ isDirty = true; }
+  function markImagesDirty(){ markDirty(); imagesDirty = true; scheduleImagesAutosave(); }
   let pendingAction = null; // {mode:'move'|'rotate'|'create'|'rubberband'|'crop', hitId, startX, startY, moved}
   let cropMode = false;
   let cropRect = null; // {x,y,w,h} in canvas backing-px
@@ -1432,7 +1439,7 @@
         const act = actBtn && actBtn.getAttribute('data-act');
         if(act==='rename'){
           const nn = prompt('도면 이름을 입력하세요', d.name);
-          if(nn){ d.name = nn; renderDrawingTabs(); syncSurveyLocationField(); }
+          if(nn){ d.name = nn; markDirty(); renderDrawingTabs(); syncSurveyLocationField(); }
           e.stopPropagation(); return;
         }
         if(act==='del'){
@@ -1556,6 +1563,7 @@
           if(Math.max(w,h) <= MAX_DRAWING_DIM){
             const nd = buildDrawingFromImage(img, reader.result, name);
             drawings.push(nd);
+            markImagesDirty();
             renderDrawingTabs();
             setActiveDrawing(nd.id);
             return;
@@ -1575,6 +1583,7 @@
           img2.onload = ()=>{
             const nd = buildDrawingFromImage(img2, resizedURL, name);
             drawings.push(nd);
+            markImagesDirty();
             renderDrawingTabs();
             setActiveDrawing(nd.id);
           };
@@ -2199,6 +2208,7 @@
   // 때처럼 활성 도면이 아닌 다른 도면을 고쳐야 할 때도 undo 기록이 빠지지 않도록 인자로 받을 수 있다.
   function pushUndo(targetDrawing){
     const d = targetDrawing || getActiveDrawing(); if(!d) return;
+    markDirty();
     undoStack.push({type:'markers', drawingId:d.id, markers: cloneMarkersForUndo(d.markers)});
     if(undoStack.length>60) undoStack.shift();
     redoStack = []; // 새 작업이 일어나면 그 이전의 "다시하기" 기록은 더 이상 의미가 없으므로 비운다
@@ -2206,6 +2216,7 @@
   // 이미지 자체가 바뀌는 작업(자르기·회전·지우개브러시) 직전에 호출 — 이미지+그 시점의 마커를 통째로 기록한다.
   // pushUndo()와 같은 undoStack에 함께 쌓이므로 "실행취소" 버튼 하나로 마커 작업과 순서대로 되돌릴 수 있다.
   function pushImageUndo(d){
+    markDirty();
     undoStack.push({
       type:'image',
       drawingId: d.id,
@@ -2225,6 +2236,7 @@
   function deleteDrawing(id){
     const idx = drawings.findIndex(x=>x.id===id); if(idx<0) return;
     const d = drawings[idx];
+    markDirty();
     undoStack.push({type:'drawing', drawing:d, index:idx});
     if(undoStack.length>60) undoStack.shift();
     redoStack = [];
@@ -2234,6 +2246,7 @@
   }
   function undo(){
     const last = undoStack.pop(); if(!last) return;
+    markDirty();
     if(last.type==='drawing'){
       const insertAt = Math.min(last.index, drawings.length);
       drawings.splice(insertAt, 0, last.drawing);
@@ -2254,6 +2267,7 @@
         d.naturalW = last.naturalW; d.naturalH = last.naturalH;
         d.baseW = last.baseW; d.baseH = last.baseH;
         d.markers = last.markers;
+        markImagesDirty();
         if(d.id===activeDrawingId){ selectedIds = new Set(); renderCanvas(); renderTable(); }
       };
       img.src = last.imgSrc;
@@ -2266,6 +2280,7 @@
   }
   function redo(){
     const next = redoStack.pop(); if(!next) return;
+    markDirty();
     if(next.type==='drawing'){
       const idx = drawings.findIndex(x=>x.id===next.drawingId); if(idx<0){ redo(); return; }
       const removed = drawings[idx];
@@ -2288,6 +2303,7 @@
         d.naturalW = next.naturalW; d.naturalH = next.naturalH;
         d.baseW = next.baseW; d.baseH = next.baseH;
         d.markers = next.markers;
+        markImagesDirty();
         if(d.id===activeDrawingId){ selectedIds = new Set(); renderCanvas(); renderTable(); }
       };
       img.src = next.imgSrc;
@@ -2395,6 +2411,7 @@
     const newImg = new Image();
     newImg.onload = ()=>{
       d.imgSrc = newSrc; d.imgEl = newImg;
+      markImagesDirty();
       renderCanvas();
     };
     newImg.src = newSrc;
@@ -2438,6 +2455,7 @@
     const sel = card.querySelector(`[data-role="${fieldKey}"]`);
     const custom = card.querySelector(`[data-role="${fieldKey}_custom"]`);
     sel.addEventListener('change', ()=>{
+      markDirty();
       if(sel.value==='__custom__'){
         custom.style.display = 'block'; custom.value = ''; custom.focus();
         m[fieldKey] = '';
@@ -2446,7 +2464,7 @@
         m[fieldKey] = sel.value;
       }
     });
-    custom.addEventListener('input', ()=>{ m[fieldKey] = custom.value; });
+    custom.addEventListener('input', ()=>{ markDirty(); m[fieldKey] = custom.value; });
   }
   function renderTable(){
     const d = getActiveDrawing();
@@ -2512,7 +2530,7 @@
       wireReportSelect(card, 'rptMember', m);
       wireReportSelect(card, 'rptDefect', m);
       ['rptWidth','rptLength','rptCount','rptTag'].forEach(key=>{
-        card.querySelector(`[data-role="${key}"]`).addEventListener('input', (e)=>{ m[key] = e.target.value; });
+        card.querySelector(`[data-role="${key}"]`).addEventListener('input', (e)=>{ markDirty(); m[key] = e.target.value; });
       });
       list.appendChild(card);
     });
@@ -2675,6 +2693,7 @@
       d.imgSrc = newSrc; d.imgEl = newImg; d.naturalW = nw; d.naturalH = nh;
       const fit = fitBaseSize(nw, nh);
       d.baseW = fit.baseW; d.baseH = fit.baseH;
+      markImagesDirty();
       selectedIds = new Set();
       exitCropMode();
       renderTable();
@@ -2728,6 +2747,7 @@
       d.imgSrc = newSrc; d.imgEl = newImg; d.naturalW = nw; d.naturalH = nh;
       const fit = fitBaseSize(nw, nh);
       d.baseW = fit.baseW; d.baseH = fit.baseH;
+      markImagesDirty();
       renderCanvas(); renderTable();
     };
     newImg.src = newSrc;
@@ -4024,6 +4044,7 @@
   function removePhotoAt(i){
     const m = currentPhotoMarker(); if(!m || !m.photos) return;
     m.photos.splice(i,1);
+    markImagesDirty();
     if(photoPreviewIndex>=m.photos.length) photoPreviewIndex = m.photos.length-1;
     renderPhotoModal();
     renderTable(); // 카드의 사진 개수 배지 갱신
@@ -4054,6 +4075,7 @@
           ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
           ctx.drawImage(img, 0, 0, off.width, off.height);
           m.photos.push(off.toDataURL('image/jpeg', 0.85));
+          markImagesDirty();
           done();
         };
         img.onerror = done; // 손상된 이미지는 건너뛰고 나머지는 계속 처리
@@ -4099,6 +4121,7 @@
     off.getContext('2d').drawImage(video, 0, 0);
     if(!m.photos) m.photos = [];
     m.photos.push(off.toDataURL('image/jpeg', 0.92));
+    markImagesDirty();
     closeCameraView();
     renderTable();
   }
@@ -4199,7 +4222,7 @@
     if(drawings.length===0){ alert('저장할 도면이 없습니다.'); return; }
     const data = buildProjectSnapshot();
     downloadBlob(JSON.stringify(data), filenameBase()+'_project.json', 'application/json');
-    lastSavedSnapshotJSON = JSON.stringify(data); // 파일로 실제 저장됐으므로, 이 시점을 "저장됨" 기준선으로 삼는다
+    isDirty = false; // 파일로 실제 저장됐으므로 미저장 표시를 내린다
   }
 
   function loadProjectFile(file){
@@ -4238,7 +4261,7 @@
     redoStack = [];
     if(data.drawings.length===0){
       renderDrawingTabs(); renderCanvas(); renderTable();
-      lastSavedSnapshotJSON = JSON.stringify(buildProjectSnapshot());
+      isDirty = false;
       if(opts.onDone) opts.onDone();
       return;
     }
@@ -4250,7 +4273,7 @@
       drawings.sort((a,b)=> data.drawings.findIndex(x=>x.id===a.id) - data.drawings.findIndex(x=>x.id===b.id));
       activeDrawingId = drawings[0] ? drawings[0].id : null;
       renderDrawingTabs(); renderCanvas(); renderTable(); syncSurveyLocationField();
-      lastSavedSnapshotJSON = JSON.stringify(buildProjectSnapshot());
+      isDirty = false;
       if(failedNames.length>0){
         const tail = drawings.length>0
           ? '나머지 '+drawings.length+'개 도면은 정상적으로 열렸습니다.'
@@ -4431,6 +4454,7 @@
     const d = getActiveDrawing();
     if(!d) return;
     d.surveyLocation = e.target.value;
+    markDirty();
     refreshTbPreviewIfOpen();
   });
   document.getElementById('titleBlockToggle').addEventListener('change', e=>{
@@ -4445,6 +4469,10 @@
   });
   ['projectNameInput','siteNameInput','structureTypeInput'].forEach(id=>{
     document.getElementById(id).addEventListener('input', refreshTbPreviewIfOpen);
+  });
+  // 프로젝트 상단 정보(현장명·구조형식 등)도 저장 파일 내용에 포함되므로 편집 시 미저장 표시가 되어야 함.
+  ['projectNameInput','siteNameInput','structureTypeInput','docTitleInput'].forEach(id=>{
+    document.getElementById(id).addEventListener('input', markDirty);
   });
   document.getElementById('btnApplyTemplate').addEventListener('click', applyTbTemplate);
   document.getElementById('btnSaveTemplate').addEventListener('click', saveTbTemplate);
@@ -4877,13 +4905,21 @@
   window.addEventListener('touchcancel', ()=>{ endPinch(); pendingAction = null; renderCanvas(); });
 
   // ---------- 자동저장(IndexedDB) ----------
-  // 웹앱 전환: Electron 시절엔 없던 기능. 파일시스템에 의존하지 않고 브라우저 IndexedDB에
-  // 30초 간격으로 현재 작업 전체(도면 이미지 포함)를 스냅샷으로 저장해, 탭을 실수로 닫거나
-  // 새로고침해도 다음에 열었을 때 복구를 제안할 수 있게 한다.
+  // 웹앱 전환: Electron 시절엔 없던 기능. 파일시스템에 의존하지 않고 브라우저 IndexedDB에 현재
+  // 작업을 스냅샷으로 저장해, 탭을 실수로 닫거나 새로고침해도 다음에 열었을 때 복구를 제안할 수
+  // 있게 한다. 예전에는 30초마다 도면 이미지·사진까지 포함한 전체 스냅샷을 통째로 직렬화해
+  // 저장했는데, 사진이 쌓일수록 그 30초 틱 자체가 무거워졌다. 그래서 지금은 두 키로 나눈다:
+  //   - "meta" 키: 마커 좌표·표 입력값·프로젝트 정보 등 가벼운 데이터. 30초 주기로 항상 저장.
+  //   - "images" 키: 도면 imgSrc·결함 사진(photos) 등 무거운 데이터. 실제로 바뀔 때만
+  //     (markImagesDirty() 호출 시, 짧게 디바운스해서) 저장 — 30초 틱과 무관하게 동작한다.
+  // 복구 시에는 두 키를 id로 짝지어 하나의 완전한 프로젝트 데이터로 합친다.
   const AUTOSAVE_DB_NAME = 'defectMarkerAutosaveDB';
   const AUTOSAVE_STORE = 'snapshots';
-  const AUTOSAVE_KEY = 'latest';
+  const AUTOSAVE_META_KEY = 'latestMeta';
+  const AUTOSAVE_IMAGES_KEY = 'latestImages';
+  const AUTOSAVE_LEGACY_KEY = 'latest'; // 분리 저장 도입 이전 버전이 쓰던 단일 스냅샷 키(하위호환 복구용)
   const AUTOSAVE_INTERVAL_MS = 30000;
+  const AUTOSAVE_IMAGES_DEBOUNCE_MS = 1200;
   let autosaveDbPromise = null;
   function openAutosaveDB(){
     if(autosaveDbPromise) return autosaveDbPromise;
@@ -4896,18 +4932,18 @@
     });
     return autosaveDbPromise;
   }
-  function autosaveWrite(record){
+  function autosaveWriteKey(key, record){
     return openAutosaveDB().then(db=> new Promise((resolve, reject)=>{
       const tx = db.transaction(AUTOSAVE_STORE, 'readwrite');
-      tx.objectStore(AUTOSAVE_STORE).put(record, AUTOSAVE_KEY);
+      tx.objectStore(AUTOSAVE_STORE).put(record, key);
       tx.oncomplete = ()=> resolve();
       tx.onerror = ()=> reject(tx.error);
     })).catch(err=>{ /* 저장 실패해도(용량 초과 등) 앱 동작에는 지장 없음 */ console.warn('자동저장 실패:', err); });
   }
-  function autosaveRead(){
+  function autosaveReadKey(key){
     return openAutosaveDB().then(db=> new Promise((resolve, reject)=>{
       const tx = db.transaction(AUTOSAVE_STORE, 'readonly');
-      const req = tx.objectStore(AUTOSAVE_STORE).get(AUTOSAVE_KEY);
+      const req = tx.objectStore(AUTOSAVE_STORE).get(key);
       req.onsuccess = ()=> resolve(req.result || null);
       req.onerror = ()=> reject(req.error);
     })).catch(()=> null);
@@ -4915,26 +4951,87 @@
   function autosaveClear(){
     return openAutosaveDB().then(db=> new Promise(resolve=>{
       const tx = db.transaction(AUTOSAVE_STORE, 'readwrite');
-      tx.objectStore(AUTOSAVE_STORE).delete(AUTOSAVE_KEY);
+      tx.objectStore(AUTOSAVE_STORE).delete(AUTOSAVE_META_KEY);
+      tx.objectStore(AUTOSAVE_STORE).delete(AUTOSAVE_IMAGES_KEY);
+      tx.objectStore(AUTOSAVE_STORE).delete(AUTOSAVE_LEGACY_KEY);
       tx.oncomplete = ()=> resolve();
       tx.onerror = ()=> resolve();
     })).catch(()=>{});
   }
+  // 마커·표 입력값·프로젝트 정보만 담은 가벼운 스냅샷. m.photos는 images 스냅샷 쪽 책임이라 제외한다.
+  function buildProjectMetaSnapshot(){
+    return {
+      version: PROJECT_FILE_VERSION,
+      projectName: document.getElementById('projectNameInput').value,
+      siteName: document.getElementById('siteNameInput').value,
+      structureType: document.getElementById('structureTypeInput').value,
+      docTitle: document.getElementById('docTitleInput').value,
+      drawings: drawings.map(d=>({
+        id: d.id, name: d.name, surveyLocation: d.surveyLocation||'',
+        markers: d.markers.map(m=>{ const {photos, ...rest} = m; return rest; }),
+      })),
+    };
+  }
+  // 도면 imgSrc와 마커별 사진만 담은 스냅샷 — 용량이 큰 데이터만 모아 별도 키에 저장한다.
+  function buildProjectImagesSnapshot(){
+    return {
+      drawings: drawings.map(d=>({
+        id: d.id,
+        imgSrc: d.imgSrc,
+        photosByMarker: d.markers.filter(m=>m.photos && m.photos.length).map(m=>({ id:m.id, photos:m.photos })),
+      })),
+    };
+  }
+  // meta 스냅샷(마커·프로젝트 정보)과 images 스냅샷(imgSrc·photos)을 도면/마커 id로 짝지어
+  // applyProjectData()가 기대하는 완전한 프로젝트 데이터 모양으로 합친다.
+  function mergeMetaAndImages(metaRecord, imagesRecord){
+    if(!metaRecord || !metaRecord.data) return null;
+    const meta = metaRecord.data;
+    const imagesByDrawing = new Map(((imagesRecord && imagesRecord.data && imagesRecord.data.drawings) || []).map(x=>[x.id, x]));
+    const drawings = meta.drawings.map(d=>{
+      const img = imagesByDrawing.get(d.id);
+      const photosByMarker = new Map(((img && img.photosByMarker) || []).map(p=>[p.id, p.photos]));
+      return {
+        ...d,
+        imgSrc: img ? img.imgSrc : null,
+        markers: d.markers.map(m=> photosByMarker.has(m.id) ? { ...m, photos: photosByMarker.get(m.id) } : m),
+      };
+    });
+    return { ...meta, drawings };
+  }
+  let imagesAutosaveTimer = null;
+  function scheduleImagesAutosave(){
+    if(imagesAutosaveTimer) clearTimeout(imagesAutosaveTimer);
+    imagesAutosaveTimer = setTimeout(()=>{
+      imagesAutosaveTimer = null;
+      if(drawings.length===0) return;
+      autosaveWriteKey(AUTOSAVE_IMAGES_KEY, { savedAt: Date.now(), data: buildProjectImagesSnapshot() });
+      imagesDirty = false;
+    }, AUTOSAVE_IMAGES_DEBOUNCE_MS);
+  }
+  // 탭이 실제로 닫히는 시점(pagehide)에는 디바운스를 기다리면 마지막 이미지 변경이 유실될 수
+  // 있으므로, 대기 중인 타이머가 있으면 취소하고 즉시 저장한다.
+  function flushImagesAutosave(){
+    if(imagesAutosaveTimer){ clearTimeout(imagesAutosaveTimer); imagesAutosaveTimer = null; }
+    if(!imagesDirty || drawings.length===0) return;
+    autosaveWriteKey(AUTOSAVE_IMAGES_KEY, { savedAt: Date.now(), data: buildProjectImagesSnapshot() });
+    imagesDirty = false;
+  }
   function runAutosaveTick(){
     if(drawings.length===0) return; // 빈 프로젝트는 저장할 것이 없음
-    autosaveWrite({ savedAt: Date.now(), data: buildProjectSnapshot() });
+    autosaveWriteKey(AUTOSAVE_META_KEY, { savedAt: Date.now(), data: buildProjectMetaSnapshot() });
   }
   setInterval(runAutosaveTick, AUTOSAVE_INTERVAL_MS);
-  window.addEventListener('pagehide', runAutosaveTick);
+  window.addEventListener('pagehide', ()=>{ runAutosaveTick(); flushImagesAutosave(); });
 
   // ---------- 미저장 변경사항 확인(창/탭 닫기) ----------
-  // 마지막으로 파일 저장/불러오기한 시점의 스냅샷(lastSavedSnapshotJSON)과 현재 상태를 비교해
-  // 다르면 "미저장 변경사항"으로 본다. 자동저장(IndexedDB)은 이 기준선을 갱신하지 않는다 —
-  // 브라우저 저장소가 지워질 수 있어 실제 파일 저장과는 안전성이 다르기 때문이다.
+  // isDirty 플래그를 그대로 반환 — 예전에는 매번 전체 스냅샷을 JSON.stringify해서 마지막 저장본과
+  // 비교했는데, 사진·도면 이미지가 많으면 beforeunload/자동저장 틱마다 이 직렬화 자체가 무거웠다.
+  // 자동저장(IndexedDB)은 isDirty를 갱신하지 않는다 — 브라우저 저장소가 지워질 수 있어 실제 파일
+  // 저장과는 안전성이 다르기 때문이다(파일 저장/불러오기 시에만 false로 리셋).
   function hasUnsavedChanges(){
     if(drawings.length===0) return false;
-    try{ return JSON.stringify(buildProjectSnapshot()) !== lastSavedSnapshotJSON; }
-    catch(err){ return false; }
+    return isDirty;
   }
   window.addEventListener('beforeunload', e=>{
     if(hasUnsavedChanges()){
@@ -4968,9 +5065,19 @@
     });
   }
   function checkAutosaveRecovery(){
-    autosaveRead().then(record=>{
-      if(record && record.data && Array.isArray(record.data.drawings) && record.data.drawings.length>0){
-        showRecoveryBanner(record);
+    Promise.all([
+      autosaveReadKey(AUTOSAVE_META_KEY),
+      autosaveReadKey(AUTOSAVE_IMAGES_KEY),
+      autosaveReadKey(AUTOSAVE_LEGACY_KEY),
+    ]).then(([metaRecord, imagesRecord, legacyRecord])=>{
+      if(metaRecord && metaRecord.data && Array.isArray(metaRecord.data.drawings) && metaRecord.data.drawings.length>0){
+        const merged = mergeMetaAndImages(metaRecord, imagesRecord);
+        if(merged) showRecoveryBanner({ savedAt: metaRecord.savedAt, data: merged });
+        return;
+      }
+      // meta/images 분리 저장을 도입하기 전 버전이 남긴 단일 스냅샷이 있으면 그대로 복구 후보로 보여준다.
+      if(legacyRecord && legacyRecord.data && Array.isArray(legacyRecord.data.drawings) && legacyRecord.data.drawings.length>0){
+        showRecoveryBanner(legacyRecord);
       }
     });
   }
@@ -5030,7 +5137,7 @@
   updateModeHint();
   renderCanvas();
   renderTable();
-  lastSavedSnapshotJSON = JSON.stringify(buildProjectSnapshot()); // 빈 프로젝트 = "저장됨" 기준선
+  isDirty = false; // 빈 프로젝트 = "저장됨" 기준선
   checkAutosaveRecovery();
 })();
 </script>
