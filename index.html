@@ -4776,22 +4776,30 @@
 
   // ---------- 터치(태블릿) 지원: 손가락 하나는 마우스와 동일하게(그리기·이동·선택·리사이즈),
   // 손가락 두 개는 핀치로 확대/축소(휠 줌과 동일한 "커서 위치 고정" 로직을 두 손가락 중점 기준으로 적용) ----------
-  let pinchState = null; // {startDist, startZoom}
+  let pinchState = null; // {startDist, startZoom, midX, midY} — midX/midY는 직전 프레임의 두 손가락 중점(패닝 계산용)
   function touchDist(t0,t1){ return Math.hypot(t1.clientX-t0.clientX, t1.clientY-t0.clientY); }
   function startPinch(e){
     pendingAction = null;
     const [t0,t1] = e.touches;
-    pinchState = { startDist: touchDist(t0,t1), startZoom: zoom };
+    const midX = (t0.clientX+t1.clientX)/2, midY = (t0.clientY+t1.clientY)/2;
+    pinchState = { startDist: touchDist(t0,t1), startZoom: zoom, midX, midY };
   }
   function updatePinch(e){
     if(!pinchState || !getActiveDrawing()) return;
     const [t0,t1] = e.touches;
     const dist = touchDist(t0,t1);
-    if(dist<=0) return;
-    const newZoom = clamp(pinchState.startZoom * (dist/pinchState.startDist), 0.1, 4);
-    if(Math.abs(newZoom-zoom) < 0.0005) return;
     const wrap = document.getElementById('canvasWrap');
     const midX = (t0.clientX+t1.clientX)/2, midY = (t0.clientY+t1.clientY)/2;
+
+    // 두 손가락 평행 이동(패닝): 확대/축소 여부와 무관하게 중점이 움직인 만큼 매 프레임 스크롤을 보정한다.
+    // 부호는 기존 마우스 pan 모드(startScrollLeft - (clientX-startClientX))와 동일한 방향으로 맞춘다.
+    wrap.scrollLeft -= (midX - pinchState.midX);
+    wrap.scrollTop -= (midY - pinchState.midY);
+    pinchState.midX = midX; pinchState.midY = midY;
+
+    if(dist<=0) return;
+    const newZoom = clamp(pinchState.startZoom * (dist/pinchState.startDist), 0.1, 4);
+    if(Math.abs(newZoom-zoom) < 0.0005) return; // 줌 변화가 거의 없으면(순수 패닝) 아래 재렌더링·줌보정은 생략 — 패닝은 위에서 이미 처리됨
     const beforeRect = canvas.getBoundingClientRect();
     const fracX = beforeRect.width>0 ? (midX-beforeRect.left)/beforeRect.width : 0.5;
     const fracY = beforeRect.height>0 ? (midY-beforeRect.top)/beforeRect.height : 0.5;
