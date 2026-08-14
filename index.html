@@ -4992,11 +4992,17 @@
   //   - "images" 키: 도면 imgSrc·결함 사진(photos) 등 무거운 데이터. 실제로 바뀔 때만
   //     (markImagesDirty() 호출 시, 짧게 디바운스해서) 저장 — 30초 틱과 무관하게 동작한다.
   // 복구 시에는 두 키를 id로 짝지어 하나의 완전한 프로젝트 데이터로 합친다.
+  // 자동저장은 "프로젝트명" 기준 슬롯으로 나뉜다 — 단일 'latest' 슬롯 하나만 있으면 서로 다른
+  // 프로젝트를 오가며 작업할 때 먼저 하던 프로젝트의 자동저장이 나중 것에 덮여 사라지므로,
+  // 최근에 손댄 프로젝트 최대 5개까지 각자의 슬롯을 유지하고(slotIndex로 최근 사용 순서 관리,
+  // 넘치면 가장 오래된 슬롯을 지움), 복구 배너에서 그중 하나를 골라 복구할 수 있게 한다.
   const AUTOSAVE_DB_NAME = 'defectMarkerAutosaveDB';
   const AUTOSAVE_STORE = 'snapshots';
-  const AUTOSAVE_META_KEY = 'latestMeta';
-  const AUTOSAVE_IMAGES_KEY = 'latestImages';
-  const AUTOSAVE_LEGACY_KEY = 'latest'; // 분리 저장 도입 이전 버전이 쓰던 단일 스냅샷 키(하위호환 복구용)
+  const AUTOSAVE_SLOT_INDEX_KEY = 'slotIndex';
+  const AUTOSAVE_MAX_SLOTS = 5;
+  const AUTOSAVE_META_KEY_LEGACY = 'latestMeta'; // 슬롯 분리 이전(단일 슬롯) 버전이 쓰던 키(하위호환)
+  const AUTOSAVE_IMAGES_KEY_LEGACY = 'latestImages';
+  const AUTOSAVE_LEGACY_KEY = 'latest'; // meta/images 분리 이전 버전이 쓰던 단일 스냅샷 키(하위호환)
   const AUTOSAVE_INTERVAL_MS = 30000;
   const AUTOSAVE_IMAGES_DEBOUNCE_MS = 1200;
   let autosaveDbPromise = null;
@@ -5027,15 +5033,46 @@
       req.onerror = ()=> reject(req.error);
     })).catch(()=> null);
   }
-  function autosaveClear(){
+  function autosaveDeleteKey(key){
     return openAutosaveDB().then(db=> new Promise(resolve=>{
       const tx = db.transaction(AUTOSAVE_STORE, 'readwrite');
-      tx.objectStore(AUTOSAVE_STORE).delete(AUTOSAVE_META_KEY);
-      tx.objectStore(AUTOSAVE_STORE).delete(AUTOSAVE_IMAGES_KEY);
-      tx.objectStore(AUTOSAVE_STORE).delete(AUTOSAVE_LEGACY_KEY);
+      tx.objectStore(AUTOSAVE_STORE).delete(key);
       tx.oncomplete = ()=> resolve();
       tx.onerror = ()=> resolve();
     })).catch(()=>{});
+  }
+  // 복구 배너에서 "무시"를 누르면 이 프로젝트/브라우저의 자동저장을 전부 지운다 — 지우지 않으면
+  // 같은 스냅샷이 새로고침할 때마다 계속 다시 떠서 매번 "무시"를 눌러야 하는 문제가 있었다.
+  function autosaveClear(){
+    return autosaveReadIndex().then(slots=>{
+      const keys = [AUTOSAVE_SLOT_INDEX_KEY, AUTOSAVE_META_KEY_LEGACY, AUTOSAVE_IMAGES_KEY_LEGACY, AUTOSAVE_LEGACY_KEY];
+      slots.forEach(s=>{ keys.push(metaKeyFor(s.id), imagesKeyFor(s.id)); });
+      return Promise.all(keys.map(autosaveDeleteKey));
+    });
+  }
+  function metaKeyFor(slotId){ return 'meta:'+slotId; }
+  function imagesKeyFor(slotId){ return 'images:'+slotId; }
+  // 현재 프로젝트명을 슬롯 id로 쓴다 — 제목을 아직 안 붙였으면 모두 같은 "(제목없음)" 슬롯을
+  // 공유(마지막 것이 남는다), 제목을 붙이면 프로젝트별로 자동저장이 분리된다.
+  function currentAutosaveSlotId(){
+    const name = document.getElementById('projectNameInput').value.trim();
+    return name || '(제목없음)';
+  }
+  function autosaveReadIndex(){
+    return autosaveReadKey(AUTOSAVE_SLOT_INDEX_KEY).then(rec=> (rec && Array.isArray(rec.slots)) ? rec.slots : []);
+  }
+  // 슬롯을 "최근 사용" 목록 맨 앞으로 올리고, 최대 개수를 넘으면 가장 오래된 슬롯을 밀어내며
+  // 그 슬롯의 meta/images 데이터도 함께 지운다(색인만 지우고 데이터를 남겨두면 저장공간이 계속 쌓임).
+  function touchAutosaveSlot(slotId, savedAt, projectName){
+    return autosaveReadIndex().then(slots=>{
+      const kept = slots.filter(s=>s.id!==slotId);
+      kept.unshift({ id: slotId, projectName: projectName||'', savedAt });
+      const evicted = kept.splice(AUTOSAVE_MAX_SLOTS);
+      return Promise.all([
+        autosaveWriteKey(AUTOSAVE_SLOT_INDEX_KEY, { slots: kept }),
+        ...evicted.flatMap(s=> [autosaveDeleteKey(metaKeyFor(s.id)), autosaveDeleteKey(imagesKeyFor(s.id))]),
+      ]);
+    });
   }
   // 마커·표 입력값·프로젝트 정보만 담은 가벼운 스냅샷. m.photos는 images 스냅샷 쪽 책임이라 제외한다.
   function buildProjectMetaSnapshot(){
@@ -5084,7 +5121,7 @@
     imagesAutosaveTimer = setTimeout(()=>{
       imagesAutosaveTimer = null;
       if(drawings.length===0) return;
-      autosaveWriteKey(AUTOSAVE_IMAGES_KEY, { savedAt: Date.now(), data: buildProjectImagesSnapshot() });
+      autosaveWriteKey(imagesKeyFor(currentAutosaveSlotId()), { savedAt: Date.now(), data: buildProjectImagesSnapshot() });
       imagesDirty = false;
     }, AUTOSAVE_IMAGES_DEBOUNCE_MS);
   }
@@ -5093,12 +5130,16 @@
   function flushImagesAutosave(){
     if(imagesAutosaveTimer){ clearTimeout(imagesAutosaveTimer); imagesAutosaveTimer = null; }
     if(!imagesDirty || drawings.length===0) return;
-    autosaveWriteKey(AUTOSAVE_IMAGES_KEY, { savedAt: Date.now(), data: buildProjectImagesSnapshot() });
+    autosaveWriteKey(imagesKeyFor(currentAutosaveSlotId()), { savedAt: Date.now(), data: buildProjectImagesSnapshot() });
     imagesDirty = false;
   }
   function runAutosaveTick(){
     if(drawings.length===0) return; // 빈 프로젝트는 저장할 것이 없음
-    autosaveWriteKey(AUTOSAVE_META_KEY, { savedAt: Date.now(), data: buildProjectMetaSnapshot() });
+    const slotId = currentAutosaveSlotId();
+    const projectName = document.getElementById('projectNameInput').value;
+    const savedAt = Date.now();
+    autosaveWriteKey(metaKeyFor(slotId), { savedAt, data: buildProjectMetaSnapshot() });
+    touchAutosaveSlot(slotId, savedAt, projectName);
   }
   setInterval(runAutosaveTick, AUTOSAVE_INTERVAL_MS);
   window.addEventListener('pagehide', ()=>{ runAutosaveTick(); flushImagesAutosave(); });
@@ -5126,37 +5167,76 @@
       return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
     } catch(err){ return ''; }
   }
-  function showRecoveryBanner(record){
+  // candidates: [{id, projectName, savedAt, data}, ...] — 최근 사용 순. 슬롯이 여러 개면 드롭다운으로
+  // 고를 수 있게 하고, 하나뿐이면 굳이 선택 UI를 보이지 않는다.
+  function showRecoveryBanner(candidates){
+    if(!candidates || candidates.length===0) return;
     const banner = document.createElement('div');
     banner.className = 'recovery-banner';
+    const multi = candidates.length>1;
+    const pickerHTML = multi
+      ? `<select id="recoverySlotSelect">${candidates.map((c,i)=>
+          `<option value="${i}">${escapeHTML(c.projectName || '(제목없음)')} · ${escapeHTML(formatAutosaveTime(c.savedAt))}</option>`
+        ).join('')}</select>`
+      : `<span class="rb-time">(${escapeHTML(candidates[0].projectName || '제목없음')} · ${escapeHTML(formatAutosaveTime(candidates[0].savedAt))} 자동저장)</span>`;
     banner.innerHTML = `
-      <span><b>이전 작업 내역</b>이 있습니다. <span class="rb-time">(${escapeHTML(formatAutosaveTime(record.savedAt))} 자동저장)</span></span>
+      <span><b>이전 작업 내역</b>이 있습니다.</span>
+      ${pickerHTML}
       <button type="button" class="primary" id="btnRecoveryRestore">복구하기</button>
       <button type="button" id="btnRecoveryDismiss">무시</button>
     `;
     document.body.appendChild(banner);
     banner.querySelector('#btnRecoveryRestore').addEventListener('click', ()=>{
-      applyProjectData(record.data);
+      const select = banner.querySelector('#recoverySlotSelect');
+      const chosen = candidates[select ? parseInt(select.value,10) : 0];
+      // 현재 화면에 이미 작업 중인 내용이 있으면 자동저장 내용으로 덮어쓰기 전에 한 번 더 확인—
+      // applyProjectData()는 확인 없이 즉시 현재 상태를 덮어쓰므로, 실수로 작업을 잃지 않게 한다.
+      if(drawings.length>0){
+        const ok = confirm('현재 작업 중인 내용이 있습니다. 자동저장된 내용으로 덮어쓸까요?\n(지금 화면의 작업 내용은 사라집니다)');
+        if(!ok) return;
+      }
+      applyProjectData(chosen.data);
       banner.remove();
     });
     banner.querySelector('#btnRecoveryDismiss').addEventListener('click', ()=>{
+      // 지우지 않으면 새로고침할 때마다 같은 배너가 계속 다시 떠서 매번 무시를 눌러야 하므로,
+      // 무시를 누르면 자동저장 내용을 실제로 지운다.
+      autosaveClear();
       banner.remove();
     });
   }
   function checkAutosaveRecovery(){
+    autosaveReadIndex().then(slots=>{
+      if(slots.length===0){ checkLegacyAutosaveRecovery(); return; }
+      Promise.all(slots.map(s=>
+        Promise.all([autosaveReadKey(metaKeyFor(s.id)), autosaveReadKey(imagesKeyFor(s.id))]).then(([metaRecord, imagesRecord])=>{
+          if(!metaRecord || !metaRecord.data) return null;
+          const merged = mergeMetaAndImages(metaRecord, imagesRecord);
+          if(!merged || !Array.isArray(merged.drawings) || merged.drawings.length===0) return null;
+          return { id: s.id, projectName: s.projectName, savedAt: metaRecord.savedAt, data: merged };
+        })
+      )).then(candidates=>{
+        const valid = candidates.filter(Boolean);
+        if(valid.length>0) showRecoveryBanner(valid);
+        else checkLegacyAutosaveRecovery();
+      });
+    });
+  }
+  // 슬롯 분리(프로젝트별 최근 5개) 이전 버전들이 남긴 자동저장 형식을 순서대로 확인한다:
+  // 1) meta/images 분리(단일 슬롯) 버전, 2) 그보다도 이전의 단일 통합 스냅샷 버전.
+  function checkLegacyAutosaveRecovery(){
     Promise.all([
-      autosaveReadKey(AUTOSAVE_META_KEY),
-      autosaveReadKey(AUTOSAVE_IMAGES_KEY),
+      autosaveReadKey(AUTOSAVE_META_KEY_LEGACY),
+      autosaveReadKey(AUTOSAVE_IMAGES_KEY_LEGACY),
       autosaveReadKey(AUTOSAVE_LEGACY_KEY),
     ]).then(([metaRecord, imagesRecord, legacyRecord])=>{
       if(metaRecord && metaRecord.data && Array.isArray(metaRecord.data.drawings) && metaRecord.data.drawings.length>0){
         const merged = mergeMetaAndImages(metaRecord, imagesRecord);
-        if(merged) showRecoveryBanner({ savedAt: metaRecord.savedAt, data: merged });
+        if(merged) showRecoveryBanner([{ id:'legacy', projectName: merged.projectName||'', savedAt: metaRecord.savedAt, data: merged }]);
         return;
       }
-      // meta/images 분리 저장을 도입하기 전 버전이 남긴 단일 스냅샷이 있으면 그대로 복구 후보로 보여준다.
       if(legacyRecord && legacyRecord.data && Array.isArray(legacyRecord.data.drawings) && legacyRecord.data.drawings.length>0){
-        showRecoveryBanner(legacyRecord);
+        showRecoveryBanner([{ id:'legacy2', projectName: legacyRecord.data.projectName||'', savedAt: legacyRecord.savedAt, data: legacyRecord.data }]);
       }
     });
   }
