@@ -48,3 +48,61 @@
 - 다음 단계에서 주의할 점:
   - 2단계(계열 시스템)는 `renumberDrawingMarkers`를 "도면 전체 하나의 카운터"에서 "series별 독립 카운터"로 바꿔야 한다 — 함수 시그니처와 호출부(렌더/내보내기 쪽)는 이미 seq 필드를 통해 간접 참조하도록 정리해뒀으므로, 이 함수 내부 로직만 series 그룹핑으로 교체하면 된다.
   - 마커 생성 지점이 늘어나면(예: 4단계 복제) 반드시 `newMarkerIdPair()`를 재사용해 uid를 새로 발급할 것 — 복제된 마커는 새 uid를 받아야 하고(원본과 동일 uid면 안 됨), seq는 대상 도면에서 `renumberDrawingMarkers`가 다시 매겨준다.
+
+## 2단계 - 완료
+- 커밋 해시: (이 커밋)
+- 바꾼 것:
+  - 하드코딩된 `DEFECT_TYPES` 4종을 `makeSeries()`로 만드는 데이터 기반 "계열(series)"로 일반화.
+    `DEFECT_TYPES`/`TYPE_MAP`/`getType()` 이름은 그대로 유지해(기존 15곳 이상 호출부 무수정)
+    내용만 활성 프리셋에 따라 바뀌는 구조로 바꿈.
+  - 계열 필드: `color`/`endStyle`(arrow·dot·rect)/`badgeShape`(circle·text·box, 신규)/
+    `hatch`(none·diagonal·cross·dot, 신규)/`prefix`/`numbering{mode,digits,start}`.
+  - `renumberDrawingMarkers()`가 계열별 `numbering.mode==='independent'`이면 그 계열끼리만 등장
+    순서로 채번(전역 idx+1과 별개 카운터), `mode==='global'`이면 기존과 동일하게 도면 전체 순서.
+  - `formatMarkerLabel(m, idx)` 신설 — 접두+자릿수 패딩을 적용한 표시 문자열("SH-01")을 캔버스
+    렌더링·PNG/PDF·CSV/XLSX·사진ZIP이 전부 공유. 결함 목록의 "번호" 입력칸(mc-num, 순서 이동용)은
+    파싱 가능해야 하므로 계속 raw `m.seq` 사용(의도적으로 포맷 안 함 — 아래 미해결 문제 참고).
+  - `drawMarker()`에 badgeShape 분기 추가(circle은 기존과 동일, text는 흰 테두리 글자만, box는
+    텍스트 폭에 맞는 둥근 라벨박스). `drawHatchInRect()` 신설로 범위 마커·범례 스와치가 해치 4종을
+    공유(기존엔 항상 빗금 하드코딩, drawAreaMarker와 drawLegendIcon 두 곳의 중복 코드 제거 겸함).
+  - 숫자키 1~9를 `typeByShortcutKey()`로 위치 기반 자동 배정(계열 정의에 shortcut 필드 저장 안 함,
+    프리셋의 앞 9개 계열에 매번 다시 매김). `renderTypeGrid`/`renderFloatTypeGrid`/`updateModeHint`의
+    "1~4" 하드코딩도 계열 수에 맞춰 동적으로 바뀌도록 수정.
+  - XLSX 행 배경색(옅은 빨강/파랑)과 CSV 라벨 매칭(`matchTypeKeyByLabel`)에 남아있던 'wall'/'flat'
+    하드코딩을 계열 색상 기반 판정(`xlsxRowStyleForType`) / `TYPE_MAP.wall` 존재 여부 가드로 일반화 —
+    다른 프리셋에서도 죽지 않고, 외관조사 프리셋에서는 기존과 동일한 결과.
+  - 프리셋 저장/전환: `BUILTIN_PRESETS`(외관조사·장비조사·기울기 3개) + `customPresets`
+    (localStorage `defectMarkerSeriesPresets_v1`, 표제란 템플릿과 동일한 저장/불러오기 패턴).
+    좌측 사이드바에 프리셋 select + 저장/삭제 버튼 + "계열 편집" 토글 패널 신설(색상·이름·접두·
+    형상·배지·해치·채번 방식/자릿수/시작번호를 계열마다 편집, 추가/삭제 가능). 같은 마크업이
+    `.sidebar.left`에 있어 태블릿 서랍에서도 그대로 열리고 스크롤됨(별도 태블릿 코드 불필요).
+  - 프로젝트 저장 파일/자동저장에 `seriesPresetName`/`seriesSnapshot`을 함께 실어, 프로젝트를 열면
+    그 프로젝트가 쓰던 계열 정의가 앱의 "마지막으로 쓴 프리셋"과 무관하게 정확히 복원되도록 함
+    (필드가 없는 예전 파일은 그냥 지금 활성 프리셋을 유지 — 하위호환).
+  - **버그 수정(구현 중 발견)**: 프리셋의 `series` 배열을 참조로 그대로 쓰면 계열 편집 UI에서 값을
+    바꿀 때마다 `BUILTIN_PRESETS` 원본 객체 자체가 오염되는 문제가 있어, `cloneSeriesList()`로
+    깊은 복사한 사본만 `DEFECT_TYPES`로 쓰도록 수정(원본 프리셋에 반영하려면 "새 프리셋으로 저장" 필요).
+- 새로 만든 함수/파일: `makeSeries`, `cloneSeriesList`, `findPreset`/`allPresets`, `setActivePreset`,
+  `typeByShortcutKey`, `shortcutForTypeIndex`, `formatMarkerLabel`, `drawHatchInRect`,
+  `xlsxRowStyleForType`, `renderSeriesPresetSelect`, `renderSeriesEditor`, `seriesFieldChanged`
+- 알려진 미해결 문제 / 판단 필요:
+  - **장비조사·기울기 프리셋의 라벨·색상은 추정값**입니다(SH=반발경도, PH=중성화(탄산화)시험,
+    DM=철근탐사로 임의 라벨링; 기울기는 측정위치/측정방향 2계열). 실제 현장 용어와 다르면 좌측
+    "계열 편집"에서 바로 고치고 "새 프리셋으로 저장"하면 됩니다 — 코드 수정 불필요.
+  - **판단 필요**: "계열 독립" 채번인 마커는 결함 목록의 번호칸(mc-num)에 "그 계열 안에서 몇 번째"
+    (예: SH의 3번째 → "3")가 표시되는데, 이 칸에 값을 입력해 순서를 옮기는 기존 기능은 여전히
+    "도면 전체 배열에서 몇 번째 위치로 옮길지"로 해석합니다. 즉 SH-03을 "5"로 바꿔도 SH 계열의
+    5번째가 되는 게 아니라 도면 전체 마커 중 5번째 위치로 이동할 뿐입니다 — 전역 채번(외관조사
+    기본값)에서는 문제없지만, 계열독립 프리셋(장비조사·기울기)에서 번호칸으로 순서를 옮기는 조작은
+    기대와 다르게 동작할 수 있습니다. 드래그로 마커 자체를 옮기거나, 캔버스에서 삭제 후 원하는
+    순서로 다시 찍는 방식은 정상 동작합니다. 이 번호칸의 "계열 내 위치로 해석" 대응은 범위가 커서
+    이번 단계에 포함하지 않았습니다.
+  - 여전히 자동화된 브라우저 회귀 테스트를 못 돌림(사유는 1단계와 동일 — 도구 없음/설치 금지).
+    `node --check`로 매 커밋 전 구문 오류만 확인함. **브라우저에서 프리셋 3개를 각각 켜보고 마커를
+    몇 개 찍어 배지 모양(원/텍스트/박스)·해치·번호가 의도대로 보이는지 확인해주시면 좋겠습니다.**
+- 다음 단계에서 주의할 점:
+  - 3단계(범례 자유 배치)의 범례 항목은 `usedTypes(d)`를 그대로 재사용 가능(계열 일반화가 이미
+    끝나 있음) — series의 `legendShow` 필드(신설, 기본 true)로 항목별 노출 여부를 이미 지원해둠.
+  - 4단계(복제)에서 마커를 복제할 때 `typeKey`가 대상 도면에 로드된 계열 목록(TYPE_MAP)에 없는
+    경우(다른 프리셋의 도면에 복제하는 극단적 케이스)는 `getType()` 폴백으로 안전하게 동작하지만
+    시각적으로 어색할 수 있음 — 같은 프리셋을 쓰는 도면끼리 복제하는 것을 전제로 설계됨.

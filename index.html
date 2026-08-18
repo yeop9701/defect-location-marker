@@ -451,6 +451,19 @@
   .tb-field{display:flex;flex-direction:column;gap:3px;font-size:11px;color:var(--text-secondary);}
   .tb-field input[type=text]{font-size:12px;padding:6px 8px;border:1px solid var(--gridline);border-radius:6px;
     background:var(--surface-1);color:var(--text-primary);width:100%;}
+  /* 계열(series) 편집 카드 — 데스크톱 사이드바 기준으로 만들되, 폭 제한 없이 세로로 쌓이는 구조라
+     태블릿 서랍(폭이 좁음)에서도 최소한 스크롤해서 열람·수정은 가능하다. */
+  .series-edit-list{display:flex;flex-direction:column;gap:8px;}
+  .series-edit-card{background:var(--surface-2);border-radius:8px;padding:8px 9px;display:flex;flex-direction:column;gap:6px;}
+  .series-edit-row{display:flex;align-items:center;gap:5px;flex-wrap:wrap;}
+  .series-edit-row label{display:flex;flex-direction:column;gap:2px;font-size:9.5px;color:var(--muted);
+    text-transform:uppercase;letter-spacing:.02em;flex:1 1 70px;min-width:56px;}
+  .series-edit-row input[type=text],.series-edit-row select,.series-edit-row input[type=number]{
+    font-size:11.5px;padding:5px 6px;border-radius:5px;border:1px solid var(--gridline);
+    background:var(--surface-1);color:var(--text-primary);width:100%;}
+  .series-edit-row input[type=color]{width:32px;height:28px;padding:1px;border-radius:5px;border:1px solid var(--gridline);background:var(--surface-1);flex:0 0 auto;}
+  .series-edit-card .row-del{align-self:flex-end;}
+  .add-drawing-btn.series-add{margin-top:2px;}
   .modal-backdrop{position:fixed;inset:0;background:rgba(11,11,11,0.45);display:flex;align-items:center;
     justify-content:center;z-index:1000;padding:24px;}
   /* 모달 패널: 드래그로 옮겨도 화면 밖으로 나가지 않도록 항상 fixed 좌표(left/top)로 위치를 고정하고
@@ -637,6 +650,17 @@
       <div>
         <div class="panel-title">위치 유형 선택 (클릭 후 도면 클릭)</div>
         <div class="type-grid" id="typeGrid"></div>
+      </div>
+
+      <div>
+        <div class="panel-title">계열(위치도 종류) 프리셋</div>
+        <div class="tb-template-row">
+          <select id="seriesPresetSelect" title="외관조사/장비조사/기울기처럼 위치도 종류에 맞는 계열 구성을 통째로 바꿉니다"></select>
+          <button type="button" class="tool" id="btnSaveSeriesPreset" title="지금 계열 구성을 새 이름의 프리셋으로 저장"><svg class="icon"><use href="#i-save"/></svg></button>
+          <button type="button" class="tool" id="btnDeleteSeriesPreset" title="선택한(사용자 저장) 프리셋 삭제"><svg class="icon"><use href="#i-trash"/></svg></button>
+        </div>
+        <button class="help-toggle" id="seriesEditorToggle">계열 편집 (색상·접두·모양·채번)</button>
+        <div id="seriesEditorPanel" style="margin-top:8px;display:none;"></div>
       </div>
 
       <div>
@@ -1160,15 +1184,129 @@
     applyTabletMode();
   });
 
-  // ---------- 위치 유형 정의: 벽체(화살표 인출선) / 바닥·천장(점 인출선) — 엑셀 표준 색상 ----------
-  const DEFECT_TYPES = [
-    {key:'wall', label:'벽체',     color:'#FF0000', shape:'circle', text:'#ffffff', endStyle:'arrow', shortcut:'1'}, // 엑셀 표준색상 "빨강"
-    {key:'flat', label:'바닥/천장', color:'#0047AB', shape:'circle', text:'#ffffff', endStyle:'dot',   shortcut:'2'}, // 기존보다 진한 파랑
-    {key:'wall_area', label:'벽체(범위)',     color:'#FF0000', shape:'circle', text:'#ffffff', endStyle:'rect', shortcut:'3'}, // 넓은 범위 손상: 사각형+빗금
-    {key:'flat_area', label:'바닥/천장(범위)', color:'#0047AB', shape:'circle', text:'#ffffff', endStyle:'rect', shortcut:'4'},
+  // ---------- 마커 계열(series) 정의 ----------
+  // 예전에는 "위치 유형"이 벽체/바닥·천장 4종으로 코드에 고정돼 있었다. 지금은 그 4종도 "프리셋"
+  // 하나일 뿐이고, 실제 정의는 series 배열(현재 프리셋의 series)에서 온다 — 외관조사/장비조사/기울기
+  // 위치도를 코드 분기 없이 프리셋 교체만으로 만들 수 있게 하기 위해서다. 화면 곳곳(캔버스 렌더링·
+  // 범례·CSV/XLSX·표로입력·퀵입력)은 계속 DEFECT_TYPES/TYPE_MAP/getType()이라는 기존 이름을 그대로
+  // 쓰지만, 이제 그 내용은 활성 프리셋이 바뀔 때마다 다시 채워지는 배열이다(기존 호출부는 수정 불필요).
+  //
+  // series 필드:
+  //   key: 마커의 typeKey로 저장되는 값(기존과 동일한 역할)
+  //   label: 화면·범례·CSV에 쓰이는 이름
+  //   color: 마킹 색상
+  //   endStyle: 'arrow'(화살표 인출선) | 'dot'(점 인출선) | 'rect'(범위, 사각형+해치)
+  //   badgeShape: 번호 배지 모양 — 'circle'(기존 흰 원+색 테두리, 접두 없는 짧은 번호에 적합) |
+  //     'text'(원 없이 색 글자만, 화살표/점 끝에 라벨) | 'box'(둥근 테두리 라벨박스, 'SH-01'처럼
+  //     접두+번호가 길 때 원에 안 들어가서 새로 만듦)
+  //   hatch: endStyle이 'rect'일 때 채우는 무늬 — 'none' | 'diagonal'(빗금, 기존 기본값) |
+  //     'cross'(교차) | 'dot'(점무늬)
+  //   prefix: 배지에 붙는 접두('SH'/'PH'/'DM' 등, 없으면 '')
+  //   numbering: {mode:'global'|'independent', digits, start} — global은 도면 전체 공용 채번(기존 방식
+  //     그대로, index+1), independent는 이 계열끼리만 따로 세는 채번(SH-01~12처럼 다른 계열과
+  //     안 섞임). digits>0이면 그 자릿수만큼 0을 채운다(예: digits:2 → "01").
+  //   legendShow: 범례에 이 계열을 표시할지(기본 true)
+  function makeSeries(o){
+    return {
+      key: o.key, label: o.label, color: o.color, text: '#ffffff',
+      endStyle: o.endStyle, badgeShape: o.badgeShape || 'circle',
+      hatch: o.hatch || (o.endStyle==='rect' ? 'diagonal' : 'none'),
+      prefix: o.prefix || '',
+      numbering: Object.assign({mode:'global', digits:0, start:1}, o.numbering || {}),
+      legendShow: o.legendShow!==false,
+    };
+  }
+  // 기본 프리셋 3개. "외관조사"는 기존 4종을 그대로 이관한 것이라 프리셋을 바꾸지 않는 한 지금까지와
+  // 화면·번호 표기가 완전히 동일하다(접두 없음·전역채번·circle 배지). "장비조사"·"기울기"는 라벨/색만
+  // 지시대로 채운 기본값이며, 실제 현장 용어는 다를 수 있으니 좌측 "계열 편집"에서 이름을 바로 고칠
+  // 수 있게 만들었다 — 코드를 다시 고치지 않아도 된다.
+  const BUILTIN_PRESETS = [
+    { name:'외관조사', series:[
+      makeSeries({key:'wall', label:'벽체', color:'#FF0000', endStyle:'arrow'}), // 엑셀 표준색상 "빨강"
+      makeSeries({key:'flat', label:'바닥/천장', color:'#0047AB', endStyle:'dot'}), // 기존보다 진한 파랑
+      makeSeries({key:'wall_area', label:'벽체(범위)', color:'#FF0000', endStyle:'rect'}),
+      makeSeries({key:'flat_area', label:'바닥/천장(범위)', color:'#0047AB', endStyle:'rect'}),
+    ]},
+    { name:'장비조사', series:[
+      makeSeries({key:'sh', label:'반발경도(강도)', color:'#D93025', endStyle:'dot', badgeShape:'box', prefix:'SH', numbering:{mode:'independent', digits:2, start:1}}),
+      makeSeries({key:'ph', label:'중성화(탄산화)시험', color:'#1A73E8', endStyle:'dot', badgeShape:'box', prefix:'PH', numbering:{mode:'independent', digits:2, start:1}}),
+      makeSeries({key:'dm', label:'철근탐사', color:'#188038', endStyle:'dot', badgeShape:'box', prefix:'DM', numbering:{mode:'independent', digits:2, start:1}}),
+    ]},
+    { name:'기울기', series:[
+      makeSeries({key:'tilt_pos', label:'측정위치', color:'#D93025', endStyle:'dot', badgeShape:'circle', numbering:{mode:'independent', digits:0, start:1}}),
+      makeSeries({key:'tilt_dir', label:'측정방향', color:'#1A73E8', endStyle:'arrow', badgeShape:'circle', numbering:{mode:'independent', digits:0, start:1}}),
+    ]},
   ];
-  const TYPE_MAP = {}; DEFECT_TYPES.forEach(t=>TYPE_MAP[t.key]=t);
+  const SERIES_PRESET_STORE_KEY = 'defectMarkerSeriesPresets_v1'; // 사용자가 저장한 커스텀 프리셋 목록
+  const ACTIVE_PRESET_STORE_KEY = 'defectMarkerActivePreset_v1';
+  function loadCustomPresets(){
+    try{
+      const raw = localStorage.getItem(SERIES_PRESET_STORE_KEY);
+      const parsed = raw ? JSON.parse(raw) : [];
+      return Array.isArray(parsed) ? parsed : [];
+    } catch(err){ return []; }
+  }
+  function saveCustomPresets(list){
+    try{ localStorage.setItem(SERIES_PRESET_STORE_KEY, JSON.stringify(list)); } catch(err){ /* 저장 실패해도 화면 동작에는 지장 없음 */ }
+  }
+  let customPresets = loadCustomPresets();
+  function allPresets(){ return BUILTIN_PRESETS.concat(customPresets); }
+  function findPreset(name){ return allPresets().find(p=>p.name===name) || BUILTIN_PRESETS[0]; }
+  function loadActivePresetName(){
+    try{ return localStorage.getItem(ACTIVE_PRESET_STORE_KEY) || BUILTIN_PRESETS[0].name; } catch(err){ return BUILTIN_PRESETS[0].name; }
+  }
+  function saveActivePresetName(name){
+    try{ localStorage.setItem(ACTIVE_PRESET_STORE_KEY, name); } catch(err){ /* 저장 실패해도 화면 동작에는 지장 없음 */ }
+  }
+  let activePresetName = loadActivePresetName();
+  // 프리셋의 series 배열을 깊은 복사해 쓴다 — 참조를 그대로 물려받으면 계열 편집 UI에서 값을 바꿀 때마다
+  // BUILTIN_PRESETS(또는 customPresets)의 원본 객체 자체가 조용히 바뀌어버려, 다른 프리셋으로 갔다가
+  // 돌아오면 "기본값"이 이미 오염돼 있는 문제가 생긴다. DEFECT_TYPES는 항상 "지금 화면에서 편집 중인
+  // 사본"이고, 원본 프리셋에 반영하려면 반드시 "새 프리셋으로 저장"을 눌러야 한다.
+  function cloneSeriesList(series){ return series.map(t=> JSON.parse(JSON.stringify(t))); }
+  // DEFECT_TYPES/TYPE_MAP은 기존 호출부(캔버스 렌더링·범례·CSV/XLSX·표로입력·퀵입력 등 15곳 이상)가
+  // 그대로 쓰는 이름이라 유지한다 — 프리셋이 바뀌면 이 두 값만 다시 채우고 화면을 다시 그린다.
+  let DEFECT_TYPES = cloneSeriesList(findPreset(activePresetName).series);
+  let TYPE_MAP = {};
+  function rebuildTypeMap(){ TYPE_MAP = {}; DEFECT_TYPES.forEach(t=>TYPE_MAP[t.key]=t); }
+  rebuildTypeMap();
   function getType(key){ return TYPE_MAP[key] || DEFECT_TYPES[0]; }
+  // 프리셋을 바꾸면 이후 새로 찍는 마커는 새 계열 키를 쓰지만, 이미 찍힌 마커의 typeKey는 그대로
+  // 남는다(다른 프리셋 소속이라도 getType()이 TYPE_MAP에 없으면 DEFECT_TYPES[0]로 안전하게 대체
+  // 표시하므로 죽지 않는다 — 다만 도면을 섞어 쓰면 예전 계열 마커가 새 프리셋 색으로 잘못 보일 수
+  // 있으니, 실무에서는 위치도 종류(도면)별로 프리셋을 통일해 쓰는 것을 권장한다).
+  function setActivePreset(name){
+    const preset = findPreset(name);
+    activePresetName = preset.name;
+    saveActivePresetName(activePresetName);
+    DEFECT_TYPES = cloneSeriesList(preset.series);
+    rebuildTypeMap();
+    if(!TYPE_MAP[activeTypeKey]) activeTypeKey = DEFECT_TYPES[0] ? DEFECT_TYPES[0].key : activeTypeKey;
+    renderTypeGrid();
+    renderSeriesPresetSelect();
+    const editorPanel = document.getElementById('seriesEditorPanel');
+    if(editorPanel && editorPanel.style.display!=='none') renderSeriesEditor();
+    renumberAllDrawings({silent:true});
+    renderCanvas(); renderTable();
+    updateModeHint();
+  }
+  // 숫자키 1~9는 계열 목록을 코드에 미리 못박아두지 않고, "지금 활성 프리셋의 앞 9개 계열"에 그때그때
+  // 자동 배정한다(계열이 4개면 1~4만 쓰이고, 9개를 넘는 나머지는 계열 목록 UI 클릭으로만 고른다).
+  function typeByShortcutKey(key){
+    const i = '123456789'.indexOf(key);
+    return (i>=0 && i<DEFECT_TYPES.length) ? DEFECT_TYPES[i] : null;
+  }
+  function shortcutForTypeIndex(idx){ return idx<9 ? String(idx+1) : ''; }
+  // 배지에 실제로 표시할 문자열 — 접두가 있으면 "SH-01"처럼, 없으면 기존처럼 순수 번호만.
+  // digits>0이면 그만큼 0을 채운다. CSV·XLSX·PNG/PDF·사진ZIP·화면 렌더링이 전부 이 함수를 공유해
+  // "화면에 그려진 번호"와 "표에 적힌 번호"가 항상 같은 형식으로 일치하게 한다.
+  function formatMarkerLabel(m, idx){
+    const type = getType(m.typeKey);
+    const seq = m.seq || idx+1;
+    const digits = (type.numbering && type.numbering.digits) || 0;
+    const numStr = digits>0 ? String(seq).padStart(digits,'0') : String(seq);
+    return type.prefix ? `${type.prefix}-${numStr}` : numStr;
+  }
 
   // ---------- 결함 목록(우측 패널) 카드의 구조화 입력 항목 ----------
   // 마킹 자체의 색상/모양을 결정하는 DEFECT_TYPES(위)와는 별개로, 보고서에 들어갈 "유형(부위)·부재명·결함명"을
@@ -1282,8 +1420,22 @@
     opts = opts || {};
     if(!d) return [];
     const changes = [];
+    // 계열독립 채번(series numbering.mode==='independent')인 마커는 도면 전체 순서(idx+1)가 아니라
+    // 그 계열끼리만 등장 순서대로 센다 — SH/PH/DM처럼 서로 다른 계열이 도면 위에 섞여 있어도
+    // 번호가 간섭하지 않는다. 전역 채번(기본값, 기존 방식)인 계열은 그대로 idx+1을 쓴다.
+    const seriesCounters = new Map(); // typeKey -> 다음에 매길 번호
     d.markers.forEach((m, idx)=>{
-      const newSeq = idx+1;
+      const type = getType(m.typeKey);
+      const numbering = (type && type.numbering) || { mode:'global' };
+      let newSeq;
+      if(numbering.mode === 'independent'){
+        const start = numbering.start || 1;
+        const next = seriesCounters.has(m.typeKey) ? seriesCounters.get(m.typeKey) : start;
+        newSeq = next;
+        seriesCounters.set(m.typeKey, next+1);
+      } else {
+        newSeq = idx+1;
+      }
       if(typeof m.seq === 'number' && m.seq !== newSeq) changes.push({from:m.seq, to:newSeq});
       m.seq = newSeq;
     });
@@ -1383,6 +1535,9 @@
   }
 
   // 흰색 배경 + 유형 색상 테두리(링) + 유형 색상 숫자 — 테두리와 숫자 색이 같고, 그 사이는 흰색으로 비워 도면 위에서도 잘 읽히는 디자인
+  // 번호 배지 모양은 계열(type.badgeShape)에 따라 셋 중 하나로 그린다:
+  // 'circle'(기존과 동일, 흰 원+색 테두리+색 숫자) / 'text'(원 없이 색 글자만, 흰 테두리로 도면 위에서도
+  // 읽히게) / 'box'(둥근 테두리 라벨박스, 텍스트 폭에 맞춰 커짐 — 'SH-01'처럼 접두가 붙은 긴 라벨용).
   function drawMarker(ctx, type, cx, cy, r, numberLabel, selected, numRot){
     ctx.save();
     if(selected){
@@ -1396,29 +1551,107 @@
       ctx.lineWidth = 1.5;
       ctx.stroke();
     }
-    const ringW = Math.max(1.6, r*0.24);
-    const ringR = Math.max(1, r - ringW/2);
-    ctx.shadowColor = 'rgba(11,11,11,0.30)';
-    ctx.shadowBlur = Math.max(3, r*0.35);
-    ctx.shadowOffsetY = Math.max(1, r*0.1);
-    drawShapePath(ctx, type.shape, cx, cy, ringR);
-    ctx.fillStyle = '#ffffff';
-    ctx.fill();
-    ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
-    drawShapePath(ctx, type.shape, cx, cy, ringR);
-    ctx.lineWidth = ringW;
-    ctx.strokeStyle = type.color;
-    ctx.stroke();
-    if(numberLabel !== undefined && numberLabel !== null && numberLabel !== ''){
+    const hasLabel = numberLabel !== undefined && numberLabel !== null && numberLabel !== '';
+    const badgeShape = (type && type.badgeShape) || 'circle';
+    if(badgeShape === 'text'){
+      if(hasLabel){
+        ctx.save();
+        ctx.translate(cx, cy);
+        if(numRot){ ctx.rotate(numRot*Math.PI/180); }
+        ctx.font = `700 ${Math.round(r*1.05)}px system-ui, -apple-system, "Segoe UI", sans-serif`;
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.lineJoin = 'round'; ctx.lineWidth = Math.max(2, r*0.28); ctx.strokeStyle = '#ffffff';
+        ctx.strokeText(String(numberLabel), 0, 0);
+        ctx.fillStyle = type.color;
+        ctx.fillText(String(numberLabel), 0, 0);
+        ctx.restore();
+      }
+    } else if(badgeShape === 'box'){
       ctx.save();
       ctx.translate(cx, cy);
       if(numRot){ ctx.rotate(numRot*Math.PI/180); }
-      ctx.font = `700 ${Math.round(r*1.0)}px system-ui, -apple-system, "Segoe UI", sans-serif`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillStyle = type.color;
-      ctx.fillText(String(numberLabel), 0, r*0.03);
+      const label = hasLabel ? String(numberLabel) : '';
+      const fontSize = Math.round(r*0.95);
+      ctx.font = `700 ${fontSize}px system-ui, -apple-system, "Segoe UI", sans-serif`;
+      const textW = label ? ctx.measureText(label).width : 0;
+      const padX = Math.max(4, r*0.32);
+      const boxW = Math.max(r*1.6, textW + padX*2);
+      const boxH = Math.max(r*1.15, fontSize*1.35);
+      const rr = Math.min(6, boxH*0.3);
+      ctx.shadowColor = 'rgba(11,11,11,0.30)'; ctx.shadowBlur = Math.max(3, r*0.35); ctx.shadowOffsetY = Math.max(1, r*0.1);
+      roundedRectXYWH(ctx, -boxW/2, -boxH/2, boxW, boxH, rr);
+      ctx.fillStyle = '#ffffff'; ctx.fill();
+      ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+      roundedRectXYWH(ctx, -boxW/2, -boxH/2, boxW, boxH, rr);
+      ctx.lineWidth = Math.max(1.6, r*0.18); ctx.strokeStyle = type.color; ctx.stroke();
+      if(label){
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillStyle = type.color;
+        ctx.fillText(label, 0, boxH*0.03);
+      }
       ctx.restore();
+    } else {
+      const ringW = Math.max(1.6, r*0.24);
+      const ringR = Math.max(1, r - ringW/2);
+      ctx.shadowColor = 'rgba(11,11,11,0.30)';
+      ctx.shadowBlur = Math.max(3, r*0.35);
+      ctx.shadowOffsetY = Math.max(1, r*0.1);
+      drawShapePath(ctx, 'circle', cx, cy, ringR);
+      ctx.fillStyle = '#ffffff';
+      ctx.fill();
+      ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+      drawShapePath(ctx, 'circle', cx, cy, ringR);
+      ctx.lineWidth = ringW;
+      ctx.strokeStyle = type.color;
+      ctx.stroke();
+      if(hasLabel){
+        ctx.save();
+        ctx.translate(cx, cy);
+        if(numRot){ ctx.rotate(numRot*Math.PI/180); }
+        ctx.font = `700 ${Math.round(r*1.0)}px system-ui, -apple-system, "Segoe UI", sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillStyle = type.color;
+        ctx.fillText(String(numberLabel), 0, r*0.03);
+        ctx.restore();
+      }
+    }
+    ctx.restore();
+  }
+
+  // "범위" 계열(endStyle==='rect')의 해치(채움 무늬) — type.hatch: 'none'|'diagonal'(기존 기본값,
+  // 빗금)|'cross'(교차)|'dot'(점무늬). rectPath로 이미 클립된 사각형 안에 그린다는 전제로, 범위 마커
+  // 본체(drawAreaMarker)와 범례/팔레트 스와치(drawLegendIcon)가 이 함수 하나를 공유한다.
+  function drawHatchInRect(ctx, type, rectPath, cx, cy, rw, rh, r){
+    const hatch = type.hatch || 'diagonal';
+    if(hatch === 'none') return;
+    ctx.save();
+    ctx.clip(rectPath);
+    ctx.strokeStyle = type.color;
+    const step = Math.max(4, r*0.42);
+    const diag = Math.hypot(rw,rh)*2 + step*2;
+    if(hatch === 'dot'){
+      ctx.fillStyle = type.color;
+      const dotR = Math.max(1, r*0.09);
+      for(let y=cy-diag; y<=cy+diag; y+=step){
+        for(let x=cx-diag; x<=cx+diag; x+=step){
+          ctx.beginPath(); ctx.arc(x,y,dotR,0,Math.PI*2); ctx.fill();
+        }
+      }
+    } else {
+      ctx.lineWidth = Math.max(1.2, r*0.14);
+      ctx.beginPath();
+      for(let off=-diag; off<=diag; off+=step){
+        ctx.moveTo(cx+off-diag, cy-diag);
+        ctx.lineTo(cx+off+diag, cy+diag);
+      }
+      if(hatch === 'cross'){
+        for(let off=-diag; off<=diag; off+=step){
+          ctx.moveTo(cx+off+diag, cy-diag);
+          ctx.lineTo(cx+off-diag, cy+diag);
+        }
+      }
+      ctx.stroke();
     }
     ctx.restore();
   }
@@ -1434,25 +1667,16 @@
       ctx.fillStyle = '#ffffff';
       ctx.fillRect(rx, ry, rw, rh);
       const rectPath = new Path2D(); rectPath.rect(rx, ry, rw, rh);
-      ctx.save();
-      ctx.clip(rectPath);
-      ctx.strokeStyle = type.color;
-      ctx.lineWidth = Math.max(1, r*0.16);
-      const step = Math.max(3, r*0.5);
-      const diag = Math.hypot(rw,rh)*2 + step*2;
-      ctx.beginPath();
-      for(let off=-diag; off<=diag; off+=step){
-        ctx.moveTo(cx+off-diag, cy-diag);
-        ctx.lineTo(cx+off+diag, cy+diag);
-      }
-      ctx.stroke();
-      ctx.restore();
+      drawHatchInRect(ctx, type, rectPath, cx, cy, rw, rh, r);
       ctx.strokeStyle = type.color;
       ctx.lineWidth = Math.max(1.4, r*0.22);
       ctx.strokeRect(rx, ry, rw, rh);
       ctx.restore();
     } else {
-      drawMarker(ctx, type, cx, cy, r, '', false);
+      // 'circle' 배지는 원래대로 빈 원(번호 없음)이 스와치로 자연스럽지만, 'text'/'box'는 라벨이
+      // 없으면 아무것도 안 그려져(빈 아이콘) 목록에서 구분이 안 되므로 자리표시 '#'를 넣어준다.
+      const placeholder = (type.badgeShape==='circle' || !type.badgeShape) ? '' : '#';
+      drawMarker(ctx, type, cx, cy, r, placeholder, false);
     }
   }
 
@@ -1538,19 +1762,7 @@
     ctx.translate(-badgeX, -badgeY);
     const rectPath = new Path2D();
     rectPath.rect(rx, ry, rw, rh);
-    ctx.save();
-    ctx.clip(rectPath);
-    ctx.strokeStyle = type.color;
-    ctx.lineWidth = Math.max(1.2, r*0.14);
-    const step = Math.max(4, r*0.42);
-    const diag = Math.hypot(rw,rh)*2 + step*2;
-    ctx.beginPath();
-    for(let off=-diag; off<=diag; off+=step){
-      ctx.moveTo(cx+off-diag, cy-diag);
-      ctx.lineTo(cx+off+diag, cy+diag);
-    }
-    ctx.stroke();
-    ctx.restore();
+    drawHatchInRect(ctx, type, rectPath, cx, cy, rw, rh, r);
     ctx.strokeStyle = type.color;
     ctx.lineWidth = Math.max(1.6, r*0.2);
     ctx.strokeRect(rx, ry, rw, rh);
@@ -2030,7 +2242,7 @@
     ctx.clearRect(0,0,w,h);
     const r = markerRadiusFor(d, w, h);
     d.markers.forEach((m,idx)=>{
-      drawMarkerDispatch(ctx, d, m, m.seq||idx+1, w, h, r, selectedIds.has(m.id));
+      drawMarkerDispatch(ctx, d, m, formatMarkerLabel(m, idx), w, h, r, selectedIds.has(m.id));
     });
     renderLegendPreview(d);
     drawInteractionOverlay(ctx, w, h);
@@ -2259,7 +2471,7 @@
       tctx.drawImage(d.imgEl, 0, 0, tw, th);
       const tr = clamp(Math.min(tw,th)*0.05, 5, 14);
       d.markers.forEach((m, idx)=>{
-        drawMarkerDispatch(tctx, d, m, m.seq||idx+1, tw, th, tr, false);
+        drawMarkerDispatch(tctx, d, m, formatMarkerLabel(m, idx), tw, th, tr, false);
       });
       const label = document.createElement('div');
       label.className = 'thumb-label';
@@ -3024,7 +3236,9 @@
     } else if(getType(activeTypeKey).endStyle==='rect'){
       hint.innerHTML = `현재 선택된 유형: <b id="activeTypeLabel">${getType(activeTypeKey).label}</b> — <b>클릭 3번</b>으로 생성: ① 사각형 첫 코너 → ② 반대쪽 코너 → ③ 번호가 표시될 위치${pendingRectCreate ? ` <b>(${pendingRectCreate.stage}/2단계 완료, 계속 클릭하세요 · Esc로 취소)</b>` : ''}`;
     } else {
-      hint.innerHTML = `현재 선택된 유형: <b id="activeTypeLabel">${getType(activeTypeKey).label}</b> (단축키 1~4) — 클릭해 추가, 드래그로 방향·길이 지정 (Shift: 수직/수평 고정) · <b>s</b>: 선택 · <b>m</b>: 이동 · <b>d</b>: 지우개`;
+      // 계열 개수가 프리셋마다 달라지므로 단축키 안내도 "1~N"(N=min(계열수,9))으로 동적으로 맞춘다.
+      const shortcutRange = DEFECT_TYPES.length>1 ? `1~${Math.min(DEFECT_TYPES.length,9)}` : '1';
+      hint.innerHTML = `현재 선택된 유형: <b id="activeTypeLabel">${getType(activeTypeKey).label}</b> (단축키 ${shortcutRange}) — 클릭해 추가, 드래그로 방향·길이 지정 (Shift: 수직/수평 고정) · <b>s</b>: 선택 · <b>m</b>: 이동 · <b>d</b>: 지우개`;
     }
   }
   function setMoveMode(v){
@@ -3080,12 +3294,13 @@
   function renderTypeGrid(){
     const grid = document.getElementById('typeGrid');
     grid.innerHTML = '';
-    DEFECT_TYPES.forEach(type=>{
+    DEFECT_TYPES.forEach((type, i)=>{
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'type-btn' + (type.key===activeTypeKey ? ' active':'');
       btn.style.setProperty('--type-color', type.color);
-      btn.innerHTML = `<span class="type-swatch">${typeSwatchSVG(type)}</span><span>${type.label}</span><span class="kbd-hint">${type.shortcut}</span>`;
+      const shortcut = shortcutForTypeIndex(i);
+      btn.innerHTML = `<span class="type-swatch">${typeSwatchSVG(type)}</span><span>${type.label}</span><span class="kbd-hint">${shortcut}</span>`;
       btn.addEventListener('click', ()=>{
         setActiveType(type.key);
         // 태블릿에서는 유형을 고르면 곧바로 도면을 클릭할 것이므로 서랍을 자동으로 닫아준다.
@@ -3101,17 +3316,148 @@
     const grid = document.getElementById('tabletFloatTypeGrid');
     if(!grid) return;
     grid.innerHTML = '';
-    DEFECT_TYPES.forEach(type=>{
+    DEFECT_TYPES.forEach((type, i)=>{
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'tablet-float-type-btn' + (type.key===activeTypeKey ? ' active':'');
-      btn.title = `${type.label} (${type.shortcut})`;
+      const shortcut = shortcutForTypeIndex(i);
+      btn.title = shortcut ? `${type.label} (${shortcut})` : type.label;
       btn.style.setProperty('--type-color', type.color);
       btn.innerHTML = `<span class="type-swatch">${typeSwatchSVG(type)}</span>`;
       btn.addEventListener('click', ()=> setActiveType(type.key)); // 이미 서랍 밖이라 닫을 서랍이 없음
       grid.appendChild(btn);
     });
   }
+
+  // ---------- 계열(series) 프리셋 선택 · 편집 UI ----------
+  // 데스크톱 좌측 사이드바 기준으로 만들었지만 폭 제한 없이 세로로 쌓이는 카드 구조라, 태블릿
+  // 서랍(폭이 좁음)에서도 스크롤해서 열람·수정 자체는 된다(요구사항: "최소한 열리고 스크롤되기만 하면 됨").
+  function renderSeriesPresetSelect(){
+    const sel = document.getElementById('seriesPresetSelect');
+    if(!sel) return;
+    sel.innerHTML = '';
+    BUILTIN_PRESETS.forEach(p=>{
+      const opt = document.createElement('option');
+      opt.value = p.name; opt.textContent = p.name;
+      sel.appendChild(opt);
+    });
+    if(customPresets.length>0){
+      const group = document.createElement('optgroup');
+      group.label = '사용자 저장';
+      customPresets.forEach(p=>{
+        const opt = document.createElement('option');
+        opt.value = p.name; opt.textContent = p.name;
+        group.appendChild(opt);
+      });
+      sel.appendChild(group);
+    }
+    sel.value = activePresetName;
+    const delBtn = document.getElementById('btnDeleteSeriesPreset');
+    if(delBtn) delBtn.disabled = BUILTIN_PRESETS.some(p=>p.name===activePresetName);
+  }
+  const ENDSTYLE_OPTIONS = [['arrow','화살표'],['dot','점'],['rect','범위(사각형)']];
+  const BADGESHAPE_OPTIONS = [['circle','원형'],['text','텍스트만'],['box','라벨박스']];
+  const HATCH_OPTIONS = [['none','없음'],['diagonal','빗금'],['cross','교차'],['dot','점무늬']];
+  function seriesFieldChanged(refreshList){
+    markDirty();
+    renderTypeGrid();
+    renumberAllDrawings({silent:true});
+    renderCanvas(); renderTable();
+    const activeDrawing = getActiveDrawing();
+    if(activeDrawing) renderLegendPreview(activeDrawing);
+    if(refreshList) renderSeriesEditor();
+  }
+  function renderSeriesEditor(){
+    const panel = document.getElementById('seriesEditorPanel');
+    if(!panel) return;
+    const list = document.createElement('div');
+    list.className = 'series-edit-list';
+    DEFECT_TYPES.forEach((type, i)=>{
+      const card = document.createElement('div');
+      card.className = 'series-edit-card';
+      const selOpts = (opts, cur)=> opts.map(([v,l])=>`<option value="${v}" ${v===cur?'selected':''}>${l}</option>`).join('');
+      card.innerHTML = `
+        <div class="series-edit-row">
+          <input type="color" data-f="color" value="${type.color}" title="마킹 색상"/>
+          <label>이름<input type="text" data-f="label" value="${escapeAttr(type.label)}"/></label>
+          <label>접두<input type="text" data-f="prefix" value="${escapeAttr(type.prefix)}" placeholder="예: SH" style="width:100%;"/></label>
+        </div>
+        <div class="series-edit-row">
+          <label>형상<select data-f="endStyle">${selOpts(ENDSTYLE_OPTIONS, type.endStyle)}</select></label>
+          <label>배지<select data-f="badgeShape">${selOpts(BADGESHAPE_OPTIONS, type.badgeShape)}</select></label>
+          <label>해치(범위용)<select data-f="hatch">${selOpts(HATCH_OPTIONS, type.hatch)}</select></label>
+        </div>
+        <div class="series-edit-row">
+          <label>채번<select data-f="numMode"><option value="global" ${type.numbering.mode==='global'?'selected':''}>도면 전역</option><option value="independent" ${type.numbering.mode==='independent'?'selected':''}>계열 독립</option></select></label>
+          <label>자릿수<input type="number" data-f="numDigits" min="0" max="4" value="${type.numbering.digits||0}"/></label>
+          <label>시작번호<input type="number" data-f="numStart" min="1" value="${type.numbering.start||1}"/></label>
+        </div>
+        <button type="button" class="row-del" data-role="del" title="이 계열 삭제"><svg class="icon"><use href="#i-close"/></svg> 삭제</button>
+      `;
+      card.querySelector('[data-f="color"]').addEventListener('input', e=>{ type.color = e.target.value; seriesFieldChanged(false); });
+      card.querySelector('[data-f="label"]').addEventListener('input', e=>{ type.label = e.target.value; seriesFieldChanged(false); });
+      card.querySelector('[data-f="prefix"]').addEventListener('input', e=>{ type.prefix = e.target.value; seriesFieldChanged(false); });
+      card.querySelector('[data-f="endStyle"]').addEventListener('change', e=>{ type.endStyle = e.target.value; seriesFieldChanged(false); });
+      card.querySelector('[data-f="badgeShape"]').addEventListener('change', e=>{ type.badgeShape = e.target.value; seriesFieldChanged(false); });
+      card.querySelector('[data-f="hatch"]').addEventListener('change', e=>{ type.hatch = e.target.value; seriesFieldChanged(false); });
+      card.querySelector('[data-f="numMode"]').addEventListener('change', e=>{ type.numbering.mode = e.target.value; seriesFieldChanged(false); });
+      card.querySelector('[data-f="numDigits"]').addEventListener('change', e=>{ type.numbering.digits = clamp(parseInt(e.target.value,10)||0, 0, 4); seriesFieldChanged(false); });
+      card.querySelector('[data-f="numStart"]').addEventListener('change', e=>{ type.numbering.start = Math.max(1, parseInt(e.target.value,10)||1); seriesFieldChanged(false); });
+      card.querySelector('[data-role="del"]').addEventListener('click', ()=>{
+        if(DEFECT_TYPES.length<=1){ showToast('계열이 하나뿐이면 삭제할 수 없습니다.'); return; }
+        if(!confirm(`"${type.label}" 계열을 삭제할까요? 이미 이 계열로 찍힌 마커는 남아있지만 화면 표시가 달라질 수 있습니다.`)) return;
+        DEFECT_TYPES.splice(i,1);
+        rebuildTypeMap();
+        if(activeTypeKey===type.key) activeTypeKey = DEFECT_TYPES[0].key;
+        seriesFieldChanged(true);
+      });
+      list.appendChild(card);
+    });
+    const addBtn = document.createElement('button');
+    addBtn.type = 'button';
+    addBtn.className = 'add-drawing-btn series-add';
+    addBtn.textContent = '+ 계열 추가';
+    addBtn.addEventListener('click', ()=>{
+      let key = (prompt('새 계열의 내부 키를 입력하세요(영문/숫자, 예: sh2) — 마커 저장에 쓰이며 나중에 바꿀 수 없습니다.')||'').trim().toLowerCase().replace(/[^a-z0-9_]/g,'');
+      if(!key) return;
+      if(TYPE_MAP[key]){ showToast('이미 있는 키입니다.'); return; }
+      DEFECT_TYPES.push(makeSeries({ key, label:'새 계열', color:'#8f8d86', endStyle:'dot' }));
+      rebuildTypeMap();
+      seriesFieldChanged(true);
+    });
+    panel.innerHTML = '';
+    panel.appendChild(list);
+    panel.appendChild(addBtn);
+  }
+  document.getElementById('seriesEditorToggle').addEventListener('click', ()=>{
+    const panel = document.getElementById('seriesEditorPanel');
+    const willShow = panel.style.display==='none';
+    panel.style.display = willShow ? 'block' : 'none';
+    if(willShow) renderSeriesEditor();
+  });
+  document.getElementById('seriesPresetSelect').addEventListener('change', e=> setActivePreset(e.target.value));
+  document.getElementById('btnSaveSeriesPreset').addEventListener('click', ()=>{
+    const defaultName = BUILTIN_PRESETS.some(p=>p.name===activePresetName) ? '' : activePresetName;
+    const name = (prompt('프리셋 이름을 입력하세요(예: 우리회사 장비조사)', defaultName)||'').trim();
+    if(!name) return;
+    if(BUILTIN_PRESETS.some(p=>p.name===name)){ showToast('기본 프리셋과 같은 이름은 쓸 수 없습니다.'); return; }
+    const snapshot = { name, series: DEFECT_TYPES.map(t=> JSON.parse(JSON.stringify(t))) };
+    const idx = customPresets.findIndex(p=>p.name===name);
+    if(idx>=0) customPresets[idx] = snapshot; else customPresets.push(snapshot);
+    saveCustomPresets(customPresets);
+    activePresetName = name;
+    saveActivePresetName(name);
+    renderSeriesPresetSelect();
+    showToast(`"${name}" 프리셋으로 저장했습니다.`);
+  });
+  document.getElementById('btnDeleteSeriesPreset').addEventListener('click', ()=>{
+    if(BUILTIN_PRESETS.some(p=>p.name===activePresetName)) return;
+    if(!confirm(`"${activePresetName}" 프리셋을 삭제할까요?`)) return;
+    customPresets = customPresets.filter(p=>p.name!==activePresetName);
+    saveCustomPresets(customPresets);
+    setActivePreset(BUILTIN_PRESETS[0].name);
+    renderSeriesPresetSelect();
+  });
 
   // ---------- 이미지 자르기(크롭) ----------
   function enterCropMode(){
@@ -3331,7 +3677,7 @@
 
     const r = markerRadiusNatural(d);
     d.markers.forEach((m, idx)=>{
-      drawMarkerDispatch(ctx, d, m, m.seq||idx+1, w, h, r, false);
+      drawMarkerDispatch(ctx, d, m, formatMarkerLabel(m, idx), w, h, r, false);
     });
 
     return off;
@@ -3452,10 +3798,10 @@
       if(type.endStyle === 'rect'){
         const rect = markerRectPx(m, drawW, drawH);
         drawAreaMarker(ctx, type, drawX+rect.x, drawY+rect.y, rect.w, rect.h,
-          drawX+m.xPct/100*drawW, drawY+m.yPct/100*drawH, r, m.seq||idx+1, false, m.numRot||0, m.rectAngle||0);
+          drawX+m.xPct/100*drawW, drawY+m.yPct/100*drawH, r, formatMarkerLabel(m, idx), false, m.numRot||0, m.rectAngle||0);
       } else {
         const cx = drawX + m.xPct/100*drawW, cy = drawY + m.yPct/100*drawH;
-        drawMarkerWithLeader(ctx, type, cx, cy, r, m.angle||0, leaderLenForMarker(m,r), m.seq||idx+1, false, m.numRot||0);
+        drawMarkerWithLeader(ctx, type, cx, cy, r, m.angle||0, leaderLenForMarker(m,r), formatMarkerLabel(m, idx), false, m.numRot||0);
       }
     });
 
@@ -3653,7 +3999,7 @@
         const type = getType(m.typeKey);
         const lenStr = (typeof m.lenMult==='number' && isFinite(m.lenMult)) ? m.lenMult.toFixed(2) : '';
         const isRect = type.endStyle==='rect';
-        rows.push({ typeKey: m.typeKey, cells: [d.name, m.seq||idx+1, type.label, m.xPct.toFixed(1), m.yPct.toFixed(1), Math.round(m.angle||0), lenStr,
+        rows.push({ typeKey: m.typeKey, cells: [d.name, formatMarkerLabel(m, idx), type.label, m.xPct.toFixed(1), m.yPct.toFixed(1), Math.round(m.angle||0), lenStr,
           isRect ? (m.rectXPct||0).toFixed(1) : '', isRect ? (m.rectYPct||0).toFixed(1) : '',
           isRect ? (m.rectWPct||0).toFixed(1) : '', isRect ? (m.rectHPct||0).toFixed(1) : '',
           m.rptType||'', m.rptMember||'', m.rptDefect||'', m.rptWidth||'', m.rptLength||'', m.rptCount||'', m.rptTag||'',
@@ -3764,6 +4110,18 @@
   function looksNumeric(v){
     return v!==null && v!==undefined && v!=='' && /^-?\d+(\.\d+)?$/.test(String(v).trim());
   }
+  // 엑셀 행 배경색(스타일 3=옅은 빨강/4=옅은 파랑/2=중립)은 예전엔 typeKey가 'wall'/'flat'로
+  // 고정돼 있어서 이름으로 구분했지만, 계열이 프리셋마다 달라지는 지금은 계열 색상(type.color) 자체가
+  // 붉은 계열인지 푸른 계열인지를 간단한 RGB 비교로 판정한다 — 어느 프리셋을 쓰든 자동으로 맞는다.
+  function xlsxRowStyleForType(type){
+    if(!type || !type.color) return 2;
+    const m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(type.color);
+    if(!m) return 2;
+    const rr = parseInt(m[1],16), gg = parseInt(m[2],16), bb = parseInt(m[3],16);
+    if(rr > bb + 30) return 3; // 붉은 계열
+    if(bb > rr + 30) return 4; // 푸른 계열
+    return 2; // 그 외(녹색 등)는 중립 테두리만
+  }
   function buildXLSXBlob(header, rows){
     const colCount = header.length;
     // 스타일: 0=기본, 1=헤더(굵게+회색배경+테두리), 2=일반 데이터(테두리만), 3=벽체계(옅은 빨강), 4=바닥/천장계(옅은 파랑)
@@ -3795,8 +4153,7 @@
     const headerRow = `<row r="1">${header.map((h,i)=>`<c r="${xlsxColLetter(i+1)}1" t="inlineStr" s="1"><is><t>${xmlEscape(h)}</t></is></c>`).join('')}</row>`;
     const dataRows = rows.map((row,ri)=>{
       const type = getType(row.typeKey);
-      const style = type.endStyle==='dot' || row.typeKey==='flat' || row.typeKey==='flat_area' ? 4
-        : (row.typeKey==='wall' || row.typeKey==='wall_area') ? 3 : 2;
+      const style = xlsxRowStyleForType(type);
       const r = ri+2;
       const cells = row.cells.map((v,ci)=>{
         // 숫자 열이면서 값이 실제로 순수한 숫자 형태일 때만 숫자 셀(t 속성 없음 = 기본 numeric)로 쓴다.
@@ -3885,7 +4242,7 @@
         // 번호(seq) 뒤에 불변 uid 앞 8자리를 붙여, 같은 번호가 재정렬로 바뀌어도(또는 여러 프로젝트의
         // 사진을 한 폴더에 모아도) 파일명만으로 어느 결함의 사진인지 항상 구분할 수 있게 한다.
         const uid8 = String(m.uid||m.id||'').slice(0,8);
-        const nameParts = [String(m.seq||idx+1)];
+        const nameParts = [formatMarkerLabel(m, idx)];
         if(uid8) nameParts.push(uid8);
         if(m.rptType) nameParts.push(m.rptType);
         if(m.rptMember) nameParts.push(m.rptMember);
@@ -3949,8 +4306,10 @@
   function matchTypeKeyByLabel(label){
     const s = String(label||'').trim().toLowerCase();
     const isArea = /범위|영역|area|range/.test(s);
-    if(/벽/.test(s) || /wall/.test(s)) return isArea ? 'wall_area' : 'wall';
-    if(/바닥|천장|천정|floor|ceiling/.test(s)) return isArea ? 'flat_area' : 'flat';
+    // "벽"/"바닥" 줄임 매칭은 외관조사 프리셋(wall/flat 키가 실제로 존재할 때)에서만 쓴다 — 장비조사·
+    // 기울기 등 다른 프리셋에서는 이 키 자체가 없어 잘못 배정될 수 있으므로 아래 일반 매칭으로 넘어간다.
+    if(TYPE_MAP.wall && (/벽/.test(s) || /wall/.test(s))) return isArea ? 'wall_area' : 'wall';
+    if(TYPE_MAP.flat && (/바닥|천장|천정|floor|ceiling/.test(s))) return isArea ? 'flat_area' : 'flat';
     const found = DEFECT_TYPES.find(t => t.label===label || s.includes(t.label.toLowerCase()) || t.key===s);
     return found ? found.key : DEFECT_TYPES[0].key;
   }
@@ -4765,6 +5124,18 @@
       );
       if(!proceed) return;
     }
+    // 프로젝트가 저장될 당시의 계열(series) 정의를 함께 실어뒀다면 그대로 복원한다 — 프리셋은 앱
+    // 전역 설정(localStorage)이라, 마지막으로 켜둔 프리셋이 이 프로젝트가 쓰던 것과 다를 수 있기
+    // 때문이다(예: 장비조사 프로젝트를 열었는데 앱은 외관조사 프리셋에 남아있던 경우). seriesSnapshot이
+    // 없는 예전 파일(2단계 이전)은 지금 활성 프리셋을 그대로 두며, 그 예전 파일들은 전부 외관조사
+    // 4종 스키마였으므로 기본 프리셋과 자연히 맞아떨어진다.
+    if(Array.isArray(data.seriesSnapshot) && data.seriesSnapshot.length>0){
+      DEFECT_TYPES = data.seriesSnapshot.map(t=> Object.assign({}, t, { numbering: Object.assign({mode:'global',digits:0,start:1}, t.numbering||{}) }));
+      rebuildTypeMap();
+      activePresetName = data.seriesPresetName || activePresetName;
+      renderTypeGrid();
+      renderSeriesPresetSelect();
+    }
     // 예전 버전(프로젝트명을 슬롯 id로 쓰던 시절)에 저장된 파일·자동저장에는 projectUuid가 없다 —
     // 그런 경우 새 uuid를 발급해, 지금부터는 이름이 바뀌어도 같은 프로젝트로 계속 이어지게 한다.
     currentProjectUuid = data.projectUuid || generateUuid();
@@ -4840,6 +5211,8 @@
       siteName: document.getElementById('siteNameInput').value,
       structureType: document.getElementById('structureTypeInput').value,
       docTitle: document.getElementById('docTitleInput').value,
+      seriesPresetName: activePresetName,
+      seriesSnapshot: DEFECT_TYPES,
       drawings: drawings.map(d=>({ id:d.id, name:d.name, surveyLocation:d.surveyLocation||'', imgSrc:d.imgSrc, markers:d.markers }))
     };
   }
@@ -5071,7 +5444,7 @@
     if(e.key==='q' || e.key==='Q'){
       e.preventDefault(); toggleCoordGuide(); return;
     }
-    const typeByShortcut = DEFECT_TYPES.find(t=>t.shortcut===e.key);
+    const typeByShortcut = typeByShortcutKey(e.key);
     if(typeByShortcut){ e.preventDefault(); setActiveType(typeByShortcut.key); return; }
     if((e.key==='ArrowLeft' || e.key==='ArrowRight') && selectedIds.size>0){
       e.preventDefault();
@@ -5747,6 +6120,8 @@
       siteName: document.getElementById('siteNameInput').value,
       structureType: document.getElementById('structureTypeInput').value,
       docTitle: document.getElementById('docTitleInput').value,
+      seriesPresetName: activePresetName,
+      seriesSnapshot: DEFECT_TYPES,
       drawings: drawings.map(d=>({
         id: d.id, name: d.name, surveyLocation: d.surveyLocation||'',
         markers: d.markers.map(m=>{ const {photos, ...rest} = m; return rest; }),
@@ -6043,6 +6418,7 @@
   // ---------- 초기화 ----------
   { const el = document.getElementById('buildDateLabel'); if(el) el.textContent = APP_BUILD_DATE; }
   renderTypeGrid();
+  renderSeriesPresetSelect();
   renderDrawingTabs();
   updateModeButtonsUI();
   updateModeHint();
