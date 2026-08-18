@@ -1792,11 +1792,14 @@
   // 그리기 전에 필요한 크기·글자 폭을 먼저 계산 — drawOverlayLegend 자신과, 표제란 내보내기가 범례 열
   // 폭을 미리 예약할 때(도면을 그 나머지 폭에 배치하기 위해) 공통으로 쓴다. refW은 "1배율" 크기의
   // 기준이 되는 폭(보통 도면 폭 또는 도곽 콘텐츠 폭)이고, 실제 배율은 legendScaleFor(d)를 곱해서 얻는다.
-  function overlayLegendGeometry(ctx, d, refW){
+  // scaleOverride: 지정하면 legendScaleFor(d)/autoScale 계산을 건너뛰고 이 배율을 그대로 쓴다 —
+  // drawOverlayLegend가 화면 미리보기에서 박스가 캔버스보다 커지는 것을 막으려고(아래 maxW/maxH)
+  // 축소된 배율로 다시 계산할 때 쓴다.
+  function overlayLegendGeometry(ctx, d, refW, scaleOverride){
     const items = overlayLegendItems(d);
     if(items.length===0) return null;
     const autoScale = clamp(refW / (d.naturalW||refW||1), 0.05, 20);
-    const scale = autoScale * legendScaleFor(d);
+    const scale = (typeof scaleOverride==='number' && scaleOverride>0) ? scaleOverride : autoScale * legendScaleFor(d);
     const pad = Math.max(7, 9*scale);
     const rowH = Math.max(15, 19*scale);
     const titleH = Math.max(17, 21*scale);
@@ -1816,6 +1819,21 @@
     const boxH = pad + titleH + items.length*rowH + pad*0.4;
     return { items, labels, scale, pad, rowH, titleH, swatchR, font, titleFont, boxW, boxH };
   }
+  // legendScale(기본 6배)이 계열 라벨이 길고 refW(도면·페이지 폭) 대비 naturalW가 작을 때는 박스가
+  // 감당 안 되게 커질 수 있다(화면에서는 마커를 찍기 어려워지고, 표제란 내보내기에서는 예약해둔 열
+  // 폭을 넘어 도면과 겹친다). maxW/maxH가 주어지면 넘치는 만큼 배율을 비례 축소해 다시 계산한다 —
+  // 사용자가 슬라이더로 고른 legendScale 값 자체(도면에 저장되는 값)는 바꾸지 않고, 그릴 때만 줄인다.
+  // 열 폭을 미리 예약하는 쪽(표제란 내보내기)과 실제로 그리는 쪽(drawOverlayLegend)이 항상 똑같은
+  // 축소 결과를 쓰도록, 두 곳 모두 이 함수 하나만 호출한다.
+  function overlayLegendGeometryCapped(ctx, d, refW, maxW, maxH){
+    let geo = overlayLegendGeometry(ctx, d, refW);
+    if(!geo) return null;
+    if((maxW && geo.boxW>maxW) || (maxH && geo.boxH>maxH)){
+      const shrink = Math.min(maxW ? maxW/geo.boxW : 1, maxH ? maxH/geo.boxH : 1);
+      geo = overlayLegendGeometry(ctx, d, refW, geo.scale*shrink);
+    }
+    return geo;
+  }
   // 캔버스(screen 또는 export)에 그리고, 다음 히트테스트·드래그에 쓸 사각형(캔버스 backing-px 기준)을
   // 돌려준다. items가 없으면(그릴 게 없으면) null을 돌려주고 아무것도 그리지 않는다.
   // opts.anchor==='fixed'면 opts.x/opts.y를 그대로 좌상단으로 쓴다(표제란 내보내기의 "범례 전용 열"용,
@@ -1823,7 +1841,8 @@
   // 기본값)로 이미지 위에 떠 있는 자유배치 박스를 그린다(화면 캔버스·표제란 없이 저장하는 경로).
   function drawOverlayLegend(ctx, d, w, h, opts){
     opts = opts || {};
-    const geo = overlayLegendGeometry(ctx, d, (typeof opts.refW==='number') ? opts.refW : w);
+    const refW = (typeof opts.refW==='number') ? opts.refW : w;
+    const geo = overlayLegendGeometryCapped(ctx, d, refW, opts.maxW, opts.maxH);
     if(!geo) return null;
     const { items, labels, scale, pad, rowH, titleH, swatchR, font, titleFont, boxW, boxH } = geo;
     let x, y;
@@ -2438,7 +2457,17 @@
     });
     // 히트테스트·드래그(hitTestLegendBox)가 쓸 수 있도록, 방금 그린 자리를 캔버스 backing-px 기준으로
     // 도면 객체에 캐시해둔다 — 매 프레임 다시 그리면서 함께 갱신되므로 항상 최신 위치를 반영한다.
-    d.__legendBox = drawOverlayLegend(ctx, d, w, h, { selected: legendSelected && d.id===activeDrawingId });
+    // refW을 그냥 w(캔버스 backing 폭)로 두면 overlayLegendGeometry의 autoScale(=refW/naturalW)에
+    // fitBaseSize()가 작은 이미지를 최대 2배까지 확대해 보여주는 배율까지 섞여 들어가, legendScale(기본
+    // 6배)과 곱해지며 화면 미리보기에서만 범례가 비정상적으로 커지는 버그가 있었다(예: 400px 이미지 →
+    // baseW 800px인 경우 autoScale=2, 6배와 곱해져 실제로는 12배가 됨). w 대신 "fitBaseSize 확대율을
+    // 제외한" naturalW*줌*DPR을 넘겨서, 표제란 내보내기(autoScale=1 고정)와 같은 기준으로 legendScale이
+    // 적용되게 한다 — 줌에 따라 범례가 함께 커지고 작아지는 동작은 그대로 유지된다.
+    const legendRefW = d.naturalW * (w / (d.baseW || w || 1));
+    d.__legendBox = drawOverlayLegend(ctx, d, w, h, {
+      selected: legendSelected && d.id===activeDrawingId, refW: legendRefW,
+      maxW: w*0.55, maxH: h*0.55, // 캔버스 대부분을 뒤덮지 않도록(위 drawOverlayLegend 주석 참고)
+    });
     renderLegendPreview(d);
     drawInteractionOverlay(ctx, w, h);
     drawCoordGuideOverlay(ctx, w, h);
@@ -4352,11 +4381,14 @@
 
     // ---- 범례(NOTE) 열 폭을 먼저 예약한다 — 1장 수정지시서 1-2-4: 범례는 항상 도면 이미지 "바깥"
     // 우측에 그려지므로, 도면은 그 나머지 폭에만 contain 배치한다(하단 가로 범례는 1-3에 따라 제거됨).
-    const legendGeo = overlayLegendGeometry(ctx, d, contentW);
-    const legendColGap = legendGeo ? Math.max(16, 18*legendGeo.scale) : 0;
-    const legendColW = legendGeo ? legendGeo.boxW : 0;
+    // legendScale(기본 6배)의 기준이 되는 autoScale(=contentW/naturalW)은 도면 해상도가 페이지 폭보다
+    // 작으면(예: 화면용으로 작게 내보낸 이미지) 1을 훌쩍 넘을 수 있어, 계열이 많거나 라벨이 길면 범례
+    // 열이 도면 자리를 거의 다 잠식할 수 있다 — 페이지 폭의 42%·본문 높이의 90%로 상한을 둔다.
     const contentY0 = contentMarginTop + titleBarH;
     const contentAreaH = outerH - contentMarginTop - contentMarginBottom - titleBarH;
+    const legendGeo = overlayLegendGeometryCapped(ctx, d, contentW, contentW*0.42, contentAreaH*0.9);
+    const legendColGap = legendGeo ? Math.max(16, 18*legendGeo.scale) : 0;
+    const legendColW = legendGeo ? legendGeo.boxW : 0;
     const drawAreaW = Math.max(10, contentW - legendColW - legendColGap);
     // 이미지가 표제란/범례/외곽 테두리에 딱 붙지 않도록 도면 배치 영역 안쪽으로 약간의 여백을 둔다.
     const imageMargin = clamp(Math.min(drawAreaW, contentAreaH)*0.02, 10, 26);
@@ -4389,7 +4421,8 @@
     if(legendGeo){
       const legendX = contentMarginSide + drawAreaW + legendColGap;
       const legendY0 = contentY0 + imageMargin;
-      drawOverlayLegend(ctx, d, contentW, contentAreaH, { anchor:'fixed', x: legendX, y: legendY0, refW: contentW });
+      drawOverlayLegend(ctx, d, contentW, contentAreaH, { anchor:'fixed', x: legendX, y: legendY0, refW: contentW,
+        maxW: contentW*0.42, maxH: contentAreaH*0.9 });
     }
 
     // ---- 5-4: 도곽 좌측 하단에 방위 심볼(⊕N) + 도면 제목. 부록 PDF들처럼 "⊕ 부동침하 위치도" 형태로
