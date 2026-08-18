@@ -652,27 +652,26 @@
           <button type="button" class="add-drawing-btn" id="btnAddDrawing">+ 도면 이미지 추가</button>
           <input type="file" id="addDrawingInput" accept="image/*" multiple />
         </label>
-        <button type="button" id="btnDuplicateOpen" style="width:100%;margin-top:6px;" title="현재 도면의 마킹을 다른 도면들에 그대로 복제합니다(같은 평면도가 동만 바뀌어 반복될 때 유용)"><svg class="icon"><use href="#i-archive"/></svg> 마킹 전체 복제</button>
+        <button type="button" id="btnDuplicateOpen" style="width:100%;margin-top:6px;" title="현재 도면의 마킹을 다른 도면들에 그대로 복제합니다(같은 평면도가 동만 바뀌어 반복될 때 유용)"><svg class="icon"><use href="#i-archive"/></svg> 마킹 전체 복사</button>
       </div>
 
       <div>
-        <div class="panel-title">위치 유형 선택 (클릭 후 도면 클릭)</div>
         <div class="type-grid" id="typeGrid"></div>
       </div>
 
       <div>
-        <div class="panel-title">계열(위치도 종류) 프리셋</div>
+        <div class="panel-title">위치도 종류</div>
         <div class="tb-template-row">
           <select id="seriesPresetSelect" title="외관조사/장비조사/기울기처럼 위치도 종류에 맞는 계열 구성을 통째로 바꿉니다"></select>
           <button type="button" class="tool" id="btnSaveSeriesPreset" title="지금 계열 구성을 새 이름의 프리셋으로 저장"><svg class="icon"><use href="#i-save"/></svg></button>
           <button type="button" class="tool" id="btnDeleteSeriesPreset" title="선택한(사용자 저장) 프리셋 삭제"><svg class="icon"><use href="#i-trash"/></svg></button>
         </div>
-        <button class="help-toggle" id="seriesEditorToggle">계열 편집 (색상·접두·모양·채번)</button>
+        <button class="help-toggle" id="seriesEditorToggle">위치도별 마커 편집</button>
         <div id="seriesEditorPanel" style="margin-top:8px;display:none;"></div>
       </div>
 
       <div>
-        <button class="help-toggle" id="helpToggle">사용법 / 단축키 보기</button>
+        <button class="help-toggle" id="helpToggle">사용법/단축키</button>
         <div class="help-box" id="helpBox" style="margin-top:8px;display:none;">
           <div class="help-sec">
             <h5>시작하기</h5>
@@ -858,10 +857,6 @@
           </label>
           <button type="button" id="btnTableInput" style="width:100%;"><svg class="icon"><use href="#i-table"/></svg> 표로 입력</button>
         </div>
-        <div style="font-size:10.5px;color:var(--text-secondary);margin-top:5px;line-height:1.5;">
-          CSV 형식: <code>위치유형,X(%),Y(%),각도,비고</code>. "도면명" 열이 있으면 도면별로 자동
-          배분됩니다. 일반 "CSV" 저장(CP949/EUC-KR)과 "CSV UTF-8" 모두 자동 판별해 읽습니다.
-        </div>
         <div class="sidebar-btn-grid" style="margin-top:10px;">
           <button id="btnExportCSV" class="primary" style="width:100%;"><svg class="icon"><use href="#i-upload"/></svg> CSV로 저장</button>
           <button id="btnExportXLSX" class="primary" style="width:100%;"><svg class="icon"><use href="#i-spreadsheet"/></svg> 엑셀로 저장</button>
@@ -877,13 +872,13 @@
         <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;">
           <label class="check-row">
             <input type="checkbox" id="titleBlockToggle" />
-            표제란(도곽) 표시
+            도면틀
           </label>
           <button type="button" class="tool" id="btnReopenTbPreview" style="display:none;font-size:10.5px;padding:3px 7px;" title="인쇄 미리보기 다시 열기"><svg class="icon"><use href="#i-eye"/></svg> 미리보기</button>
         </div>
         <label class="check-row" style="margin-top:6px;" title="PNG/PDF 저장·인쇄 미리보기에 NOTE 범례 박스를 포함할지 정합니다. 작업 화면에는 표시되지 않습니다 — 크기 조절은 미리보기 창에서 할 수 있습니다.">
           <input type="checkbox" id="legendToggle" checked />
-          범례(NOTE) 표시
+          범례
         </label>
         <div class="panel-title" style="margin-top:10px;">표제란 입력</div>
         <div class="tb-template-row">
@@ -928,7 +923,7 @@
   <div class="modal-panel" id="duplicatePanel" style="width:min(520px, 92vw);">
     <div class="modal-header" id="duplicateDragHandle" title="여기를 마우스로 눌러 끌면 창을 옮길 수 있습니다">
       <div>
-        <div class="modal-title">마킹 전체 복제</div>
+        <div class="modal-title">마킹 전체 복사</div>
         <div class="modal-sub">현재 도면(<b id="duplicateSourceName"></b>)의 마킹 <b id="duplicateSourceCount"></b>건을 아래서 고른 도면에 그대로 복제합니다. 번호는 대상 도면에서 다시 매겨지고, 사진은 복제되지 않습니다.</div>
       </div>
       <button type="button" id="btnDuplicateClose" class="icon-btn"><svg class="icon icon-lg"><use href="#i-close"/></svg></button>
@@ -1124,7 +1119,7 @@
         범례(NOTE) 크기 <span id="tbPreviewLegendScaleLabel">6.0</span>배
         <input type="range" id="tbPreviewLegendScaleSlider" min="1" max="12" step="0.5" value="6" style="width:140px;" />
       </label>
-      <div style="font-size:11px;color:var(--text-secondary);flex:1;">이 창을 닫아도 "표제란(도곽) 표시" 설정은 유지되어 저장 시 계속 포함됩니다.</div>
+      <div style="font-size:11px;color:var(--text-secondary);flex:1;">이 창을 닫아도 "도면틀" 설정은 유지되어 저장 시 계속 포함됩니다.</div>
       <button type="button" id="btnTbPreviewCloseFooter">닫기</button>
     </div>
   </div>
@@ -1263,6 +1258,9 @@
       endStyle: o.endStyle, badgeShape: o.badgeShape || 'circle',
       hatch: o.hatch || (o.endStyle==='rect' ? 'diagonal' : 'none'),
       prefix: o.prefix || '',
+      // 배지 번호 표기에서 접두와 번호 사이에 넣는 구분자. 기본은 "SH-01"처럼 '-'. 부동침하(lv_x/lv_y)처럼
+      // "P1"로 붙여 쓰고 싶은 계열은 ''로 지정한다.
+      labelSep: o.labelSep!==undefined ? o.labelSep : '-',
       numbering: Object.assign({mode:'global', digits:0, start:1}, o.numbering || {}),
       legendShow: o.legendShow!==false,
     };
@@ -1290,8 +1288,10 @@
     // 4-1: 부동침하 위치도 신규 프리셋(부록35 기준) — 횡방향(X)·종방향(Y) 두 계열, 배지는 "P1"처럼
     // 접두+번호. 범례 표기는 seriesLegendLabel()이 "P-0 : 횡방향(X방향)" 형태로 자동 생성한다.
     { name:'부동침하', series:[
-      makeSeries({key:'lv_x', label:'횡방향(X방향)', color:'#FF0000', endStyle:'dot', badgeShape:'circle', prefix:'P', numbering:{mode:'independent', digits:0, start:1}}),
-      makeSeries({key:'lv_y', label:'종방향(Y방향)', color:'#0047AB', endStyle:'dot', badgeShape:'circle', prefix:'P', numbering:{mode:'independent', digits:0, start:1}}),
+      // endStyle:'badge' — 인출선(선)과 점 없이 클릭한 자리에 번호 배지만 찍는다. labelSep:''이라 배지 표기는
+      // "P-1"이 아니라 "P1"처럼 접두+번호가 붙어서 나온다.
+      makeSeries({key:'lv_x', label:'횡방향(X방향)', color:'#FF0000', endStyle:'badge', badgeShape:'circle', prefix:'P', labelSep:'', numbering:{mode:'independent', digits:0, start:1}}),
+      makeSeries({key:'lv_y', label:'종방향(Y방향)', color:'#0047AB', endStyle:'badge', badgeShape:'circle', prefix:'P', labelSep:'', numbering:{mode:'independent', digits:0, start:1}}),
     ]},
   ];
   const SERIES_PRESET_STORE_KEY = 'defectMarkerSeriesPresets_v1'; // 사용자가 저장한 커스텀 프리셋 목록
@@ -1371,11 +1371,17 @@
     renderCanvas(); renderTable();
     updateModeHint();
   }
+  // "측정방향"(tilt_dir)처럼 항상 자동으로만 계산·배치되는 계열은 사용자가 직접 골라 찍을 수 없어야
+  // 하므로, 위치 유형 선택 그리드·단축키·표에 노출되는 목록은 전부 이 함수를 거친다.
+  function selectableDefectTypes(){
+    return DEFECT_TYPES.filter(t=>t.key!=='tilt_dir');
+  }
   // 숫자키 1~9는 계열 목록을 코드에 미리 못박아두지 않고, "지금 활성 프리셋의 앞 9개 계열"에 그때그때
   // 자동 배정한다(계열이 4개면 1~4만 쓰이고, 9개를 넘는 나머지는 계열 목록 UI 클릭으로만 고른다).
   function typeByShortcutKey(key){
     const i = '123456789'.indexOf(key);
-    return (i>=0 && i<DEFECT_TYPES.length) ? DEFECT_TYPES[i] : null;
+    const list = selectableDefectTypes();
+    return (i>=0 && i<list.length) ? list[i] : null;
   }
   function shortcutForTypeIndex(idx){ return idx<9 ? String(idx+1) : ''; }
   // 배지에 실제로 표시할 문자열 — 접두가 있으면 "SH-01"처럼, 없으면 기존처럼 순수 번호만.
@@ -1399,7 +1405,8 @@
     const seq = m.seq || idx+1;
     const digits = (type.numbering && type.numbering.digits) || 0;
     const numStr = digits>0 ? String(seq).padStart(digits,'0') : String(seq);
-    return type.prefix ? `${type.prefix}-${numStr}` : numStr;
+    const sep = type.labelSep!==undefined ? type.labelSep : '-';
+    return type.prefix ? `${type.prefix}${sep}${numStr}` : numStr;
   }
 
   // ---------- 결함 목록(우측 패널) 카드의 구조화 입력 항목 ----------
@@ -1549,9 +1556,9 @@
   // 화면 뒤로 묻히는 경우가 있어, 사용자 확인이 필요 없는 단순 안내는 이 토스트로 대신한다.
   // confirm()처럼 실제로 선택이 필요한 경우는 그대로 네이티브 confirm()을 쓴다.
   let toastStackEl = null;
-  // opts.sticky: 지정하지 않으면 메시지가 길거나(60자 초과) 줄바꿈이 있으면(예: 실패한 파일명 목록처럼
-  // 한 번에 다 읽기 어려운 정보) 자동으로 sticky 처리해 사용자가 직접 닫기 전까진 사라지지 않는다.
-  // "먼저 도면을 추가해주세요" 같은 짧은 한 줄 안내는 그대로 일정 시간 뒤 자동으로 사라진다.
+  // opts.sticky: 사용자가 실제로 선택해야 하는 토스트(opts.actionLabel+opts.onAction, 예: "되돌리기" 실행
+  // 버튼이 있는 경우)만 기본으로 sticky 처리해 직접 닫기 전까진 사라지지 않는다. 그 외에는 메시지 길이와
+  // 무관하게 전부 일정 시간 뒤 자동으로 사라진다 — 선택이 필요 없는 안내창을 계속 띄워두지 않기 위함.
   function showToast(message, opts){
     opts = opts || {};
     if(!toastStackEl){
@@ -1585,8 +1592,8 @@
     closeBtn.addEventListener('click', remove);
     el.appendChild(closeBtn);
     toastStackEl.appendChild(el);
-    // 실행 버튼이 있는 토스트는 누를 시간을 주기 위해 기본으로 사라지지 않게 한다.
-    const sticky = opts.sticky!==undefined ? opts.sticky : (!!opts.actionLabel || message.length>60 || message.indexOf('\n')!==-1);
+    // 실행 버튼(선택이 필요한 경우)이 있는 토스트만 누를 시간을 주기 위해 기본으로 사라지지 않게 한다.
+    const sticky = opts.sticky!==undefined ? opts.sticky : !!(opts.actionLabel && opts.onAction);
     if(!sticky) setTimeout(remove, 6000);
   }
 
@@ -1793,7 +1800,8 @@
     if(type.legendLabel) return type.legendLabel;
     if(type.prefix){
       const digits = Math.max(2, (type.numbering && type.numbering.digits) || 2);
-      return `${type.prefix}-${'0'.repeat(digits)} : ${type.label}`;
+      const sep = type.labelSep!==undefined ? type.labelSep : '-';
+      return `${type.prefix}${sep}${'0'.repeat(digits)} : ${type.label}`;
     }
     return type.label;
   }
@@ -1910,6 +1918,11 @@
   }
 
   function drawMarkerWithLeader(ctx, type, cx, cy, r, angleDeg, len, numberLabel, selected, numRot){
+    // endStyle==='badge'(예: 부동침하)는 인출선·점 없이 번호 배지만 클릭한 자리에 그린다.
+    if(type.endStyle === 'badge'){
+      drawMarker(ctx, type, cx, cy, r, numberLabel, selected, numRot);
+      return { tipX: cx, tipY: cy };
+    }
     const rad = (angleDeg||0) * Math.PI/180;
     const tipX = cx + Math.cos(rad)*len, tipY = cy + Math.sin(rad)*len;
     const headLen = r*0.85, headAngle = 22*Math.PI/180;
@@ -2053,7 +2066,7 @@
       [[rect.x,rect.y],[rect.x+rect.w,rect.y],[rect.x,rect.y+rect.h],[rect.x+rect.w,rect.y+rect.h]].forEach(([lx,ly])=>{
         pts.push(toRectWorld(lx, ly, badgeX, badgeY, ra));
       });
-    } else {
+    } else if(type.endStyle !== 'badge'){ // badge는 인출선이 없어 배지 모서리(위에서 이미 추가함)로 충분하다
       const len = leaderLenForMarker(m, r);
       const rad = (m.angle||0)*Math.PI/180;
       pts.push({x:badgeX+Math.cos(rad)*len, y:badgeY+Math.sin(rad)*len});
@@ -2864,6 +2877,7 @@
     const r = markerRadiusFor(d, w, h);
     for(let i=d.markers.length-1;i>=0;i--){
       const m = d.markers[i];
+      if(m.typeKey==='tilt_dir') continue; // 측정방향은 항상 자동 계산되는 표시일 뿐이라 클릭으로 선택/이동할 수 없다
       const type = getType(m.typeKey);
       const badgeX = m.xPct/100*w, badgeY = m.yPct/100*h;
       if(Math.hypot(x-badgeX, y-badgeY) <= r*1.35) return m;
@@ -2875,7 +2889,7 @@
         if(local.x>=rect.x && local.x<=rect.x+rect.w && local.y>=rect.y && local.y<=rect.y+rect.h) return m;
         const worldCenter = toRectWorld(rect.x+rect.w/2, rect.y+rect.h/2, badgeX, badgeY, angle);
         if(pointToSegDist(x,y,worldCenter.x,worldCenter.y,badgeX,badgeY) <= Math.max(6,r*0.3)) return m;
-      } else {
+      } else if(type.endStyle !== 'badge'){ // badge는 인출선이 없으므로 위의 배지 반경 판정만 적용된다
         const len = leaderLenForMarker(m, r);
         const rad = (m.angle||0) * Math.PI/180;
         const tipX = badgeX+Math.cos(rad)*len, tipY = badgeY+Math.sin(rad)*len;
@@ -2896,8 +2910,9 @@
     const touchMult = isTouch ? 1.75 : 1;
     for(let i=d.markers.length-1;i>=0;i--){
       const m = d.markers[i];
+      if(m.typeKey==='tilt_dir') continue; // 측정방향은 항상 자동 계산되는 표시일 뿐이라 손잡이로 조절할 수 없다
       const type = getType(m.typeKey);
-      if(type.endStyle === 'rect') continue;
+      if(type.endStyle === 'rect' || type.endStyle === 'badge') continue; // 인출선이 없으면 조절할 손잡이도 없다
       const len = leaderLenForMarker(m, r);
       const cx = m.xPct/100*w, cy = m.yPct/100*h;
       const rad = (m.angle||0) * Math.PI/180;
@@ -3145,12 +3160,23 @@
     }
   }
 
+  // 한 번 클릭만으로 마커를 만들 때: 클릭 지점이 그대로 "화살표 끝/점"(실제 결함 위치)이 되도록,
+  // 번호 배지는 기본 각도(0°, 오른쪽)의 반대 방향으로 인출선 길이만큼 미리 물려서 배치한다.
+  // (드래그로 만들 때는 이미 "클릭점=화살표 끝, 드래그 종료점=배지"라 이 규칙과 일치한다 — computeCreateGeom 참고.)
+  // 인출선이 없는 유형(endStyle==='badge', 예: 부동침하)은 클릭 지점 자체가 배지 위치이므로 그대로 쓴다.
   function addMarkerAt(x,y){
     const d = getActiveDrawing(); if(!d) return;
     const canvas = document.getElementById('mainCanvas');
     const w = canvas.width, h = canvas.height;
     pushUndo();
-    const marker = { ...newMarkerIdPair(), typeKey: activeTypeKey, xPct: clamp(x/w*100,0,100), yPct: clamp(y/h*100,0,100), angle: 0, lenMult: 1, numRot: 0, note:'' };
+    const type = getType(activeTypeKey);
+    let bx = x, by = y;
+    if(type.endStyle==='arrow' || type.endStyle==='dot'){
+      const r = markerRadiusFor(d, w, h);
+      const len = leaderLenForMarker({lenMult:1}, r);
+      bx = x - len;
+    }
+    const marker = { ...newMarkerIdPair(), typeKey: activeTypeKey, xPct: clamp(bx/w*100,0,100), yPct: clamp(by/h*100,0,100), angle: 0, lenMult: 1, numRot: 0, note:'' };
     d.markers.push(marker);
     selectOnly(marker.id);
     maybeOpenQuickInputSheet(marker);
@@ -3366,6 +3392,9 @@
     m.tiltDiffD = calc.dms.d; m.tiltDiffM = calc.dms.m; m.tiltDiffS = calc.dms.s;
     syncTiltDirMarker(m, calc.direction);
   }
+  // 측정방향 화살표는 더 이상 직접 만들거나 드래그로 옮길 수 없다(9번째 수정지시서) — 항상 "측정위치"
+  // 마커의 인출선(번호 배지↔점) 중앙에서, 그 인출선과 직각(90°)으로, 입력된 상부/하부 각도로 계산된
+  // 좌/우 방향에 맞춰 자동으로 배치된다.
   function syncTiltDirMarker(m, direction){
     const d = getActiveDrawing(); if(!d) return;
     if(direction==='없음' || !tiltHasAngleInput(m)){
@@ -3376,17 +3405,29 @@
       }
       return;
     }
+    const canvas = document.getElementById('mainCanvas');
+    const w = canvas.width, h = canvas.height;
+    const r = markerRadiusFor(d, w, h);
+    const posLen = leaderLenForMarker(m, r); // 측정위치 인출선(배지↔점) 길이
+    const posRad = (m.angle||0) * Math.PI/180;
+    const badgeX = m.xPct/100*w, badgeY = m.yPct/100*h;
+    const dotX = badgeX + Math.cos(posRad)*posLen, dotY = badgeY + Math.sin(posRad)*posLen;
+    const midX = (badgeX+dotX)/2, midY = (badgeY+dotY)/2;
+    // 측정위치 인출선(m.angle 방향)과 직각인 두 방향 중 하나를 고른다. 화면 좌표는 y가 아래로 증가하므로,
+    // m.angle 방향을 "바라보고 선다"고 하면 +90° 회전이 오른쪽(우), -90° 회전이 왼쪽(좌)을 가리킨다.
+    // (실제 현장 좌/우 관례와 반대로 보이면 아래 삼항식의 +90/-90 부호만 서로 바꾸면 된다.)
+    const perpDeg = ((m.angle||0) + (direction==='좌' ? -90 : 90) + 360) % 360;
     let dirMarker = m.linkedDirId ? d.markers.find(x=>x.id===m.linkedDirId) : null;
-    const targetAngle = direction==='좌' ? 180 : 0;
     if(!dirMarker){
       const pair = newMarkerIdPair();
-      dirMarker = { id: pair.id, uid: pair.uid, typeKey: tiltDirSeriesKey(), xPct: m.xPct, yPct: m.yPct,
-        angle: targetAngle, lenMult: 1, numRot: 0, linkedFromId: m.id, dirAngleManual: false };
+      dirMarker = { id: pair.id, uid: pair.uid, typeKey: tiltDirSeriesKey(), xPct: 0, yPct: 0,
+        angle: perpDeg, lenMult: 1, numRot: 0, linkedFromId: m.id };
       d.markers.push(dirMarker);
       m.linkedDirId = dirMarker.id;
     }
-    dirMarker.xPct = m.xPct; dirMarker.yPct = m.yPct; // 측정위치를 옮기면 방향 마커도 같이 따라간다
-    if(!dirMarker.dirAngleManual) dirMarker.angle = targetAngle;
+    dirMarker.xPct = clamp(midX/w*100,0,100);
+    dirMarker.yPct = clamp(midY/h*100,0,100);
+    dirMarker.angle = perpDeg;
   }
   // 8장 사용자 피드백: 측점번호 입력칸과 방향(자동/좌/우) 드롭다운은 표에서 뺐다 — 방향은 항상
   // 자동으로 계산해 캔버스의 파란 화살표로만 보여준다(수평각차 결과는 도·분·초 3칸으로 표시).
@@ -3400,7 +3441,7 @@
     return `
       <div class="mc-row">
         <input type="text" class="mc-num" data-role="pos" tabindex="-1" value="${m.seq||idx+1}" title="번호"/>
-        <select data-role="type" class="mc-marktype" tabindex="-1" title="마킹 색상·모양">${DEFECT_TYPES.map(t=>`<option value="${t.key}" ${t.key===m.typeKey?'selected':''}>${t.label}</option>`).join('')}</select>
+        <select data-role="type" class="mc-marktype" tabindex="-1" title="마킹 색상·모양">${selectableDefectTypes().map(t=>`<option value="${t.key}" ${t.key===m.typeKey?'selected':''}>${t.label}</option>`).join('')}</select>
         <span class="mc-field" data-label="구분"><input type="text" data-role="tiltBldg" placeholder="구분(예: 205동)" title="구분(동 이름 등)" value="${escapeAttr(m.tiltBldg||'')}"/></span>
         <span class="mc-suffix tilt-dms-group" data-label="상부(도분초)" title="상부시준 도/분/초">
           <input type="text" class="tilt-dms" data-role="tiltUpD" placeholder="도" value="${escapeAttr(m.tiltUpD||'')}"/>°<input type="text" class="tilt-dms" data-role="tiltUpM" placeholder="분" value="${escapeAttr(m.tiltUpM||'')}"/>′<input type="text" class="tilt-dms" data-role="tiltUpS" placeholder="초" value="${escapeAttr(m.tiltUpS||'')}"/>″
@@ -3417,11 +3458,11 @@
       </div>`;
   }
   function buildTiltDirCardHTML(m, idx){
-    const linkedNote = m.linkedFromId ? '측정위치에 자동 연동됨 (각도는 도면에서 드래그로 미세조정 가능)' : '독립 배치된 방향 마커';
+    const linkedNote = '측정위치 인출선 중앙에 직각으로 자동 표시됨 (클릭·드래그로 직접 옮길 수 없습니다)';
     return `
       <div class="mc-row">
         <input type="text" class="mc-num" data-role="pos" tabindex="-1" value="${m.seq||idx+1}" title="번호"/>
-        <select data-role="type" class="mc-marktype" tabindex="-1" title="마킹 색상·모양">${DEFECT_TYPES.map(t=>`<option value="${t.key}" ${t.key===m.typeKey?'selected':''}>${t.label}</option>`).join('')}</select>
+        <select data-role="type" class="mc-marktype" tabindex="-1" title="마킹 색상·모양" disabled>${DEFECT_TYPES.map(t=>`<option value="${t.key}" ${t.key===m.typeKey?'selected':''}>${t.label}</option>`).join('')}</select>
         <span class="mc-field" style="flex:1;color:var(--text-secondary);font-size:11.5px;">${linkedNote}</span>
         <button class="mc-photo" data-role="photo" tabindex="-1" title="사진 첨부"><svg class="icon"><use href="#i-camera"/></svg>${(m.photos&&m.photos.length)?`<span class="photo-count">${m.photos.length}</span>`:''}</button>
         <button class="row-del" data-role="del" tabindex="-1" title="삭제"><svg class="icon"><use href="#i-close"/></svg></button>
@@ -3840,7 +3881,8 @@
       hint.innerHTML = `현재 선택된 유형: <b id="activeTypeLabel">${getType(activeTypeKey).label}</b> — <b>클릭 3번</b>으로 생성: ① 사각형 첫 코너 → ② 반대쪽 코너 → ③ 번호가 표시될 위치${pendingRectCreate ? ` <b>(${pendingRectCreate.stage}/2단계 완료, 계속 클릭하세요 · Esc로 취소)</b>` : ''}`;
     } else {
       // 계열 개수가 프리셋마다 달라지므로 단축키 안내도 "1~N"(N=min(계열수,9))으로 동적으로 맞춘다.
-      const shortcutRange = DEFECT_TYPES.length>1 ? `1~${Math.min(DEFECT_TYPES.length,9)}` : '1';
+      const selectableCount = selectableDefectTypes().length;
+      const shortcutRange = selectableCount>1 ? `1~${Math.min(selectableCount,9)}` : '1';
       hint.innerHTML = `현재 선택된 유형: <b id="activeTypeLabel">${getType(activeTypeKey).label}</b> (단축키 ${shortcutRange}) — 클릭해 추가, 드래그로 방향·길이 지정 (Shift: 수직/수평 고정) · <b>s</b>: 선택 · <b>m</b>: 이동 · <b>d</b>: 지우개`;
     }
   }
@@ -3897,7 +3939,7 @@
   function renderTypeGrid(){
     const grid = document.getElementById('typeGrid');
     grid.innerHTML = '';
-    DEFECT_TYPES.forEach((type, i)=>{
+    selectableDefectTypes().forEach((type, i)=>{
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'type-btn' + (type.key===activeTypeKey ? ' active':'');
@@ -3919,7 +3961,7 @@
     const grid = document.getElementById('tabletFloatTypeGrid');
     if(!grid) return;
     grid.innerHTML = '';
-    DEFECT_TYPES.forEach((type, i)=>{
+    selectableDefectTypes().forEach((type, i)=>{
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'tablet-float-type-btn' + (type.key===activeTypeKey ? ' active':'');
@@ -3958,7 +4000,7 @@
     const delBtn = document.getElementById('btnDeleteSeriesPreset');
     if(delBtn) delBtn.disabled = BUILTIN_PRESETS.some(p=>p.name===activePresetName);
   }
-  const ENDSTYLE_OPTIONS = [['arrow','화살표'],['dot','점'],['rect','범위(사각형)']];
+  const ENDSTYLE_OPTIONS = [['arrow','화살표'],['dot','점'],['badge','배지만(선없음)'],['rect','범위(사각형)']];
   const BADGESHAPE_OPTIONS = [['circle','원형'],['text','텍스트만'],['box','라벨박스']];
   const HATCH_OPTIONS = [['none','없음'],['diagonal','빗금'],['cross','교차'],['dot','점무늬']];
   function seriesFieldChanged(refreshList){
@@ -5382,6 +5424,10 @@
         const rx = m.rectXPct||0, ry = m.rectYPct||0, rw = m.rectWPct||0, rh = m.rectHPct||0;
         tr.querySelector('[data-col="x"]').value = `${rx.toFixed(1)}~${(rx+rw).toFixed(1)}`;
         tr.querySelector('[data-col="y"]').value = `${ry.toFixed(1)}~${(ry+rh).toFixed(1)}`;
+      } else if(type.endStyle==='badge'){
+        // 인출선이 없는 유형(부동침하 등)은 배지 좌표 자체가 곧 표시 위치다.
+        tr.querySelector('[data-col="x"]').value = m.xPct.toFixed(1);
+        tr.querySelector('[data-col="y"]').value = m.yPct.toFixed(1);
       } else {
         const tip = badgeToTipPct(d, m);
         tr.querySelector('[data-col="x"]').value = tip.xPct.toFixed(1);
@@ -5503,7 +5549,8 @@
       const note = get('note');
       const angleFinal = isNaN(angleVal)?0:angleVal;
       const lenFinal = (!isNaN(lenVal) && lenVal>0) ? lenVal : 1;
-      const isRect = getType(typeKey).endStyle==='rect';
+      const rowEndStyle = getType(typeKey).endStyle;
+      const isRect = rowEndStyle==='rect';
       const fields = { typeKey, angle: angleFinal, note: note||'' };
       if(!isNaN(lenVal) && lenVal>0) fields.lenMult = lenVal;
       if(isRect){
@@ -5531,6 +5578,10 @@
           fields.xPct = clamp(fields.rectXPct+fields.rectWPct, 0, 100);
           fields.yPct = clamp(fields.rectYPct+fields.rectHPct, 0, 100);
         }
+      } else if(rowEndStyle==='badge'){
+        // 인출선이 없는 유형(부동침하 등)은 입력한 X/Y가 곧 배지 좌표다.
+        fields.xPct = clamp(xVal,0,100);
+        fields.yPct = clamp(yVal,0,100);
       } else {
         // 화살표/원 마커: 표에 입력한 X/Y는 화살표 끝(실제 결함 위치) 기준이므로 배지 좌표로 환산
         const badge = tipToBadgePct(d, xVal, yVal, angleFinal, lenFinal);
@@ -6533,6 +6584,8 @@
           if(st.rectXPct!==undefined && st.rectXPct!==null){
             mm.rectXPct = st.rectXPct+dxPct; mm.rectYPct = st.rectYPct+dyPct;
           }
+          // 측정위치를 옮기는 동안 측정방향 화살표(인출선 중앙·직각)가 실시간으로 따라오도록 함께 갱신
+          if(mm.typeKey==='tilt_pos') updateTiltMarker(mm);
         }
       });
       scheduleMarkerRender();
@@ -6551,6 +6604,8 @@
           const lm = dist/baseLen;
           if(isFinite(lm) && lm>0.05) m.lenMult = lm;
         }
+        // 측정위치 인출선의 각도·길이가 바뀌면 측정방향 화살표(인출선 중앙·직각)도 실시간으로 함께 갱신
+        if(m.typeKey==='tilt_pos') updateTiltMarker(m);
         scheduleMarkerRender();
       }
     } else if(pendingAction.mode==='resizeRect'){
@@ -6647,6 +6702,7 @@
           // "화살표, 선, 원, 사각형 모두" 마커의 시각적 외곽이 전부 영역 안에 들어와야 선택되도록
           // (배지 중심점 하나만으로 판정하던 이전 방식보다 엄격한 러버밴드 선택)
           const matched = d.markers.filter(m=>{
+            if(m.typeKey==='tilt_dir') return false; // 측정방향은 자동 계산 표시라 드래그 선택 대상에서 제외
             return markerVisualPoints(d, m, w, h).every(pt => pt.x>=x0 && pt.x<=x1 && pt.y>=y0 && pt.y<=y1);
           }).map(m=>m.id);
           if(e.shiftKey){ matched.forEach(id=>selectedIds.add(id)); }
@@ -6952,7 +7008,7 @@
       autosaveFailStreak++;
       if(autosaveFailStreak>=2 && !autosaveFailToastShown){
         autosaveFailToastShown = true;
-        showToast('자동저장이 계속 실패하고 있습니다(저장공간 부족일 수 있습니다). 지금까지 작업한 내용은 "프로젝트 저장"으로 파일에 따로 저장해두는 걸 권장합니다.', { sticky:true });
+        showToast('자동저장이 계속 실패하고 있습니다(저장공간 부족일 수 있습니다). 지금까지 작업한 내용은 "프로젝트 저장"으로 파일에 따로 저장해두는 걸 권장합니다.');
       }
     });
   }
@@ -7324,7 +7380,7 @@
       el.classList.toggle('storage-warn', ratio>=0.9);
       if(ratio>=0.9 && !storageWarnToastShown){
         storageWarnToastShown = true;
-        showToast('저장공간이 거의 찼습니다('+Math.round(ratio*100)+'%). 자동저장이 실패할 수 있으니 완료된 프로젝트는 "프로젝트 저장"으로 파일로 내보낸 뒤 브라우저 데이터를 정리해주세요.', { sticky:true });
+        showToast('저장공간이 거의 찼습니다('+Math.round(ratio*100)+'%). 자동저장이 실패할 수 있으니 완료된 프로젝트는 "프로젝트 저장"으로 파일로 내보낸 뒤 브라우저 데이터를 정리해주세요.');
       } else if(ratio<0.9){
         storageWarnToastShown = false;
       }
