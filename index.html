@@ -645,6 +645,7 @@
           <button type="button" class="add-drawing-btn" id="btnAddDrawing">+ 도면 이미지 추가</button>
           <input type="file" id="addDrawingInput" accept="image/*" multiple />
         </label>
+        <button type="button" id="btnDuplicateOpen" style="width:100%;margin-top:6px;" title="현재 도면의 마킹을 다른 도면들에 그대로 복제합니다(같은 평면도가 동만 바뀌어 반복될 때 유용)"><svg class="icon"><use href="#i-archive"/></svg> 마킹 전체 복제</button>
       </div>
 
       <div>
@@ -901,6 +902,35 @@
       </div>
     </aside>
 
+  </div>
+</div>
+
+<!-- 마킹 전체 복제 모달: 현재 도면의 마킹(좌표·각도·계열·라벨)을 고른 도면들에 그대로 복제. 사진은 제외.
+     같은 평면도가 동만 바뀌어 반복되는 실무 패턴(외관조사 등)이 주 용도 — 사무실 데스크톱 작업 위주. -->
+<div class="modal-backdrop" id="duplicateBackdrop" style="display:none;">
+  <div class="modal-panel" id="duplicatePanel" style="width:min(520px, 92vw);">
+    <div class="modal-header" id="duplicateDragHandle" title="여기를 마우스로 눌러 끌면 창을 옮길 수 있습니다">
+      <div>
+        <div class="modal-title">마킹 전체 복제</div>
+        <div class="modal-sub">현재 도면(<b id="duplicateSourceName"></b>)의 마킹 <b id="duplicateSourceCount"></b>건을 아래서 고른 도면에 그대로 복제합니다. 번호는 대상 도면에서 다시 매겨지고, 사진은 복제되지 않습니다.</div>
+      </div>
+      <button type="button" id="btnDuplicateClose" class="icon-btn"><svg class="icon icon-lg"><use href="#i-close"/></svg></button>
+    </div>
+    <div class="modal-body">
+      <div style="display:flex;gap:8px;margin-bottom:10px;">
+        <button type="button" class="tool" id="btnDuplicateSelectAll">전체 선택</button>
+        <button type="button" class="tool" id="btnDuplicateSelectNone">선택 해제</button>
+        <div style="flex:1;"></div>
+        <span style="font-size:11px;color:var(--muted);align-self:center;">Shift+클릭으로 범위 선택</span>
+      </div>
+      <div id="duplicateDrawingList" style="display:flex;flex-direction:column;gap:2px;max-height:44vh;overflow:auto;border:1px solid var(--gridline);border-radius:8px;padding:4px;"></div>
+    </div>
+    <div class="modal-footer">
+      <div style="font-size:11px;color:var(--text-secondary);flex:1;" id="duplicateFootNote">대상 도면을 선택하세요.</div>
+      <button type="button" class="tool" id="btnDuplicateCancel">취소</button>
+      <button type="button" id="btnDuplicateAppend" title="대상 도면의 기존 마킹은 그대로 두고 뒤에 이어붙입니다">뒤에 추가</button>
+      <button type="button" class="danger" id="btnDuplicateOverwrite" title="대상 도면에 이미 있는 마킹을 전부 지우고 복제한 마킹으로 바꿉니다">덮어쓰기</button>
+    </div>
   </div>
 </div>
 
@@ -2833,6 +2863,15 @@
     if(undoStack.length>60) undoStack.shift();
     redoStack = []; // 새 작업이 일어나면 그 이전의 "다시하기" 기록은 더 이상 의미가 없으므로 비운다
   }
+  // 도면 여러 개의 마커를 한 번에 바꾸는 작업(마킹 전체 복제 등) 직전에 호출 — 관련 도면들을 하나의
+  // undoStack 항목으로 함께 묶어서, 실행취소 한 번으로 전부 원래대로 돌아가게 한다.
+  function pushMultiUndo(targetDrawings){
+    if(!targetDrawings || targetDrawings.length===0) return;
+    markDirty();
+    undoStack.push({ type:'multiMarkers', entries: targetDrawings.map(d=>({ drawingId:d.id, markers: cloneMarkersForUndo(d.markers) })) });
+    if(undoStack.length>60) undoStack.shift();
+    redoStack = [];
+  }
   // 이미지 자체가 바뀌는 작업(자르기·회전·지우개브러시) 직전에 호출 — 이미지+그 시점의 마커를 통째로 기록한다.
   // pushUndo()와 같은 undoStack에 함께 쌓이므로 "실행취소" 버튼 하나로 마커 작업과 순서대로 되돌릴 수 있다.
   function pushImageUndo(d){
@@ -2875,6 +2914,23 @@
       setActiveDrawing(last.drawing.id);
       return;
     }
+    // 마킹 전체 복제(4단계)처럼 도면 여러 개를 한 번에 바꾸는 작업 전용 — 실행취소 한 번으로
+    // 관련된 모든 도면이 함께 원상복구된다(도면마다 따로 pushUndo하면 Ctrl+Z를 여러 번 눌러야 함).
+    if(last.type==='multiMarkers'){
+      const redoEntries = [];
+      last.entries.forEach(en=>{
+        const d2 = drawings.find(x=>x.id===en.drawingId); if(!d2) return;
+        redoEntries.push({ drawingId:d2.id, markers: cloneMarkersForUndo(d2.markers) });
+        d2.markers = en.markers;
+      });
+      if(redoEntries.length>0){
+        redoStack.push({ type:'multiMarkers', entries: redoEntries });
+        if(redoStack.length>60) redoStack.shift();
+      }
+      selectedIds = new Set();
+      renderCanvas(); renderTable(); renderDrawingTabs();
+      return;
+    }
     const d = drawings.find(x=>x.id===last.drawingId); if(!d){ undo(); return; }
     if(last.type==='image'){
       redoStack.push({ type:'image', drawingId:d.id, imgSrc:d.imgSrc, naturalW:d.naturalW, naturalH:d.naturalH,
@@ -2909,6 +2965,21 @@
       drawings.splice(idx,1);
       if(activeDrawingId===removed.id){ activeDrawingId = drawings[0] ? drawings[0].id : null; }
       renderDrawingTabs(); setActiveDrawing(activeDrawingId);
+      return;
+    }
+    if(next.type==='multiMarkers'){
+      const undoEntries = [];
+      next.entries.forEach(en=>{
+        const d2 = drawings.find(x=>x.id===en.drawingId); if(!d2) return;
+        undoEntries.push({ drawingId:d2.id, markers: cloneMarkersForUndo(d2.markers) });
+        d2.markers = en.markers;
+      });
+      if(undoEntries.length>0){
+        undoStack.push({ type:'multiMarkers', entries: undoEntries });
+        if(undoStack.length>60) undoStack.shift();
+      }
+      selectedIds = new Set();
+      renderCanvas(); renderTable(); renderDrawingTabs();
       return;
     }
     const d = drawings.find(x=>x.id===next.drawingId); if(!d){ redo(); return; }
@@ -4611,6 +4682,110 @@
       foot.textContent = 'X/Y는 % 좌표(0~100). "범위" 유형은 "10~20"처럼 시작~끝을 물결(~)로 함께 입력하세요(생략 시 기본 크기로 생성).';
     }
   }
+  // ---------- 마킹 전체 복제 ----------
+  // 같은 평면도가 동만 바뀌어 6~7장 반복되는 실무 패턴을 위해, 현재 도면(source)의 마킹을 통째로
+  // 골라둔 다른 도면들에 복제한다. 사진은 제외, 번호(seq)는 대상 도면에서 renumberDrawingMarkers가
+  // 다시 매긴다. Ctrl+Z 한 번으로 관련 도면 전체가 원상복구되도록 pushMultiUndo를 쓴다.
+  let duplicateSourceId = null;
+  let duplicateSelectedIds = new Set();
+  let duplicateLastClickedIdx = null;
+  function otherDrawings(){ return drawings.filter(d=>d.id!==duplicateSourceId); }
+  function renderDuplicateList(){
+    const wrap = document.getElementById('duplicateDrawingList');
+    wrap.innerHTML = '';
+    const others = otherDrawings();
+    if(others.length===0){
+      wrap.innerHTML = `<div class="empty-marker-note">복제할 다른 도면이 없습니다. 먼저 도면을 추가해주세요.</div>`;
+      return;
+    }
+    others.forEach((d, i)=>{
+      const row = document.createElement('label');
+      row.className = 'check-row';
+      row.style.justifyContent = 'space-between';
+      row.dataset.idx = i;
+      row.innerHTML = `<span style="display:flex;align-items:center;gap:7px;"><input type="checkbox" data-id="${d.id}" ${duplicateSelectedIds.has(d.id)?'checked':''}/> ${escapeHTML(d.name)}</span>
+        <span style="color:var(--muted);font-size:11px;">${d.markers.length>0 ? d.markers.length+'건 있음' : '비어있음'}</span>`;
+      const checkbox = row.querySelector('input');
+      checkbox.addEventListener('click', e=>{
+        // Shift+클릭: 마지막으로 클릭한 행부터 지금 행까지 범위를 한 번에 같은 상태로 맞춘다(데스크톱 전용
+        // 요구사항이지만 터치에서도 Shift 없이 그냥 한 칸씩 토글은 그대로 되므로 태블릿은 자연히 지원됨).
+        if(e.shiftKey && duplicateLastClickedIdx!==null){
+          const lo = Math.min(duplicateLastClickedIdx, i), hi = Math.max(duplicateLastClickedIdx, i);
+          const checked = checkbox.checked;
+          for(let k=lo; k<=hi; k++){
+            const other = others[k]; if(!other) continue;
+            if(checked) duplicateSelectedIds.add(other.id); else duplicateSelectedIds.delete(other.id);
+          }
+          renderDuplicateList();
+        } else {
+          if(checkbox.checked) duplicateSelectedIds.add(d.id); else duplicateSelectedIds.delete(d.id);
+        }
+        duplicateLastClickedIdx = i;
+        updateDuplicateFootNote();
+      });
+      wrap.appendChild(row);
+    });
+  }
+  function updateDuplicateFootNote(){
+    const foot = document.getElementById('duplicateFootNote');
+    const n = duplicateSelectedIds.size;
+    if(n===0){ foot.textContent = '대상 도면을 선택하세요.'; return; }
+    const hasExisting = otherDrawings().some(d=> duplicateSelectedIds.has(d.id) && d.markers.length>0);
+    foot.textContent = `${n}개 도면 선택됨` + (hasExisting ? ' · 일부 도면에 이미 마킹이 있습니다 — 아래에서 방식을 고르세요.' : '');
+  }
+  function openDuplicateModal(){
+    const d = getActiveDrawing();
+    if(!d){ showToast('먼저 도면을 추가하고 선택해주세요.'); return; }
+    if(d.markers.length===0){ showToast('현재 도면에 복제할 마킹이 없습니다.'); return; }
+    duplicateSourceId = d.id;
+    duplicateSelectedIds = new Set();
+    duplicateLastClickedIdx = null;
+    document.getElementById('duplicateSourceName').textContent = d.name;
+    document.getElementById('duplicateSourceCount').textContent = d.markers.length;
+    renderDuplicateList();
+    updateDuplicateFootNote();
+    document.getElementById('duplicateBackdrop').style.display = 'flex';
+  }
+  function closeDuplicateModal(){ document.getElementById('duplicateBackdrop').style.display = 'none'; }
+  function isDuplicateOpen(){ return document.getElementById('duplicateBackdrop').style.display !== 'none'; }
+  function performDuplicate(mode){
+    const source = drawings.find(x=>x.id===duplicateSourceId);
+    if(!source){ closeDuplicateModal(); return; }
+    const targets = otherDrawings().filter(d=> duplicateSelectedIds.has(d.id));
+    if(targets.length===0){ showToast('대상 도면을 1개 이상 선택하세요.'); return; }
+    if(mode==='overwrite' && !confirm(`선택한 ${targets.length}개 도면의 기존 마킹을 전부 지우고 "${source.name}"의 마킹으로 덮어쓸까요?\n이 작업은 도면마다 있던 기존 마킹을 모두 지웁니다(실행취소로 되돌릴 수 있습니다).`)) return;
+    pushMultiUndo(targets);
+    targets.forEach(target=>{
+      // %좌표·각도·인출선 길이·계열(typeKey)·보고서 라벨은 그대로 옮기고, uid/id만 새로 발급(원본과
+      // 겹치면 안 됨), seq는 아래 renumberAllDrawings가 대상 도면 순서에 맞춰 다시 매긴다. 사진은 제외.
+      const cloned = source.markers.map(m=>{
+        const { photos, id, uid: _uid, seq, ...rest } = m;
+        return { ...rest, ...newMarkerIdPair() };
+      });
+      target.markers = (mode==='overwrite') ? cloned : target.markers.concat(cloned);
+    });
+    renumberAllDrawings({silent:true});
+    renderCanvas(); renderTable(); renderDrawingTabs();
+    closeDuplicateModal();
+    showToast(`"${source.name}"의 마킹을 ${targets.length}개 도면에 복제했습니다(${mode==='overwrite'?'덮어쓰기':'뒤에 추가'}).`);
+  }
+  document.getElementById('btnDuplicateOpen').addEventListener('click', openDuplicateModal);
+  document.getElementById('btnDuplicateClose').addEventListener('click', closeDuplicateModal);
+  document.getElementById('btnDuplicateCancel').addEventListener('click', closeDuplicateModal);
+  document.getElementById('btnDuplicateSelectAll').addEventListener('click', ()=>{
+    duplicateSelectedIds = new Set(otherDrawings().map(d=>d.id));
+    renderDuplicateList(); updateDuplicateFootNote();
+  });
+  document.getElementById('btnDuplicateSelectNone').addEventListener('click', ()=>{
+    duplicateSelectedIds = new Set();
+    renderDuplicateList(); updateDuplicateFootNote();
+  });
+  document.getElementById('btnDuplicateAppend').addEventListener('click', ()=> performDuplicate('append'));
+  document.getElementById('btnDuplicateOverwrite').addEventListener('click', ()=> performDuplicate('overwrite'));
+  document.getElementById('duplicateBackdrop').addEventListener('mousedown', e=>{
+    if(e.target.id === 'duplicateBackdrop') closeDuplicateModal();
+  });
+
   function openTableInputModal(){
     if(!getActiveDrawing()){ showToast('먼저 도면을 추가하고 선택해주세요.'); return; }
     tableInputLoadedIds = null;

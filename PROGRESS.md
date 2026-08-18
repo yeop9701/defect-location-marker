@@ -153,3 +153,37 @@
     지시문 목록("%좌표·각도·인출선 길이·series·라벨을 그대로 옮긴다")에 범례가 포함되지 않으므로
     4단계에서는 범례는 복제 대상에서 제외하고 마커만 복제할 예정(대상 도면에 이미 있던 범례 위치를
     그대로 둠).
+
+## 4단계 - 완료
+- 커밋 해시: (이 커밋)
+- 바꾼 것:
+  - 좌측 사이드바 "도면 목록" 아래 "마킹 전체 복제" 버튼 + 전용 모달(`duplicateBackdrop`) 신설.
+    현재 활성 도면을 원본(source)으로, 체크박스로 고른 다른 도면들을 대상(target)으로 삼는다.
+  - 대상 선택 UI: 체크박스 + Shift+클릭 범위선택(데스크톱, `duplicateLastClickedIdx` 기준 lo~hi
+    구간을 방금 클릭한 체크 상태로 일괄 맞춤) + "전체 선택"/"선택 해제" 버튼. 태블릿은 별도 코드 없이
+    체크박스 탭 자체가 "개별 토글" 요구사항을 그대로 충족(44px 터치 타깃은 기존 태블릿 CSS가 처리).
+  - 복제 내용: 원본 마커에서 `photos`/`id`/`uid`/`seq`만 제외한 나머지 전부(타입키·xPct/yPct·각도·
+    rectXPct 등 범위 좌표·lenMult·numRot·note·rptType/Member/Defect/Width/Length/Count/Tag)를
+    그대로 복사하고, `newMarkerIdPair()`로 새 id/uid만 발급(원본과 겹치면 안 되므로). 번호(seq)는
+    복사 직후 `renumberAllDrawings({silent:true})`가 대상 도면 순서 기준으로 다시 매김.
+  - "덮어쓰기"/"뒤에 추가"를 항상 버튼 두 개로 명시적으로 나눠 보여줌(대상에 기존 마킹이 없어도
+    동일하게 두 선택지를 제공 — 상태에 따라 버튼을 숨겼다 보였다 하는 대신 매번 명확히 물어보는
+    쪽이 실수로 덮어쓸 위험이 적다고 판단). "덮어쓰기"는 파괴적이라 `confirm()`으로 한 번 더 확인.
+  - **실행취소 인프라 확장**: 기존 `pushUndo()`/`undo()`/`redo()`는 도면 1개 단위였는데(도면 여러 개를
+    건드리는 CSV 가져오기도 도면마다 별도 undo 항목이 쌓여 Ctrl+Z를 여러 번 눌러야 다 되돌아감),
+    "실행취소 한 번으로 되돌아갈 것" 요구사항을 satisfy 하기 위해 `pushMultiUndo()` +
+    `undo()`/`redo()`의 `'multiMarkers'` 항목 타입을 새로 추가— 여러 도면의 마커 스냅샷을 한
+    undoStack 항목에 묶어서, Ctrl+Z 한 번에 관련 도면 전체가 함께 원상복구된다.
+- 새로 만든 함수/파일: `pushMultiUndo`, `openDuplicateModal`/`closeDuplicateModal`/
+  `renderDuplicateList`/`performDuplicate`/`otherDrawings`/`updateDuplicateFootNote`,
+  `undo()`/`redo()`의 `multiMarkers` 분기
+- 알려진 미해결 문제 / 판단 필요:
+  - 범례(3단계, `legendPct`)는 복제 대상에서 제외했습니다(마커만 복제) — 지시문의 복제 대상
+    목록에 범례가 없어서 그렇게 판단했는데, 만약 "같은 위치도라 범례 위치도 같이 맞추고 싶다"는
+    의도였다면 알려주시면 추가하겠습니다(구현 자체는 몇 줄이면 됩니다 — `target.legendPct =
+    {...source.legendPct}` 추가하는 정도).
+  - 여전히 브라우저 자동 테스트 불가(사유 동일). **도면 2장 이상에 마킹을 찍고 복제 → 대상 도면에
+    번호가 1부터 다시 매겨지는지, Ctrl+Z 한 번으로 여러 도면이 한꺼번에 원상복구되는지 확인
+    부탁드립니다.**
+- 다음 단계에서 주의할 점: 없음(0~4단계 모두 완료). 후속 확장 아이디어는 각 단계의 "판단 필요"
+  절 참고.
