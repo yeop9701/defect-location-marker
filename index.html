@@ -505,6 +505,9 @@
   .app-toast .toast-close{position:absolute;top:4px;right:4px;background:none;border:none;
     color:var(--muted);cursor:pointer;font-size:15px;line-height:1;padding:6px;}
   .app-toast .toast-close:hover{color:var(--text-primary);}
+  .app-toast .toast-action{display:inline-flex;margin-top:8px;font-size:11.5px;font-weight:700;
+    color:var(--accent);background:none;border:none;padding:0;cursor:pointer;text-decoration:underline;}
+  .app-toast .toast-action:hover{color:var(--accent-hover);}
 </style>
 </head>
 <body>
@@ -1211,8 +1214,10 @@
   let tbTemplates = loadTbTemplates();
 
   // ---------- 상태 ----------
-  let drawings = [];          // {id,name,imgSrc,imgEl,naturalW,naturalH,baseW,baseH,markers:[{id,typeKey,xPct,yPct,angle,lenMult,note,
+  let drawings = [];          // {id,name,imgSrc,imgEl,naturalW,naturalH,baseW,baseH,markers:[{id,uid,seq,typeKey,xPct,yPct,angle,lenMult,note,
                                //   rectXPct,rectYPct,rectWPct,rectHPct,rectAngle, rptType,rptMember,rptDefect,rptWidth,rptLength,rptCount,rptTag}]}
+                               // uid: 생성 시 한 번 발급되면 안 바뀌는 식별자(내부 조회는 계속 id 사용, newMarkerIdPair() 참고).
+                               // seq: 화면에 보이는 번호 — 배열 순서와 항상 같도록 renumberDrawingMarkers()가 관리한다.
   let activeDrawingId = null;
   let activeTypeKey = 'wall';
   let selectedIds = new Set();
@@ -1260,6 +1265,38 @@
   function uid(){ return 'm'+Math.random().toString(36).slice(2,10)+Date.now().toString(36); }
   function clamp(v,lo,hi){ return Math.max(lo, Math.min(hi, v)); }
 
+  // ---------- 마커 불변 식별자(uid) · 채번(seq) ----------
+  // uid는 마커를 만들 때 한 번 발급되면 절대 바뀌지 않는 식별자로, 화면에 보이는 번호(seq)와는
+  // 별개다. CSV/XLSX 열, 사진 ZIP 파일명처럼 "이 결함"을 항상 같은 값으로 가리켜야 하는 곳에 쓴다.
+  // 기존 id 필드도 이미 uid()로 생성되어 온 값이라 새로 두 번 발급하지 않고, 하나의 uid() 결과를
+  // id/uid 두 필드에 나눠 쓴다 — 내부 조회(선택·이동·삭제 등 기존 로직)는 계속 id를 쓰고,
+  // 사람이 보는 값이 필요한 곳만 uid를 쓴다.
+  function newMarkerIdPair(){ const i = uid(); return { id:i, uid:i }; }
+
+  // 표시번호는 배열 순서(index+1)를 매번 다시 계산하는 대신 m.seq 필드에 실제로 저장해둔다
+  // (계열별 독립 채번이 필요해지는 2단계에서 이 함수만 바꾸면 되도록 채번 로직을 한 곳에 모음).
+  // 배열 순서가 바뀔 수 있는 지점(번호 직접 입력·삭제·CSV/표 입력 반영 등)마다 renderTable()이나
+  // 내보내기 함수가 이 함수를 호출해 seq를 최신 상태로 맞춘다. opts.silent가 아니면, 이미 번호가
+  // 있던 마커의 번호가 실제로 달라졌을 때(=신규 채번이 아니라 "재정렬")만 토스트로 알린다.
+  function renumberDrawingMarkers(d, opts){
+    opts = opts || {};
+    if(!d) return [];
+    const changes = [];
+    d.markers.forEach((m, idx)=>{
+      const newSeq = idx+1;
+      if(typeof m.seq === 'number' && m.seq !== newSeq) changes.push({from:m.seq, to:newSeq});
+      m.seq = newSeq;
+    });
+    if(changes.length>0 && !opts.silent){
+      const preview = changes.slice(0,3).map(c=>`${c.from}→${c.to}`).join(', ') + (changes.length>3 ? ' …' : '');
+      showToast(`번호 재정렬됨 · ${changes.length}건 변경 (${preview})`, { actionLabel:'되돌리기', onAction: undo });
+    }
+    return changes;
+  }
+  // 도면 전환 없이도 모든 도면의 번호가 맞아야 하는 내보내기(CSV/XLSX/PNG/PDF/사진ZIP)와
+  // 프로젝트 불러오기 직후에 쓴다 — 항상 opts.silent:true로 호출해 재정렬 토스트가 뜨지 않게 한다.
+  function renumberAllDrawings(opts){ drawings.forEach(d=> renumberDrawingMarkers(d, opts)); }
+
   // ---------- 인앱 토스트 (alert() 대체) ----------
   // iOS PWA(홈 화면에 추가해 standalone으로 실행)에서는 네이티브 alert()가 제대로 뜨지 않거나
   // 화면 뒤로 묻히는 경우가 있어, 사용자 확인이 필요 없는 단순 안내는 이 토스트로 대신한다.
@@ -1280,19 +1317,29 @@
     const textEl = document.createElement('div');
     textEl.textContent = message;
     el.appendChild(textEl);
+    const remove = ()=>{
+      el.remove();
+      if(toastStackEl && !toastStackEl.children.length){ toastStackEl.remove(); toastStackEl = null; }
+    };
+    // 선택적 실행 버튼(예: 번호 재정렬 토스트의 "되돌리기") — 누르면 opts.onAction을 실행하고 토스트를 닫는다.
+    if(opts.actionLabel && opts.onAction){
+      const actionBtn = document.createElement('button');
+      actionBtn.type = 'button';
+      actionBtn.className = 'toast-action';
+      actionBtn.textContent = opts.actionLabel;
+      actionBtn.addEventListener('click', ()=>{ opts.onAction(); remove(); });
+      el.appendChild(actionBtn);
+    }
     const closeBtn = document.createElement('button');
     closeBtn.type = 'button';
     closeBtn.className = 'toast-close';
     closeBtn.setAttribute('aria-label', '닫기');
     closeBtn.textContent = '×';
-    const remove = ()=>{
-      el.remove();
-      if(toastStackEl && !toastStackEl.children.length){ toastStackEl.remove(); toastStackEl = null; }
-    };
     closeBtn.addEventListener('click', remove);
     el.appendChild(closeBtn);
     toastStackEl.appendChild(el);
-    const sticky = opts.sticky!==undefined ? opts.sticky : (message.length>60 || message.indexOf('\n')!==-1);
+    // 실행 버튼이 있는 토스트는 누를 시간을 주기 위해 기본으로 사라지지 않게 한다.
+    const sticky = opts.sticky!==undefined ? opts.sticky : (!!opts.actionLabel || message.length>60 || message.indexOf('\n')!==-1);
     if(!sticky) setTimeout(remove, 6000);
   }
 
@@ -1983,7 +2030,7 @@
     ctx.clearRect(0,0,w,h);
     const r = markerRadiusFor(d, w, h);
     d.markers.forEach((m,idx)=>{
-      drawMarkerDispatch(ctx, d, m, idx+1, w, h, r, selectedIds.has(m.id));
+      drawMarkerDispatch(ctx, d, m, m.seq||idx+1, w, h, r, selectedIds.has(m.id));
     });
     renderLegendPreview(d);
     drawInteractionOverlay(ctx, w, h);
@@ -2212,7 +2259,7 @@
       tctx.drawImage(d.imgEl, 0, 0, tw, th);
       const tr = clamp(Math.min(tw,th)*0.05, 5, 14);
       d.markers.forEach((m, idx)=>{
-        drawMarkerDispatch(tctx, d, m, idx+1, tw, th, tr, false);
+        drawMarkerDispatch(tctx, d, m, m.seq||idx+1, tw, th, tr, false);
       });
       const label = document.createElement('div');
       label.className = 'thumb-label';
@@ -2595,7 +2642,7 @@
     const canvas = document.getElementById('mainCanvas');
     const w = canvas.width, h = canvas.height;
     pushUndo();
-    const marker = { id: uid(), typeKey: activeTypeKey, xPct: clamp(x/w*100,0,100), yPct: clamp(y/h*100,0,100), angle: 0, lenMult: 1, numRot: 0, note:'' };
+    const marker = { ...newMarkerIdPair(), typeKey: activeTypeKey, xPct: clamp(x/w*100,0,100), yPct: clamp(y/h*100,0,100), angle: 0, lenMult: 1, numRot: 0, note:'' };
     d.markers.push(marker);
     selectOnly(marker.id);
     maybeOpenQuickInputSheet(marker);
@@ -2611,7 +2658,7 @@
     const baseLen = r*2.6*leaderLenMult;
     let lenMult = baseLen>0 ? geom.dist/baseLen : 1;
     if(!isFinite(lenMult) || lenMult<=0) lenMult = 1;
-    const marker = { id: uid(), typeKey: activeTypeKey,
+    const marker = { ...newMarkerIdPair(), typeKey: activeTypeKey,
       xPct: clamp(geom.badgeX/w*100,0,100), yPct: clamp(geom.badgeY/h*100,0,100),
       angle: geom.markerAngleDeg, lenMult, numRot: 0, note:'' };
     d.markers.push(marker);
@@ -2649,7 +2696,7 @@
       if(rw < 6 || rh < 6){ pendingRectCreate = null; renderCanvas(); return; } // 너무 작으면 취소
       const snapped = snapAroundCenter(rx+rw/2, ry+rh/2, x, y, shift);
       pushUndo();
-      const marker = { id: uid(), typeKey: activeTypeKey,
+      const marker = { ...newMarkerIdPair(), typeKey: activeTypeKey,
         rectXPct: rx/w*100, rectYPct: ry/h*100, rectWPct: rw/w*100, rectHPct: rh/h*100,
         xPct: clamp(snapped.x/w*100,0,100), yPct: clamp(snapped.y/h*100,0,100),
         angle: 0, lenMult: 1, numRot: 0, note:'' };
@@ -2854,6 +2901,9 @@
     emptyNote.style.display = 'none';
     list.style.display = 'flex';
     countEl.textContent = String(d.markers.length);
+    // 렌더링 직전에 항상 seq를 배열 순서와 맞춘다 — 방금 일어난 조작(번호 직접 입력·삭제 등)으로
+    // 다른 마커들의 번호가 실제로 밀렸다면 여기서 재정렬 토스트가 뜬다.
+    renumberDrawingMarkers(d);
     d.markers.forEach((m, idx)=>{
       const card = document.createElement('div');
       card.className = 'marker-card' + (selectedIds.has(m.id) ? ' selected' : '');
@@ -2866,7 +2916,7 @@
       // 카드는 한 줄 — 사이드바가 좁아지면 marker-list-wrap에 가로 스크롤이 생겨서 대응한다.
       card.innerHTML = `
         <div class="mc-row">
-          <input type="text" class="mc-num" data-role="pos" tabindex="-1" value="${idx+1}" title="번호 — 값을 바꾸면 도면·목록의 순서(번호)가 그 위치로 바뀝니다"/>
+          <input type="text" class="mc-num" data-role="pos" tabindex="-1" value="${m.seq||idx+1}" title="번호 — 값을 바꾸면 도면·목록의 순서(번호)가 그 위치로 바뀝니다"/>
           <select data-role="type" class="mc-marktype" tabindex="-1" title="마킹 색상·모양(도면에 표시되는 유형)">${typeOptions}</select>
           ${buildReportSelectHTML('rptType', m.rptType, '유형')}
           ${buildReportSelectHTML('rptMember', m.rptMember, '부재명')}
@@ -2894,9 +2944,9 @@
         const dd = getActiveDrawing(); if(!dd) return;
         let n = parseInt(e.target.value, 10);
         const curIdx = dd.markers.findIndex(x=>x.id===m.id);
-        if(isNaN(n) || curIdx<0){ e.target.value = idx+1; return; }
+        if(isNaN(n) || curIdx<0){ e.target.value = m.seq||idx+1; return; }
         n = clamp(n, 1, dd.markers.length);
-        if(n===curIdx+1){ e.target.value = idx+1; return; }
+        if(n===curIdx+1){ e.target.value = m.seq||idx+1; return; }
         pushUndo();
         const [item] = dd.markers.splice(curIdx, 1);
         dd.markers.splice(n-1, 0, item);
@@ -3247,6 +3297,7 @@
   function exportPNG(){
     const d = getActiveDrawing();
     if(!d){ showToast('먼저 도면 이미지를 추가해주세요.'); return; }
+    renumberDrawingMarkers(d, {silent:true});
     const useTitleBlock = document.getElementById('titleBlockToggle').checked;
     const off = useTitleBlock ? buildExportCanvasTitleBlock(d) : buildExportCanvasSimple(d);
     const format = document.getElementById('exportFormatSelect').value;
@@ -3280,7 +3331,7 @@
 
     const r = markerRadiusNatural(d);
     d.markers.forEach((m, idx)=>{
-      drawMarkerDispatch(ctx, d, m, idx+1, w, h, r, false);
+      drawMarkerDispatch(ctx, d, m, m.seq||idx+1, w, h, r, false);
     });
 
     return off;
@@ -3401,10 +3452,10 @@
       if(type.endStyle === 'rect'){
         const rect = markerRectPx(m, drawW, drawH);
         drawAreaMarker(ctx, type, drawX+rect.x, drawY+rect.y, rect.w, rect.h,
-          drawX+m.xPct/100*drawW, drawY+m.yPct/100*drawH, r, idx+1, false, m.numRot||0, m.rectAngle||0);
+          drawX+m.xPct/100*drawW, drawY+m.yPct/100*drawH, r, m.seq||idx+1, false, m.numRot||0, m.rectAngle||0);
       } else {
         const cx = drawX + m.xPct/100*drawW, cy = drawY + m.yPct/100*drawH;
-        drawMarkerWithLeader(ctx, type, cx, cy, r, m.angle||0, leaderLenForMarker(m,r), idx+1, false, m.numRot||0);
+        drawMarkerWithLeader(ctx, type, cx, cy, r, m.angle||0, leaderLenForMarker(m,r), m.seq||idx+1, false, m.numRot||0);
       }
     });
 
@@ -3556,6 +3607,7 @@
   // 도면별로 순서대로 저장 대화상자를 띄운다(저장 대화상자가 겹치지 않도록 약간의 지연을 둔다).
   function exportAllDrawings(){
     if(drawings.length===0){ showToast('저장할 도면이 없습니다.'); return; }
+    renumberAllDrawings({silent:true});
     const useTitleBlock = document.getElementById('titleBlockToggle').checked;
     const format = document.getElementById('exportFormatSelect').value;
     const canvasList = drawings.map(d => useTitleBlock ? buildExportCanvasTitleBlock(d) : buildExportCanvasSimple(d));
@@ -3590,20 +3642,23 @@
   }
   // CSV/xlsx 내보내기가 공유하는 결함 목록 데이터 — 헤더와 각 행의 값(cells) + 색상 구분에 쓰는 typeKey.
   function buildDefectExportData(){
+    // 도면 전환 없이도 모든 도면의 번호가 최신이어야 하므로(활성 도면 렌더링에 의존하지 않음) 내보내기
+    // 직전에 전체 도면을 조용히(토스트 없이) 재정렬해 seq를 맞춘다.
+    renumberAllDrawings({silent:true});
     const header = ['도면명','번호','위치유형','X(%)','Y(%)','각도','인출선길이배율','범위X(%)','범위Y(%)','범위폭(%)','범위높이(%)',
-      '유형','부재명','결함명','폭','길이','개수','#','사진','비고'];
+      '유형','부재명','결함명','폭','길이','개수','#','사진','비고','UID'];
     const rows = [];
     drawings.forEach(d=>{
       d.markers.forEach((m, idx)=>{
         const type = getType(m.typeKey);
         const lenStr = (typeof m.lenMult==='number' && isFinite(m.lenMult)) ? m.lenMult.toFixed(2) : '';
         const isRect = type.endStyle==='rect';
-        rows.push({ typeKey: m.typeKey, cells: [d.name, idx+1, type.label, m.xPct.toFixed(1), m.yPct.toFixed(1), Math.round(m.angle||0), lenStr,
+        rows.push({ typeKey: m.typeKey, cells: [d.name, m.seq||idx+1, type.label, m.xPct.toFixed(1), m.yPct.toFixed(1), Math.round(m.angle||0), lenStr,
           isRect ? (m.rectXPct||0).toFixed(1) : '', isRect ? (m.rectYPct||0).toFixed(1) : '',
           isRect ? (m.rectWPct||0).toFixed(1) : '', isRect ? (m.rectHPct||0).toFixed(1) : '',
           m.rptType||'', m.rptMember||'', m.rptDefect||'', m.rptWidth||'', m.rptLength||'', m.rptCount||'', m.rptTag||'',
           (m.photos&&m.photos.length) ? `${m.photos.length}장` : '',
-          (m.note||'').replace(/\r?\n/g,' ')] });
+          (m.note||'').replace(/\r?\n/g,' '), m.uid||m.id||''] });
       });
     });
     return { header, rows };
@@ -3704,7 +3759,7 @@
   }
   // buildDefectExportData()가 만드는 열 순서 기준, "숫자로 봐도 되는" 열의 0-based 인덱스.
   // (번호·X%·Y%·각도·인출선길이배율·범위X/Y/폭/높이%·폭·길이·개수). 도면명·위치유형·유형·부재명·
-  // 결함명·#(자유 태그)·사진·비고는 사람이 읽는 라벨/자유 텍스트이므로 항상 문자열로 둔다.
+  // 결함명·#(자유 태그)·사진·비고·UID는 사람이 읽는 라벨/자유 텍스트이므로 항상 문자열로 둔다.
   const XLSX_NUMERIC_COL_IDX = new Set([1,3,4,5,6,7,8,9,10,14,15,16]);
   function looksNumeric(v){
     return v!==null && v!==undefined && v!=='' && /^-?\d+(\.\d+)?$/.test(String(v).trim());
@@ -3820,13 +3875,18 @@
   // 그대로를 따르고, 도면이 여러 개면 도면명 폴더로 나눠 같은 번호가 섞이지 않게 한다.
   function exportAllPhotosZip(){
     if(!hasAnyPhotos()){ showToast('첨부된 사진이 없습니다.'); return; }
+    renumberAllDrawings({silent:true});
     const multiDrawing = drawings.length > 1;
     const entries = [];
     drawings.forEach(d=>{
       d.markers.forEach((m, idx)=>{
         const photos = m.photos || [];
         if(photos.length===0) return;
-        const nameParts = [String(idx+1)];
+        // 번호(seq) 뒤에 불변 uid 앞 8자리를 붙여, 같은 번호가 재정렬로 바뀌어도(또는 여러 프로젝트의
+        // 사진을 한 폴더에 모아도) 파일명만으로 어느 결함의 사진인지 항상 구분할 수 있게 한다.
+        const uid8 = String(m.uid||m.id||'').slice(0,8);
+        const nameParts = [String(m.seq||idx+1)];
+        if(uid8) nameParts.push(uid8);
         if(m.rptType) nameParts.push(m.rptType);
         if(m.rptMember) nameParts.push(m.rptMember);
         if(m.rptDefect) nameParts.push(m.rptDefect);
@@ -3924,7 +3984,7 @@
       const lenVal = idx.len>=0 ? parseFloat(r[idx.len]) : NaN;
       const note = idx.note>=0 ? r[idx.note] : '';
       const typeKey = matchTypeKeyByLabel(typeLabel);
-      const marker = { id: uid(), typeKey, xPct: clamp(xVal,0,100), yPct: clamp(yVal,0,100), angle: isNaN(angleVal)?0:angleVal, numRot: 0, note: note||'' };
+      const marker = { ...newMarkerIdPair(), typeKey, xPct: clamp(xVal,0,100), yPct: clamp(yVal,0,100), angle: isNaN(angleVal)?0:angleVal, numRot: 0, note: note||'' };
       if(!isNaN(lenVal) && lenVal>0) marker.lenMult = lenVal;
       if(getType(typeKey).endStyle==='rect'){
         const rx = idx.rectX>=0 ? parseFloat(r[idx.rectX]) : NaN;
@@ -4294,11 +4354,11 @@
             fields.xPct = clamp(fields.rectXPct+fields.rectWPct, 0, 100);
             fields.yPct = clamp(fields.rectYPct+fields.rectHPct, 0, 100);
           }
-          d.markers.push(Object.assign({id:markerId, numRot:0}, fields));
+          d.markers.push(Object.assign({id:markerId, uid:markerId, numRot:0}, fields));
           keepIds.add(markerId); added++;
         }
       } else {
-        d.markers.push(Object.assign({id:uid(), numRot:0}, fields));
+        d.markers.push(Object.assign(newMarkerIdPair(), {numRot:0}, fields));
         added++;
       }
     });
@@ -4730,6 +4790,11 @@
       if(settled !== total) return;
       drawings.sort((a,b)=> data.drawings.findIndex(x=>x.id===a.id) - data.drawings.findIndex(x=>x.id===b.id));
       activeDrawingId = drawings[0] ? drawings[0].id : null;
+      // uid 필드가 없는 예전 프로젝트 파일(1단계 이전)은 여는 시점에 한 번 발급해 채워준다 —
+      // 이미 uid()로 만들어진 값인 기존 id를 그대로 재사용하므로 다음에 저장해도 값이 바뀌지 않는다.
+      drawings.forEach(d=> d.markers.forEach(m=>{ if(!m.uid) m.uid = m.id || uid(); }));
+      // 전체 도면 번호(seq)도 불러온 직후 한 번 맞춰둔다 — 재정렬 토스트 없이 조용히(silent) 처리.
+      renumberAllDrawings({silent:true});
       renderDrawingTabs(); renderCanvas(); renderTable(); syncSurveyLocationField();
       isDirty = false;
       if(failedNames.length>0){
