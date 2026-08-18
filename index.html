@@ -397,6 +397,10 @@
   .mc-suffix{display:flex;align-items:center;gap:3px;flex:0 0 66px;width:66px;}
   .mc-suffix input{flex:1 1 auto;min-width:0;width:0;text-align:center;}
   .mc-suffix span{font-size:10.5px;color:var(--muted);flex:0 0 auto;}
+  /* 기울기 카드: 상부/하부 시준 도·분·초 3칸을 한 mc-suffix 안에 묶어 보여준다(2-2) */
+  .tilt-dms-group{flex:0 0 118px;width:118px;gap:1px;font-size:10px;color:var(--muted);}
+  .tilt-dms{width:0;flex:1 1 auto;min-width:0;text-align:center;padding:4px 1px !important;}
+  .tilt-result{flex:0 0 132px;min-width:110px;font-size:11px;color:var(--text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .marker-card .mc-photo,.marker-card .row-del{flex:0 0 auto;}
   .mc-photo{background:none;border:none;color:var(--muted);cursor:pointer;padding:2px 4px;position:relative;flex:0 0 auto;}
   .mc-photo:hover{color:var(--accent);}
@@ -832,6 +836,12 @@
           </div>
         </div>
         <div class="legend-preview" id="legendPreview"></div>
+        <!-- 부동침하 프리셋에서만 보이는 LV 그룹 자동계산 표(4-2). 마커의 LV그룹·측정값·경간 입력을
+             그룹별로 묶어 상대값·측정길이·Max-Min·기울기·등급을 자동으로 계산해 보여준다. -->
+        <div id="lvSummaryPanel" style="display:none;margin-top:10px;">
+          <div class="panel-title">LV 그룹 자동계산</div>
+          <div id="lvSummaryBody" style="font-size:11.5px;line-height:1.6;"></div>
+        </div>
       </div>
 
       <hr class="sep" />
@@ -893,6 +903,10 @@
         </div>
         <div class="side-field">도면 제목 (비워두면 자동 생성)
           <input type="text" class="side-input" id="docTitleInput" placeholder="예: 외관조사망도" />
+        </div>
+        <div class="side-field" style="margin-top:10px;" title="화면·표제란 인쇄 미리보기·PNG/PDF 저장에 항상 표시되는 NOTE 범례 박스의 크기입니다. 도면마다 따로 저장됩니다.">
+          범례(NOTE) 크기 <span id="legendScaleLabel">6.0</span>배
+          <input type="range" id="legendScaleSlider" min="1" max="12" step="0.5" value="6" style="width:100%;" />
         </div>
       </div>
 
@@ -1266,6 +1280,12 @@
       makeSeries({key:'tilt_pos', label:'측정위치', color:'#D93025', endStyle:'dot', badgeShape:'circle', numbering:{mode:'independent', digits:0, start:1}}),
       makeSeries({key:'tilt_dir', label:'측정방향', color:'#1A73E8', endStyle:'arrow', badgeShape:'circle', numbering:{mode:'independent', digits:0, start:1}}),
     ]},
+    // 4-1: 부동침하 위치도 신규 프리셋(부록35 기준) — 횡방향(X)·종방향(Y) 두 계열, 배지는 "P1"처럼
+    // 접두+번호. 범례 표기는 seriesLegendLabel()이 "P-0 : 횡방향(X방향)" 형태로 자동 생성한다.
+    { name:'부동침하', series:[
+      makeSeries({key:'lv_x', label:'횡방향(X방향)', color:'#FF0000', endStyle:'dot', badgeShape:'circle', prefix:'P', numbering:{mode:'independent', digits:0, start:1}}),
+      makeSeries({key:'lv_y', label:'종방향(Y방향)', color:'#0047AB', endStyle:'dot', badgeShape:'circle', prefix:'P', numbering:{mode:'independent', digits:0, start:1}}),
+    ]},
   ];
   const SERIES_PRESET_STORE_KEY = 'defectMarkerSeriesPresets_v1'; // 사용자가 저장한 커스텀 프리셋 목록
   const ACTIVE_PRESET_STORE_KEY = 'defectMarkerActivePreset_v1';
@@ -1305,13 +1325,22 @@
   // 남는다(다른 프리셋 소속이라도 getType()이 TYPE_MAP에 없으면 DEFECT_TYPES[0]로 안전하게 대체
   // 표시하므로 죽지 않는다 — 다만 도면을 섞어 쓰면 예전 계열 마커가 새 프리셋 색으로 잘못 보일 수
   // 있으니, 실무에서는 위치도 종류(도면)별로 프리셋을 통일해 쓰는 것을 권장한다).
-  function setActivePreset(name){
+  // opts.fromDrawingSwitch: 도면 탭 전환이 유발한 자동 프리셋 전환이면 true — 이때는 그 도면의
+  // d.presetName을 다시 자기 자신으로 덮어쓸 필요가 없으므로 건너뛴다. 사용자가 좌측 select에서
+  // 직접 프리셋을 바꾼 경우(fromDrawingSwitch 없음)에는 지금 활성 도면의 d.presetName을 갱신해,
+  // 그 도면은 이제부터 이 프리셋에 묶인다(5-1).
+  function setActivePreset(name, opts){
+    opts = opts || {};
     const preset = findPreset(name);
     activePresetName = preset.name;
     saveActivePresetName(activePresetName);
     DEFECT_TYPES = cloneSeriesList(preset.series);
     rebuildTypeMap();
     if(!TYPE_MAP[activeTypeKey]) activeTypeKey = DEFECT_TYPES[0] ? DEFECT_TYPES[0].key : activeTypeKey;
+    if(!opts.fromDrawingSwitch){
+      const d = getActiveDrawing();
+      if(d) d.presetName = activePresetName;
+    }
     renderTypeGrid();
     renderSeriesPresetSelect();
     const editorPanel = document.getElementById('seriesEditorPanel');
@@ -1330,8 +1359,20 @@
   // 배지에 실제로 표시할 문자열 — 접두가 있으면 "SH-01"처럼, 없으면 기존처럼 순수 번호만.
   // digits>0이면 그만큼 0을 채운다. CSV·XLSX·PNG/PDF·사진ZIP·화면 렌더링이 전부 이 함수를 공유해
   // "화면에 그려진 번호"와 "표에 적힌 번호"가 항상 같은 형식으로 일치하게 한다.
-  function formatMarkerLabel(m, idx){
+  // d(마커가 속한 도면)는 기울기 계열의 "동-측점" 라벨(2-4)을 만들 때만 쓰인다 — 생략하면
+  // getActiveDrawing()으로 대체하는데, 활성 도면이 아닌 다른 도면을 순회하며 부르는 내보내기
+  // 함수들(예: 전체 도면 CSV·사진ZIP)은 반드시 그 순회 중인 도면을 명시적으로 넘겨야 정확하다.
+  function formatMarkerLabel(m, idx, d){
     const type = getType(m.typeKey);
+    // 2-4: 기울기 계열은 접두+순번 대신 부록34 형식인 "구분-측점번호"(예: "205-1")로 표시한다.
+    // 측정방향 마커는 자신의 tiltBldg/tiltPt가 없으므로 연동된 측정위치 마커의 값을 따라간다.
+    if(m.typeKey==='tilt_pos' || m.typeKey==='tilt_dir'){
+      const dd = d || getActiveDrawing();
+      const src = (m.typeKey==='tilt_dir' && m.linkedFromId && dd) ? (dd.markers.find(x=>x.id===m.linkedFromId) || m) : m;
+      const bldg = (src.tiltBldg||'').trim(), pt = (src.tiltPt||'').trim();
+      if(bldg || pt) return `${bldg||'?'}-${pt||(m.seq||idx+1)}`;
+      // 아직 구분·측점을 입력하지 않았으면 빈 라벨보다 기존처럼 순번을 보여주는 편이 낫다(아래로 이어짐).
+    }
     const seq = m.seq || idx+1;
     const digits = (type.numbering && type.numbering.digits) || 0;
     const numStr = digits>0 ? String(seq).padStart(digits,'0') : String(seq);
@@ -1736,16 +1777,29 @@
     }
     return type.label;
   }
+  // 마커 유무와 무관하게 "지금 활성 프리셋의 계열 전체"를 범례 대상으로 삼는다(legendShow:false만 제외).
+  // 예전에는 usedTypes(d)로 "이 도면에 1개 이상 찍힌 계열"만 걸러냈는데, 그 결과 마커를 찍기 전에는
+  // 범례가 아예 안 그려지는 문제가 있었다(1장 수정지시서 1-1) — 항상 표시하도록 바꿈.
   function overlayLegendItems(d){
-    return usedTypes(d).filter(({type})=> type.legendShow!==false);
+    return DEFECT_TYPES.filter(type=> type.legendShow!==false).map(type=>({type}));
   }
-  // 캔버스(screen 또는 export)에 그리고, 다음 히트테스트·드래그에 쓸 사각형(캔버스 backing-px 기준)을
-  // 돌려준다. items가 없으면(그릴 게 없으면) null을 돌려주고 아무것도 그리지 않는다.
-  function drawOverlayLegend(ctx, d, w, h, opts){
-    opts = opts || {};
+  const DEFAULT_LEGEND_SCALE = 6; // 도면별 슬라이더(1~12) 미지정 시 기본 배율. 기존 글자가 10~11px로
+  // 너무 작아 안 보이던 문제(1-1) 때문에 기존 크기의 6배를 기본값으로 삼는다.
+  function legendScaleFor(d){
+    const v = d && d.legendScale;
+    return (typeof v==='number' && isFinite(v) && v>0) ? v : DEFAULT_LEGEND_SCALE;
+  }
+  // 그리기 전에 필요한 크기·글자 폭을 먼저 계산 — drawOverlayLegend 자신과, 표제란 내보내기가 범례 열
+  // 폭을 미리 예약할 때(도면을 그 나머지 폭에 배치하기 위해) 공통으로 쓴다. refW은 "1배율" 크기의
+  // 기준이 되는 폭(보통 도면 폭 또는 도곽 콘텐츠 폭)이고, 실제 배율은 legendScaleFor(d)를 곱해서 얻는다.
+  // scaleOverride: 지정하면 legendScaleFor(d)/autoScale 계산을 건너뛰고 이 배율을 그대로 쓴다 —
+  // drawOverlayLegend가 화면 미리보기에서 박스가 캔버스보다 커지는 것을 막으려고(아래 maxW/maxH)
+  // 축소된 배율로 다시 계산할 때 쓴다.
+  function overlayLegendGeometry(ctx, d, refW, scaleOverride){
     const items = overlayLegendItems(d);
     if(items.length===0) return null;
-    const scale = clamp(w / (d.naturalW||w||1), 0.05, 20);
+    const autoScale = clamp(refW / (d.naturalW||refW||1), 0.05, 20);
+    const scale = (typeof scaleOverride==='number' && scaleOverride>0) ? scaleOverride : autoScale * legendScaleFor(d);
     const pad = Math.max(7, 9*scale);
     const rowH = Math.max(15, 19*scale);
     const titleH = Math.max(17, 21*scale);
@@ -1760,11 +1814,46 @@
       maxTextW = Math.max(maxTextW, ctx.measureText(label).width);
       return label;
     });
+    ctx.restore();
     const boxW = Math.max(pad*2 + swatchR*2 + 6*scale + maxTextW, 70*scale);
     const boxH = pad + titleH + items.length*rowH + pad*0.4;
-    const pos = d.legendPct;
-    const x = (pos && typeof pos.x==='number') ? pos.x/100*w : (w - boxW - 12*scale);
-    const y = (pos && typeof pos.y==='number') ? pos.y/100*h : 12*scale;
+    return { items, labels, scale, pad, rowH, titleH, swatchR, font, titleFont, boxW, boxH };
+  }
+  // legendScale(기본 6배)이 계열 라벨이 길고 refW(도면·페이지 폭) 대비 naturalW가 작을 때는 박스가
+  // 감당 안 되게 커질 수 있다(화면에서는 마커를 찍기 어려워지고, 표제란 내보내기에서는 예약해둔 열
+  // 폭을 넘어 도면과 겹친다). maxW/maxH가 주어지면 넘치는 만큼 배율을 비례 축소해 다시 계산한다 —
+  // 사용자가 슬라이더로 고른 legendScale 값 자체(도면에 저장되는 값)는 바꾸지 않고, 그릴 때만 줄인다.
+  // 열 폭을 미리 예약하는 쪽(표제란 내보내기)과 실제로 그리는 쪽(drawOverlayLegend)이 항상 똑같은
+  // 축소 결과를 쓰도록, 두 곳 모두 이 함수 하나만 호출한다.
+  function overlayLegendGeometryCapped(ctx, d, refW, maxW, maxH){
+    let geo = overlayLegendGeometry(ctx, d, refW);
+    if(!geo) return null;
+    if((maxW && geo.boxW>maxW) || (maxH && geo.boxH>maxH)){
+      const shrink = Math.min(maxW ? maxW/geo.boxW : 1, maxH ? maxH/geo.boxH : 1);
+      geo = overlayLegendGeometry(ctx, d, refW, geo.scale*shrink);
+    }
+    return geo;
+  }
+  // 캔버스(screen 또는 export)에 그리고, 다음 히트테스트·드래그에 쓸 사각형(캔버스 backing-px 기준)을
+  // 돌려준다. items가 없으면(그릴 게 없으면) null을 돌려주고 아무것도 그리지 않는다.
+  // opts.anchor==='fixed'면 opts.x/opts.y를 그대로 좌상단으로 쓴다(표제란 내보내기의 "범례 전용 열"용,
+  // 도면 이미지 바깥에 항상 고정). 그 외에는 기존처럼 d.legendPct(도면 % 좌표, 없으면 우측 상단
+  // 기본값)로 이미지 위에 떠 있는 자유배치 박스를 그린다(화면 캔버스·표제란 없이 저장하는 경로).
+  function drawOverlayLegend(ctx, d, w, h, opts){
+    opts = opts || {};
+    const refW = (typeof opts.refW==='number') ? opts.refW : w;
+    const geo = overlayLegendGeometryCapped(ctx, d, refW, opts.maxW, opts.maxH);
+    if(!geo) return null;
+    const { items, labels, scale, pad, rowH, titleH, swatchR, font, titleFont, boxW, boxH } = geo;
+    let x, y;
+    if(opts.anchor==='fixed'){
+      x = opts.x; y = opts.y;
+    } else {
+      const pos = d.legendPct;
+      x = (pos && typeof pos.x==='number') ? pos.x/100*w : (w - boxW - 12*scale);
+      y = (pos && typeof pos.y==='number') ? pos.y/100*h : 12*scale;
+    }
+    ctx.save();
     ctx.fillStyle = 'rgba(255,255,255,0.92)';
     ctx.strokeStyle = opts.selected ? '#2a78d6' : 'rgba(11,11,11,0.55)';
     ctx.lineWidth = opts.selected ? Math.max(1.6, 2*scale) : Math.max(1, 1.2*scale);
@@ -1973,8 +2062,10 @@
     const {baseW,baseH} = fitBaseSize(naturalW,naturalH);
     // name(도면 탭 이름)은 업로드한 파일명에서 따오지만, surveyLocation(표제란의 "조사위치")은 이와
     // 별개로 사용자가 직접 입력하는 값이라 빈 문자열로 시작한다(파일명이 그대로 표제란에 들어가지 않도록).
+    // presetName: 새 도면은 지금 화면에 켜져 있는 프리셋을 그대로 물려받는다(5-1). 이후 도면 탭을
+    // 오갈 때마다 setActiveDrawing()이 이 값을 보고 프리셋을 자동으로 맞춰준다.
     return {id: uid(), name: name || ('도면 '+(drawings.length+1)), surveyLocation: '', imgSrc: dataURL, imgEl: img,
-      naturalW, naturalH, baseW, baseH, markers: []};
+      naturalW, naturalH, baseW, baseH, markers: [], presetName: activePresetName};
   }
 
   function renderDrawingTabs(){
@@ -2015,10 +2106,19 @@
     activeDrawingId = id;
     selectedIds = new Set();
     legendSelected = false;
+    // 5-1: 도면마다 저장해둔 presetName이 지금 켜진 프리셋과 다르면, 이 도면으로 전환하는 순간
+    // 자동으로 그 프리셋을 활성화한다 — 외관조사·장비조사·기울기·부동침하 도면이 한 프로젝트에
+    // 섞여 있어도 도면을 바꿀 때마다 색·번호가 어긋나지 않는다. 프리셋이 삭제되어 더는 존재하지
+    // 않으면(커스텀 프리셋을 지운 경우 등) 조용히 지금 프리셋을 유지한다.
+    const d = getActiveDrawing();
+    if(d && d.presetName && d.presetName!==activePresetName && allPresets().some(p=>p.name===d.presetName)){
+      setActivePreset(d.presetName, {fromDrawingSwitch:true});
+    }
     renderDrawingTabs();
     renderCanvas();
     renderTable();
     syncSurveyLocationField();
+    syncLegendScaleField();
   }
 
   // 표제란의 "조사위치"는 도면 탭 이름(d.name, 보통 업로드한 파일명에서 옴)과는 별개인, 도면마다
@@ -2029,6 +2129,16 @@
     const d = getActiveDrawing();
     inp.value = d ? (d.surveyLocation||'') : '';
     refreshTbPreviewIfOpen();
+  }
+  // 1장 1-2-3: 범례 크기 슬라이더는 도면별 값(d.legendScale)을 보여준다 — 도면을 바꿀 때마다 갱신.
+  function syncLegendScaleField(){
+    const slider = document.getElementById('legendScaleSlider');
+    if(!slider) return;
+    const d = getActiveDrawing();
+    const v = legendScaleFor(d || {});
+    slider.value = String(v);
+    const label = document.getElementById('legendScaleLabel');
+    if(label) label.textContent = v.toFixed(1);
   }
 
   // ---------- 표제란(도곽) 인쇄 미리보기 ----------
@@ -2343,11 +2453,21 @@
     ctx.clearRect(0,0,w,h);
     const r = markerRadiusFor(d, w, h);
     d.markers.forEach((m,idx)=>{
-      drawMarkerDispatch(ctx, d, m, formatMarkerLabel(m, idx), w, h, r, selectedIds.has(m.id));
+      drawMarkerDispatch(ctx, d, m, formatMarkerLabel(m, idx, d), w, h, r, selectedIds.has(m.id));
     });
     // 히트테스트·드래그(hitTestLegendBox)가 쓸 수 있도록, 방금 그린 자리를 캔버스 backing-px 기준으로
     // 도면 객체에 캐시해둔다 — 매 프레임 다시 그리면서 함께 갱신되므로 항상 최신 위치를 반영한다.
-    d.__legendBox = drawOverlayLegend(ctx, d, w, h, { selected: legendSelected && d.id===activeDrawingId });
+    // refW을 그냥 w(캔버스 backing 폭)로 두면 overlayLegendGeometry의 autoScale(=refW/naturalW)에
+    // fitBaseSize()가 작은 이미지를 최대 2배까지 확대해 보여주는 배율까지 섞여 들어가, legendScale(기본
+    // 6배)과 곱해지며 화면 미리보기에서만 범례가 비정상적으로 커지는 버그가 있었다(예: 400px 이미지 →
+    // baseW 800px인 경우 autoScale=2, 6배와 곱해져 실제로는 12배가 됨). w 대신 "fitBaseSize 확대율을
+    // 제외한" naturalW*줌*DPR을 넘겨서, 표제란 내보내기(autoScale=1 고정)와 같은 기준으로 legendScale이
+    // 적용되게 한다 — 줌에 따라 범례가 함께 커지고 작아지는 동작은 그대로 유지된다.
+    const legendRefW = d.naturalW * (w / (d.baseW || w || 1));
+    d.__legendBox = drawOverlayLegend(ctx, d, w, h, {
+      selected: legendSelected && d.id===activeDrawingId, refW: legendRefW,
+      maxW: w*0.55, maxH: h*0.55, // 캔버스 대부분을 뒤덮지 않도록(위 drawOverlayLegend 주석 참고)
+    });
     renderLegendPreview(d);
     drawInteractionOverlay(ctx, w, h);
     drawCoordGuideOverlay(ctx, w, h);
@@ -2575,7 +2695,7 @@
       tctx.drawImage(d.imgEl, 0, 0, tw, th);
       const tr = clamp(Math.min(tw,th)*0.05, 5, 14);
       d.markers.forEach((m, idx)=>{
-        drawMarkerDispatch(tctx, d, m, formatMarkerLabel(m, idx), tw, th, tr, false);
+        drawMarkerDispatch(tctx, d, m, formatMarkerLabel(m, idx, d), tw, th, tr, false);
       });
       const label = document.createElement('div');
       label.className = 'thumb-label';
@@ -2609,14 +2729,9 @@
   }
   function toggleGridView(){ setGridView(!gridViewMode); }
 
-  // 결함 목록 하단 범례: "유형"(rptType, 카드의 3번째 칸) 값 기준으로 묶는다. rptType을 입력하지 않은
-  // 마커는 예전처럼 마킹 색상유형(DEFECT_TYPES) 라벨 — "벽체(1)"·"바닥/천장(2)" 등 — 로 표시한다.
-  // 마킹 색상유형(DEFECT_TYPES) 기준 집계 — 인쇄되는 표제란 하단 범례(computeLegendLayout)가 쓴다.
-  // 도면에 실제로 찍히는 색·모양과 항상 일치해야 하므로 rptType과는 별개로 유지한다.
-  function usedTypes(d){
-    return DEFECT_TYPES.map(type=>({type, count: d.markers.filter(m=>m.typeKey===type.key).length}))
-      .filter(x=>x.count>0);
-  }
+  // (구) usedTypes(d)는 표제란 하단 가로 범례(computeLegendLayout, 1-3에 따라 제거)에서만 쓰였던
+  // "마커가 1개 이상 찍힌 계열만" 집계 함수였다 — overlayLegendItems가 항상 전체 계열을 쓰도록
+  // 바뀌면서 더 이상 호출되지 않아 제거함(5장 5-6 정리 대상).
 
   // 결함 목록 하단 범례(사이드바)용 집계 — "유형"(rptType, 카드의 3번째 칸) 값 기준으로 묶는다. rptType을
   // 입력하지 않은 마커는 예전처럼 마킹 색상유형 라벨 — "벽체(1)"·"바닥/천장(2)" 등 — 로 표시한다.
@@ -3111,10 +3226,24 @@
     newImg.src = newSrc;
   }
 
+  // 기울기 측정위치를 지우면 짝 방향 마커도 함께 지우고, 방향 마커를 직접 지우면 측정위치 쪽의
+  // linkedDirId 연결을 끊어 죽은 참조가 남지 않게 한다(2-4).
+  function idsWithLinkedPairs(d, ids){
+    const out = new Set(ids);
+    d.markers.forEach(m=>{ if(out.has(m.id) && m.linkedDirId) out.add(m.linkedDirId); });
+    return out;
+  }
+  function removeMarkersById(d, idsToDelete){
+    d.markers = d.markers.filter(m=>{
+      if(idsToDelete.has(m.id)) return false;
+      if(m.linkedDirId && idsToDelete.has(m.linkedDirId)) m.linkedDirId = null;
+      return true;
+    });
+  }
   function deleteMarker(id){
     const d = getActiveDrawing(); if(!d) return;
     pushUndo();
-    d.markers = d.markers.filter(m=>m.id!==id);
+    removeMarkersById(d, idsWithLinkedPairs(d, [id]));
     selectedIds.delete(id);
     renderCanvas(); renderTable();
   }
@@ -3122,7 +3251,7 @@
   function deleteSelected(){
     const d = getActiveDrawing(); if(!d || selectedIds.size===0) return;
     pushUndo();
-    d.markers = d.markers.filter(m=>!selectedIds.has(m.id));
+    removeMarkersById(d, idsWithLinkedPairs(d, selectedIds));
     selectedIds = new Set();
     renderCanvas(); renderTable();
   }
@@ -3149,7 +3278,8 @@
   // 갱신한다 — renderTable()이 다시 호출되지 않는 필드 편집(직접입력 텍스트 등)에서도 검색이
   // 최신 값을 바로 반영하도록.
   function computeCardSearchIndex(m){
-    return [getType(m.typeKey).label, m.rptType, m.rptMember, m.rptDefect, m.rptTag]
+    return [getType(m.typeKey).label, m.rptType, m.rptMember, m.rptDefect, m.rptTag,
+        m.tiltBldg, m.tiltPt, m.lvGroup, m.eqFloor, m.eqLoc, m.eqMember, m.eqNote]
       .filter(Boolean).join(' ').toLowerCase();
   }
   function updateCardSearchIndex(card, m){
@@ -3172,6 +3302,267 @@
     });
     custom.addEventListener('input', ()=>{ markDirty(); m[fieldKey] = custom.value; updateCardSearchIndex(card, m); });
   }
+
+  // ---------- 기울기 전용 카드(측정위치/측정방향) ----------
+  // 2장 수정지시서: 기울기 프리셋은 계열 키가 항상 tilt_pos/tilt_dir(BUILTIN_PRESETS 정의, 계열
+  // 편집에서 라벨·색은 바뀌어도 key는 안 바뀜)라는 전제로, 이 두 키에 한해 결함 목록 카드를 완전히
+  // 다른 레이아웃(각도 입력 6칸+자동계산)으로 그린다. 다른 프리셋과 섞이지 않는 전용 도면이 전제라
+  // (도면당 프리셋 하나, 5-1) "이 도면은 지금 이 스키마만 쓴다"는 가정이 항상 성립한다.
+  function dmsToSec(dv,mv,sv){ return (Number(dv)||0)*3600 + (Number(mv)||0)*60 + (Number(sv)||0); }
+  function secToDms(sec){
+    sec = Math.round(sec);
+    const dg = Math.floor(sec/3600); const rem = sec - dg*3600;
+    const mi = Math.floor(rem/60); const s = rem - mi*60;
+    return { d:dg, m:mi, s };
+  }
+  // 상부−하부 수평각차를 0~360도(초 단위)로 정규화하고, ±180도 기준 부호로 좌/우를 자동 판정한다(2-3).
+  function computeTiltDiff(m){
+    const upSec = dmsToSec(m.tiltUpD, m.tiltUpM, m.tiltUpS);
+    const loSec = dmsToSec(m.tiltLoD, m.tiltLoM, m.tiltLoS);
+    const diffSec = ((upSec - loSec) % 1296000 + 1296000) % 1296000; // 0 ≤ diff < 360°(=1296000")
+    const signed = diffSec > 648000 ? diffSec - 1296000 : diffSec; // −180°~+180°
+    const direction = signed < 0 ? '좌' : (signed > 0 ? '우' : '없음');
+    return { diffSec, dms: secToDms(diffSec), signed, direction };
+  }
+  function tiltHasAngleInput(m){
+    return !!(m.tiltUpD || m.tiltUpM || m.tiltUpS || m.tiltLoD || m.tiltLoM || m.tiltLoS);
+  }
+  function tiltResultText(m){
+    if(!tiltHasAngleInput(m)) return '-';
+    const calc = computeTiltDiff(m);
+    const dir = (m.tiltDir && m.tiltDir!=='자동') ? m.tiltDir : calc.direction;
+    return `${calc.dms.d}°${calc.dms.m}′${calc.dms.s}″ (${dir})`;
+  }
+  // 기울기 프리셋의 두 계열 중 "측정방향" 키 — tilt_pos가 아닌 나머지 계열을 방향 계열로 본다
+  // (BUILTIN_PRESETS 정의 순서: 측정위치, 측정방향). 계열 편집에서 계열을 추가/삭제해 이 전제가
+  // 깨지면 안전하게 'tilt_dir'로 대체한다.
+  function tiltDirSeriesKey(){
+    const other = DEFECT_TYPES.find(t=>t.key!=='tilt_pos');
+    return other ? other.key : 'tilt_dir';
+  }
+  // 측정위치 마커(m)의 입력값이 바뀔 때마다 호출 — 수평각차를 다시 계산해 저장하고, 그 결과(또는
+  // 사용자가 수동으로 고른 좌/우)에 맞춰 짝 마커(측정방향 화살표)를 만들거나 갱신하거나 지운다(2-4).
+  function updateTiltMarker(m){
+    const calc = computeTiltDiff(m);
+    m.tiltDiffD = calc.dms.d; m.tiltDiffM = calc.dms.m; m.tiltDiffS = calc.dms.s;
+    m.tiltDirAuto = calc.direction; // 자동 판정 결과(참고용 — tiltDir이 '자동'이 아닐 때도 남겨둠)
+    const effectiveDir = (m.tiltDir && m.tiltDir!=='자동') ? m.tiltDir : calc.direction;
+    syncTiltDirMarker(m, effectiveDir);
+  }
+  function syncTiltDirMarker(m, direction){
+    const d = getActiveDrawing(); if(!d) return;
+    if(direction==='없음' || !tiltHasAngleInput(m)){
+      if(m.linkedDirId){
+        d.markers = d.markers.filter(x=>x.id!==m.linkedDirId);
+        selectedIds.delete(m.linkedDirId);
+        m.linkedDirId = null;
+      }
+      return;
+    }
+    let dirMarker = m.linkedDirId ? d.markers.find(x=>x.id===m.linkedDirId) : null;
+    const targetAngle = direction==='좌' ? 180 : 0;
+    if(!dirMarker){
+      const pair = newMarkerIdPair();
+      dirMarker = { id: pair.id, uid: pair.uid, typeKey: tiltDirSeriesKey(), xPct: m.xPct, yPct: m.yPct,
+        angle: targetAngle, lenMult: 1, numRot: 0, linkedFromId: m.id, dirAngleManual: false };
+      d.markers.push(dirMarker);
+      m.linkedDirId = dirMarker.id;
+    }
+    dirMarker.xPct = m.xPct; dirMarker.yPct = m.yPct; // 측정위치를 옮기면 방향 마커도 같이 따라간다
+    if(!dirMarker.dirAngleManual) dirMarker.angle = targetAngle;
+  }
+  function buildTiltPosCardHTML(m, idx){
+    const dirOptions = ['자동','좌','우'].map(v=>`<option value="${v}" ${((m.tiltDir||'자동')===v)?'selected':''}>${v}</option>`).join('');
+    return `
+      <div class="mc-row">
+        <input type="text" class="mc-num" data-role="pos" tabindex="-1" value="${m.seq||idx+1}" title="번호"/>
+        <select data-role="type" class="mc-marktype" tabindex="-1" title="마킹 색상·모양">${DEFECT_TYPES.map(t=>`<option value="${t.key}" ${t.key===m.typeKey?'selected':''}>${t.label}</option>`).join('')}</select>
+        <span class="mc-field" data-label="구분"><input type="text" data-role="tiltBldg" placeholder="구분(예: 205동)" title="구분(동 이름 등)" value="${escapeAttr(m.tiltBldg||'')}"/></span>
+        <span class="mc-suffix" data-label="측점"><input type="text" data-role="tiltPt" placeholder="측점" title="측점번호" value="${escapeAttr(m.tiltPt||'')}"/></span>
+        <span class="mc-suffix tilt-dms-group" data-label="상부(도분초)" title="상부시준 도/분/초">
+          <input type="text" class="tilt-dms" data-role="tiltUpD" placeholder="도" value="${escapeAttr(m.tiltUpD||'')}"/>°<input type="text" class="tilt-dms" data-role="tiltUpM" placeholder="분" value="${escapeAttr(m.tiltUpM||'')}"/>′<input type="text" class="tilt-dms" data-role="tiltUpS" placeholder="초" value="${escapeAttr(m.tiltUpS||'')}"/>″
+        </span>
+        <span class="mc-suffix tilt-dms-group" data-label="하부(도분초)" title="하부시준 도/분/초">
+          <input type="text" class="tilt-dms" data-role="tiltLoD" placeholder="도" value="${escapeAttr(m.tiltLoD||'')}"/>°<input type="text" class="tilt-dms" data-role="tiltLoM" placeholder="분" value="${escapeAttr(m.tiltLoM||'')}"/>′<input type="text" class="tilt-dms" data-role="tiltLoS" placeholder="초" value="${escapeAttr(m.tiltLoS||'')}"/>″
+        </span>
+        <span class="mc-suffix" data-label="수평거리"><input type="text" data-role="tiltDist" placeholder="거리" title="수평거리(mm)" value="${escapeAttr(m.tiltDist||'')}"/><span>mm</span></span>
+        <span class="mc-field" data-label="방향"><select data-role="tiltDir" title="방향(자동판정 또는 수동 지정)">${dirOptions}</select></span>
+        <span class="mc-field tilt-result" data-label="수평각차(자동)" title="자동계산된 상부-하부 수평각차와 방향">${tiltResultText(m)}</span>
+        <button class="mc-photo" data-role="photo" tabindex="-1" title="사진 첨부"><svg class="icon"><use href="#i-camera"/></svg>${(m.photos&&m.photos.length)?`<span class="photo-count">${m.photos.length}</span>`:''}</button>
+        <button class="row-del" data-role="del" tabindex="-1" title="삭제"><svg class="icon"><use href="#i-close"/></svg></button>
+      </div>`;
+  }
+  function buildTiltDirCardHTML(m, idx){
+    const linkedNote = m.linkedFromId ? '측정위치에 자동 연동됨 (각도는 도면에서 드래그로 미세조정 가능)' : '독립 배치된 방향 마커';
+    return `
+      <div class="mc-row">
+        <input type="text" class="mc-num" data-role="pos" tabindex="-1" value="${m.seq||idx+1}" title="번호"/>
+        <select data-role="type" class="mc-marktype" tabindex="-1" title="마킹 색상·모양">${DEFECT_TYPES.map(t=>`<option value="${t.key}" ${t.key===m.typeKey?'selected':''}>${t.label}</option>`).join('')}</select>
+        <span class="mc-field" style="flex:1;color:var(--text-secondary);font-size:11.5px;">${linkedNote}</span>
+        <button class="mc-photo" data-role="photo" tabindex="-1" title="사진 첨부"><svg class="icon"><use href="#i-camera"/></svg>${(m.photos&&m.photos.length)?`<span class="photo-count">${m.photos.length}</span>`:''}</button>
+        <button class="row-del" data-role="del" tabindex="-1" title="삭제"><svg class="icon"><use href="#i-close"/></svg></button>
+      </div>`;
+  }
+  function refreshTiltRowResult(card, m){
+    const el = card.querySelector('.tilt-result');
+    if(el) el.textContent = tiltResultText(m);
+  }
+  function wireTiltPosCard(card, m){
+    card.querySelector('[data-role="tiltBldg"]').addEventListener('input', e=>{ markDirty(); m.tiltBldg=e.target.value; updateCardSearchIndex(card,m); });
+    card.querySelector('[data-role="tiltPt"]').addEventListener('input', e=>{ markDirty(); m.tiltPt=e.target.value; updateCardSearchIndex(card,m); });
+    ['tiltUpD','tiltUpM','tiltUpS','tiltLoD','tiltLoM','tiltLoS','tiltDist'].forEach(key=>{
+      const inp = card.querySelector(`[data-role="${key}"]`);
+      inp.addEventListener('input', e=>{
+        markDirty(); m[key] = e.target.value;
+        const hadLink = !!m.linkedDirId;
+        updateTiltMarker(m);
+        refreshTiltRowResult(card, m);
+        renderCanvas();
+        if(!hadLink && m.linkedDirId) renderTable(); // 이번 입력으로 방향 마커가 막 생겼을 때만 목록에 그 행을 추가
+      });
+      inp.addEventListener('change', ()=> renderTable()); // 포커스를 벗어나는 시점에 번호·정렬을 최종 반영
+    });
+    card.querySelector('[data-role="tiltDir"]').addEventListener('change', e=>{
+      markDirty(); m.tiltDir = e.target.value;
+      updateTiltMarker(m);
+      renderCanvas(); renderTable();
+    });
+  }
+
+  // ---------- 부동침하 전용 카드 + LV 그룹 자동계산(4장) ----------
+  // 기울기(1/N)의 N값에 따른 등급 a~e 판정 기준값 — 실제 현장 기준표를 확인하기 전까지의 추정값이니
+  // (2단계에서 장비조사·기울기 프리셋 라벨을 추정값으로 채운 것과 같은 성격) 필요하면 이 배열만 고치면 된다.
+  const LV_GRADE_THRESHOLDS = [ // n = 기울기 1/n의 n값. n이 클수록(기울기가 완만할수록) 양호한 등급.
+    { grade:'a', minN:500 }, { grade:'b', minN:300 }, { grade:'c', minN:150 }, { grade:'d', minN:100 }, { grade:'e', minN:0 },
+  ];
+  function lvGradeForN(n){
+    if(!isFinite(n) || n<=0) return '-';
+    for(const t of LV_GRADE_THRESHOLDS){ if(n>=t.minN) return t.grade; }
+    return 'e';
+  }
+  // LV그룹(m.lvGroup) 문자열이 같은 lv_x/lv_y 마커끼리 묶어 그룹별 자동계산 결과를 돌려준다.
+  function computeLvGroups(d){
+    const order = [];
+    const byKey = new Map();
+    d.markers.forEach((m, idx)=>{
+      if(m.typeKey!=='lv_x' && m.typeKey!=='lv_y') return;
+      const key = (m.lvGroup||'').trim() || '(미지정)';
+      if(!byKey.has(key)){ byKey.set(key, []); order.push(key); }
+      byKey.get(key).push({ m, idx });
+    });
+    return order.map(key=>{
+      const items = byKey.get(key);
+      const values = items.map(it=>Number(it.m.lvValue)).filter(v=>isFinite(v));
+      const spans = items.map(it=>Number(it.m.lvSpan)).filter(v=>isFinite(v));
+      const row = { key, items, count: items.length };
+      if(values.length===0) return row;
+      row.maxV = Math.max(...values); row.minV = Math.min(...values);
+      row.measuredLenMm = spans.reduce((a,b)=>a+b, 0);
+      row.diffMm = (row.maxV - row.minV) * 10; // 측정값은 cm 단위 입력 → mm로 환산
+      row.n = row.diffMm>0 ? Math.round(row.measuredLenMm / row.diffMm) : Infinity;
+      row.grade = lvGradeForN(row.n);
+      return row;
+    });
+  }
+  function renderLvSummary(){
+    const panel = document.getElementById('lvSummaryPanel');
+    const body = document.getElementById('lvSummaryBody');
+    if(!panel || !body) return;
+    const d = getActiveDrawing();
+    const isLvPreset = activePresetName==='부동침하';
+    panel.style.display = isLvPreset ? '' : 'none';
+    if(!isLvPreset || !d) return;
+    const groups = computeLvGroups(d);
+    if(groups.length===0){ body.innerHTML = '<div style="color:var(--text-secondary);">LV그룹을 입력하면 여기에 자동계산됩니다.</div>'; return; }
+    body.innerHTML = groups.map(g=>{
+      if(g.maxV===undefined) return `<div style="margin-bottom:8px;"><b>${escapeHTML(g.key)}</b> — 측정값 입력 대기 중 (${g.count}점)</div>`;
+      const ratioStr = isFinite(g.n) ? `1/${g.n}` : '-';
+      return `<div style="margin-bottom:8px;">
+        <b>${escapeHTML(g.key)}</b> (${g.count}점)<br/>
+        측정길이 ${g.measuredLenMm.toLocaleString()}mm · Max−Min ${g.diffMm.toFixed(0)}mm · 기울기 ${ratioStr} · 등급 <b>${g.grade}</b>
+      </div>`;
+    }).join('');
+  }
+  function buildLvCardHTML(m, idx){
+    return `
+      <div class="mc-row">
+        <input type="text" class="mc-num" data-role="pos" tabindex="-1" value="${m.seq||idx+1}" title="번호"/>
+        <select data-role="type" class="mc-marktype" tabindex="-1" title="마킹 색상·모양">${DEFECT_TYPES.map(t=>`<option value="${t.key}" ${t.key===m.typeKey?'selected':''}>${t.label}</option>`).join('')}</select>
+        <span class="mc-field" data-label="LV그룹"><input type="text" data-role="lvGroup" placeholder="예: LV-1 X방향" title="LV 그룹 — 같은 그룹끼리 자동 집계됩니다" value="${escapeAttr(m.lvGroup||'')}"/></span>
+        <span class="mc-suffix" data-label="측점">${escapeHTML(formatMarkerLabel(m, idx))}</span>
+        <span class="mc-suffix" data-label="측정값"><input type="text" data-role="lvValue" placeholder="측정값" title="측정값(cm)" value="${escapeAttr(m.lvValue||'')}"/><span>cm</span></span>
+        <span class="mc-suffix" data-label="경간"><input type="text" data-role="lvSpan" placeholder="경간" title="경간(mm)" value="${escapeAttr(m.lvSpan||'')}"/><span>mm</span></span>
+        <button class="mc-photo" data-role="photo" tabindex="-1" title="사진 첨부"><svg class="icon"><use href="#i-camera"/></svg>${(m.photos&&m.photos.length)?`<span class="photo-count">${m.photos.length}</span>`:''}</button>
+        <button class="row-del" data-role="del" tabindex="-1" title="삭제"><svg class="icon"><use href="#i-close"/></svg></button>
+      </div>`;
+  }
+  function wireLvCard(card, m){
+    card.querySelector('[data-role="lvGroup"]').addEventListener('input', e=>{ markDirty(); m.lvGroup=e.target.value; updateCardSearchIndex(card,m); renderLvSummary(); });
+    ['lvValue','lvSpan'].forEach(key=>{
+      card.querySelector(`[data-role="${key}"]`).addEventListener('input', e=>{ markDirty(); m[key]=e.target.value; renderLvSummary(); });
+    });
+  }
+
+  // ---------- 장비조사 전용 카드(SH/PH/DM, 3장 3-2) ----------
+  // 기울기·부동침하와 같은 이유로 typeKey가 'sh'/'ph'/'dm'(BUILTIN_PRESETS 정의, 계열 편집에서
+  // 라벨·색만 바뀌고 key는 안 바뀜)인지로 분기한다. 장비조사 프리셋은 한 도면 안에 SH·PH·DM 마커가
+  // 섞일 수 있어(기울기·부동침하와 달리 "도면당 스키마 하나" 전제가 안 맞음) 고정된 한 줄 헤더로는
+  // 계열마다 다른 칸을 정확히 표시할 수 없다 — 그래서 헤더는 안내 문구로 남겨두고, 각 칸은
+  // placeholder·title(툴팁)·data-label(태블릿에서 실제로 라벨로 렌더됨, 260줄 근처 CSS 참고)로
+  // 구분한다. 세 계열이 공통으로 쓰는 값(층수·위치·부재명 등)은 필드 이름을 공유한다(eqFloor 등) —
+  // 한 마커는 항상 세 계열 중 하나뿐이라 값이 섞일 일이 없다.
+  function buildShCardHTML(m, idx){
+    return `
+      <div class="mc-row">
+        <input type="text" class="mc-num" data-role="pos" tabindex="-1" value="${m.seq||idx+1}" title="번호"/>
+        <select data-role="type" class="mc-marktype" tabindex="-1" title="마킹 색상·모양">${DEFECT_TYPES.map(t=>`<option value="${t.key}" ${t.key===m.typeKey?'selected':''}>${t.label}</option>`).join('')}</select>
+        <span class="mc-field" data-label="층수"><input type="text" data-role="eqFloor" placeholder="층수" title="층수" value="${escapeAttr(m.eqFloor||'')}"/></span>
+        <span class="mc-field" data-label="위치"><input type="text" data-role="eqLoc" placeholder="위치" title="위치" value="${escapeAttr(m.eqLoc||'')}"/></span>
+        <span class="mc-field" data-label="부재명"><input type="text" data-role="eqMember" placeholder="부재명" title="부재명" value="${escapeAttr(m.eqMember||'')}"/></span>
+        <span class="mc-field" data-label="비고" style="flex:1.4 1 100px;"><input type="text" data-role="eqNote" placeholder="비고" title="비고" value="${escapeAttr(m.eqNote||'')}"/></span>
+        <button class="mc-photo" data-role="photo" tabindex="-1" title="사진 첨부"><svg class="icon"><use href="#i-camera"/></svg>${(m.photos&&m.photos.length)?`<span class="photo-count">${m.photos.length}</span>`:''}</button>
+        <button class="row-del" data-role="del" tabindex="-1" title="삭제"><svg class="icon"><use href="#i-close"/></svg></button>
+      </div>`;
+  }
+  function buildPhCardHTML(m, idx){
+    return `
+      <div class="mc-row">
+        <input type="text" class="mc-num" data-role="pos" tabindex="-1" value="${m.seq||idx+1}" title="번호"/>
+        <select data-role="type" class="mc-marktype" tabindex="-1" title="마킹 색상·모양">${DEFECT_TYPES.map(t=>`<option value="${t.key}" ${t.key===m.typeKey?'selected':''}>${t.label}</option>`).join('')}</select>
+        <span class="mc-suffix" data-label="구분" title="자동 채번(PH-01…)">${escapeHTML(formatMarkerLabel(m, idx))}</span>
+        <span class="mc-field" data-label="위치"><input type="text" data-role="eqLoc" placeholder="위치" title="위치" value="${escapeAttr(m.eqLoc||'')}"/></span>
+        <span class="mc-field" data-label="부재"><input type="text" data-role="eqMember" placeholder="부재" title="부재" value="${escapeAttr(m.eqMember||'')}"/></span>
+        <span class="mc-suffix" data-label="탄산화깊이"><input type="text" data-role="eqCarbDepth" placeholder="깊이" title="탄산화 깊이(mm)" value="${escapeAttr(m.eqCarbDepth||'')}"/><span>mm</span></span>
+        <span class="mc-suffix" data-label="피복두께"><input type="text" data-role="eqCoverDepth" placeholder="두께" title="피복두께(mm)" value="${escapeAttr(m.eqCoverDepth||'')}"/><span>mm</span></span>
+        <button class="mc-photo" data-role="photo" tabindex="-1" title="사진 첨부"><svg class="icon"><use href="#i-camera"/></svg>${(m.photos&&m.photos.length)?`<span class="photo-count">${m.photos.length}</span>`:''}</button>
+        <button class="row-del" data-role="del" tabindex="-1" title="삭제"><svg class="icon"><use href="#i-close"/></svg></button>
+      </div>`;
+  }
+  function buildDmCardHTML(m, idx){
+    return `
+      <div class="mc-row">
+        <input type="text" class="mc-num" data-role="pos" tabindex="-1" value="${m.seq||idx+1}" title="번호"/>
+        <select data-role="type" class="mc-marktype" tabindex="-1" title="마킹 색상·모양">${DEFECT_TYPES.map(t=>`<option value="${t.key}" ${t.key===m.typeKey?'selected':''}>${t.label}</option>`).join('')}</select>
+        <span class="mc-suffix" data-label="No." title="자동 채번(DM-01…)">${escapeHTML(formatMarkerLabel(m, idx))}</span>
+        <span class="mc-field" data-label="층수"><input type="text" data-role="eqFloor" placeholder="층수" title="층수" value="${escapeAttr(m.eqFloor||'')}"/></span>
+        <span class="mc-field" data-label="위치"><input type="text" data-role="eqLoc" placeholder="위치" title="위치" value="${escapeAttr(m.eqLoc||'')}"/></span>
+        <span class="mc-field" data-label="부재명"><input type="text" data-role="eqMember" placeholder="부재명" title="부재명" value="${escapeAttr(m.eqMember||'')}"/></span>
+        <span class="mc-suffix" data-label="실측상"><input type="text" data-role="eqMeasured" placeholder="실측상" title="실측상(mm)" value="${escapeAttr(m.eqMeasured||'')}"/><span>mm</span></span>
+        <button class="mc-photo" data-role="photo" tabindex="-1" title="사진 첨부"><svg class="icon"><use href="#i-camera"/></svg>${(m.photos&&m.photos.length)?`<span class="photo-count">${m.photos.length}</span>`:''}</button>
+        <button class="row-del" data-role="del" tabindex="-1" title="삭제"><svg class="icon"><use href="#i-close"/></svg></button>
+      </div>`;
+  }
+  function wireEqTextFields(card, m, keys){
+    keys.forEach(key=>{
+      card.querySelector(`[data-role="${key}"]`).addEventListener('input', e=>{
+        markDirty(); m[key] = e.target.value;
+        updateCardSearchIndex(card, m);
+      });
+    });
+  }
+  function wireShCard(card, m){ wireEqTextFields(card, m, ['eqFloor','eqLoc','eqMember','eqNote']); }
+  function wirePhCard(card, m){ wireEqTextFields(card, m, ['eqLoc','eqMember','eqCarbDepth','eqCoverDepth']); }
+  function wireDmCard(card, m){ wireEqTextFields(card, m, ['eqFloor','eqLoc','eqMember','eqMeasured']); }
 
   // ---------- 퀵 입력 시트(태블릿 전용) ----------
   // 마커를 찍으면 서랍(우측 결함 목록)을 열지 않고도 유형·부재명·결함명만 바로 채울 수 있게, 캔버스
@@ -3253,10 +3644,57 @@
     renderTable();
   }
 
+  // 결함 목록 상단 고정 헤더(marker-list-head)의 컬럼 라벨 — 활성 프리셋이 기울기/부동침하면 그
+  // 프리셋 전용 카드(아래)의 칸 이름으로 바꿔 보여준다. 한 도면은 프리셋 하나만 쓴다는 전제(5-1)라
+  // 헤더 하나로 항상 정확하다.
+  const DEFAULT_MARKER_LIST_HEAD_HTML = `
+    <span class="mc-num"></span>
+    <span class="mc-marktype"></span>
+    <span class="mc-field">유형</span>
+    <span class="mc-field">부재명</span>
+    <span class="mc-field">결함명</span>
+    <span class="mc-suffix">폭</span>
+    <span class="mc-suffix">길이</span>
+    <span class="mc-suffix">개수</span>
+    <span class="mc-suffix">사진번호</span>`;
+  const TILT_MARKER_LIST_HEAD_HTML = `
+    <span class="mc-num"></span>
+    <span class="mc-marktype"></span>
+    <span class="mc-field">구분</span>
+    <span class="mc-suffix">측점</span>
+    <span class="mc-suffix">상부(도분초)</span>
+    <span class="mc-suffix">하부(도분초)</span>
+    <span class="mc-suffix">수평거리</span>
+    <span class="mc-field">방향</span>
+    <span class="mc-field">수평각차(자동)</span>`;
+  const LV_MARKER_LIST_HEAD_HTML = `
+    <span class="mc-num"></span>
+    <span class="mc-marktype"></span>
+    <span class="mc-field">LV그룹</span>
+    <span class="mc-suffix">측점</span>
+    <span class="mc-suffix">측정값(cm)</span>
+    <span class="mc-suffix">경간(mm)</span>`;
+  // 장비조사는 한 도면에 SH/PH/DM이 섞일 수 있어(계열마다 칸 구성이 다름) 고정된 한 줄 헤더로 정확한
+  // 컬럼명을 달 수 없다 — 안내 문구만 두고, 각 칸은 카드의 placeholder·title(툴팁)로 구분한다.
+  const EQ_MARKER_LIST_HEAD_HTML = `
+    <span class="mc-num"></span>
+    <span class="mc-marktype"></span>
+    <span class="mc-field" style="flex:1;color:var(--text-secondary);font-weight:400;">SH(층수·위치·부재명·비고) · PH(위치·부재·탄산화깊이·피복두께) · DM(층수·위치·부재명·실측상) — 계열마다 칸이 다릅니다</span>`;
+  function renderMarkerListHead(){
+    const row = document.querySelector('.marker-list-head .mc-row');
+    if(!row) return;
+    row.innerHTML = activePresetName==='기울기' ? TILT_MARKER_LIST_HEAD_HTML
+      : activePresetName==='부동침하' ? LV_MARKER_LIST_HEAD_HTML
+      : activePresetName==='장비조사' ? EQ_MARKER_LIST_HEAD_HTML
+      : DEFAULT_MARKER_LIST_HEAD_HTML;
+  }
+
   function renderTable(){
     const d = getActiveDrawing();
     // 시트가 가리키던 마커가 실행취소·삭제·도면 전환 등으로 더 이상 없으면 조용히 닫는다.
     if(quickInputMarkerId && (!d || !d.markers.some(m=>m.id===quickInputMarkerId))) hideQuickInputSheet();
+    renderMarkerListHead();
+    renderLvSummary();
     const list = document.getElementById('markerList');
     const countEl = document.getElementById('markerCount');
     const emptyNote = document.getElementById('emptyMarkerNote');
@@ -3277,27 +3715,38 @@
       const card = document.createElement('div');
       card.className = 'marker-card' + (selectedIds.has(m.id) ? ' selected' : '');
       card.dataset.id = m.id;
-      const typeOptions = DEFECT_TYPES.map(t=>`<option value="${t.key}" ${t.key===m.typeKey?'selected':''}>${t.label}</option>`).join('');
       // 검색/필터 입력란이 대조할 문자열 — 유형·부재명·결함명·사진번호를 한데 모아 소문자로 저장해둔다.
       card.dataset.search = computeCardSearchIndex(m);
-      // 마킹유형/번호/사진/삭제는 tabindex=-1로 빼서, Tab 키가 유형→부재명→결함명→폭→길이→개수→사진번호
-      // 순서로만 흐르다가 자연스럽게 다음 카드의 "유형" 칸으로 넘어가도록 한다(빠른 연속 입력용).
-      // 카드는 한 줄 — 사이드바가 좁아지면 marker-list-wrap에 가로 스크롤이 생겨서 대응한다.
-      card.innerHTML = `
-        <div class="mc-row">
-          <input type="text" class="mc-num" data-role="pos" tabindex="-1" value="${m.seq||idx+1}" title="번호 — 값을 바꾸면 도면·목록의 순서(번호)가 그 위치로 바뀝니다"/>
-          <select data-role="type" class="mc-marktype" tabindex="-1" title="마킹 색상·모양(도면에 표시되는 유형)">${typeOptions}</select>
-          ${buildReportSelectHTML('rptType', m.rptType, '유형')}
-          ${buildReportSelectHTML('rptMember', m.rptMember, '부재명')}
-          ${buildReportSelectHTML('rptDefect', m.rptDefect, '결함명')}
-          <span class="mc-suffix" data-label="폭"><input type="text" data-role="rptWidth" placeholder="폭" title="폭(mm)" value="${escapeAttr(m.rptWidth||'')}"/><span>mm</span></span>
-          <span class="mc-suffix" data-label="길이"><input type="text" data-role="rptLength" placeholder="길이" title="길이(mm)" value="${escapeAttr(m.rptLength||'')}"/><span>mm</span></span>
-          <span class="mc-suffix" data-label="개수"><input type="text" data-role="rptCount" placeholder="개수" title="개수" value="${escapeAttr(m.rptCount||'')}"/><span>개</span></span>
-          <span class="mc-suffix" data-label="사진번호"><span>#</span><input type="text" data-role="rptTag" placeholder="사진번호" title="사진번호" value="${escapeAttr(m.rptTag||'')}"/></span>
-          <button class="mc-photo" data-role="photo" tabindex="-1" title="사진 첨부"><svg class="icon"><use href="#i-camera"/></svg>${(m.photos&&m.photos.length)?`<span class="photo-count">${m.photos.length}</span>`:''}</button>
-          <button class="row-del" data-role="del" tabindex="-1" title="삭제"><svg class="icon"><use href="#i-close"/></svg></button>
-        </div>
-      `;
+      // 마킹유형/번호/사진/삭제는 tabindex=-1로 빼서, Tab 키가 입력칸 사이로만 흐르다가 자연스럽게
+      // 다음 카드로 넘어가도록 한다(빠른 연속 입력용). 카드는 한 줄 — 사이드바가 좁아지면
+      // marker-list-wrap에 가로 스크롤이 생겨서 대응한다.
+      const isTiltPos = m.typeKey==='tilt_pos', isTiltDir = m.typeKey==='tilt_dir';
+      const isLv = m.typeKey==='lv_x' || m.typeKey==='lv_y';
+      const isSh = m.typeKey==='sh', isPh = m.typeKey==='ph', isDm = m.typeKey==='dm';
+      if(isTiltPos) card.innerHTML = buildTiltPosCardHTML(m, idx);
+      else if(isTiltDir) card.innerHTML = buildTiltDirCardHTML(m, idx);
+      else if(isLv) card.innerHTML = buildLvCardHTML(m, idx);
+      else if(isSh) card.innerHTML = buildShCardHTML(m, idx);
+      else if(isPh) card.innerHTML = buildPhCardHTML(m, idx);
+      else if(isDm) card.innerHTML = buildDmCardHTML(m, idx);
+      else {
+        const typeOptions = DEFECT_TYPES.map(t=>`<option value="${t.key}" ${t.key===m.typeKey?'selected':''}>${t.label}</option>`).join('');
+        card.innerHTML = `
+          <div class="mc-row">
+            <input type="text" class="mc-num" data-role="pos" tabindex="-1" value="${m.seq||idx+1}" title="번호 — 값을 바꾸면 도면·목록의 순서(번호)가 그 위치로 바뀝니다"/>
+            <select data-role="type" class="mc-marktype" tabindex="-1" title="마킹 색상·모양(도면에 표시되는 유형)">${typeOptions}</select>
+            ${buildReportSelectHTML('rptType', m.rptType, '유형')}
+            ${buildReportSelectHTML('rptMember', m.rptMember, '부재명')}
+            ${buildReportSelectHTML('rptDefect', m.rptDefect, '결함명')}
+            <span class="mc-suffix" data-label="폭"><input type="text" data-role="rptWidth" placeholder="폭" title="폭(mm)" value="${escapeAttr(m.rptWidth||'')}"/><span>mm</span></span>
+            <span class="mc-suffix" data-label="길이"><input type="text" data-role="rptLength" placeholder="길이" title="길이(mm)" value="${escapeAttr(m.rptLength||'')}"/><span>mm</span></span>
+            <span class="mc-suffix" data-label="개수"><input type="text" data-role="rptCount" placeholder="개수" title="개수" value="${escapeAttr(m.rptCount||'')}"/><span>개</span></span>
+            <span class="mc-suffix" data-label="사진번호"><span>#</span><input type="text" data-role="rptTag" placeholder="사진번호" title="사진번호" value="${escapeAttr(m.rptTag||'')}"/></span>
+            <button class="mc-photo" data-role="photo" tabindex="-1" title="사진 첨부"><svg class="icon"><use href="#i-camera"/></svg>${(m.photos&&m.photos.length)?`<span class="photo-count">${m.photos.length}</span>`:''}</button>
+            <button class="row-del" data-role="del" tabindex="-1" title="삭제"><svg class="icon"><use href="#i-close"/></svg></button>
+          </div>
+        `;
+      }
       card.addEventListener('click', (e)=>{
         if(e.target.closest('select,input,button')) return;
         selectOnly(m.id);
@@ -3321,15 +3770,27 @@
         dd.markers.splice(n-1, 0, item);
         renderCanvas(); renderTable();
       });
-      wireReportSelect(card, 'rptType', m);
-      wireReportSelect(card, 'rptMember', m);
-      wireReportSelect(card, 'rptDefect', m);
-      ['rptWidth','rptLength','rptCount','rptTag'].forEach(key=>{
-        card.querySelector(`[data-role="${key}"]`).addEventListener('input', (e)=>{
-          markDirty(); m[key] = e.target.value;
-          if(key==='rptTag') updateCardSearchIndex(card, m); // 사진번호(#)만 검색 대상이라 이때만 갱신
+      if(isTiltPos){
+        wireTiltPosCard(card, m);
+      } else if(isLv){
+        wireLvCard(card, m);
+      } else if(isSh){
+        wireShCard(card, m);
+      } else if(isPh){
+        wirePhCard(card, m);
+      } else if(isDm){
+        wireDmCard(card, m);
+      } else if(!isTiltDir){
+        wireReportSelect(card, 'rptType', m);
+        wireReportSelect(card, 'rptMember', m);
+        wireReportSelect(card, 'rptDefect', m);
+        ['rptWidth','rptLength','rptCount','rptTag'].forEach(key=>{
+          card.querySelector(`[data-role="${key}"]`).addEventListener('input', (e)=>{
+            markDirty(); m[key] = e.target.value;
+            if(key==='rptTag') updateCardSearchIndex(card, m); // 사진번호(#)만 검색 대상이라 이때만 갱신
+          });
         });
-      });
+      }
       list.appendChild(card);
     });
     applyMarkerSearchFilter();
@@ -3442,7 +3903,7 @@
   function eraseAtPoint(d, x, y){
     const m = hitTestMarker(d, x, y);
     if(!m) return false;
-    d.markers = d.markers.filter(mm=>mm.id!==m.id);
+    removeMarkersById(d, idsWithLinkedPairs(d, [m.id]));
     selectedIds.delete(m.id);
     renderTable();
     return true;
@@ -3736,12 +4197,18 @@
   function sanitizeFilename(s){ return String(s||'').replace(/[\\/:*?"<>|]/g,'_').trim() || 'untitled'; }
   // 저장 파일명 = 도면 제목(없으면 "외관조사망도") + 조사위치(활성 도면에 입력돼 있으면) + 날짜, '_'로 연결.
   // 예: "외관조사망도_2층 계단실_20260814" / 도면제목·조사위치가 모두 비어있으면 "외관조사망도_20260814".
+  // 도면 제목을 비워두면 활성 프리셋에 맞춰 자동으로 채운다("OO 위치도") — 5-4: 예전에는 프리셋과
+  // 무관하게 항상 "외관조사망도"였다.
+  function defaultDocTitle(){
+    if(activePresetName==='외관조사') return '외관조사망도';
+    return activePresetName + ' 위치도';
+  }
   function filenameBase(){
     const docTitle = document.getElementById('docTitleInput').value.trim();
     const d = getActiveDrawing();
     const surveyLocation = (d && d.surveyLocation) ? d.surveyLocation.trim() : '';
     const dt = new Date(); const ymd = dt.toISOString().slice(0,10).replace(/-/g,'');
-    const parts = [sanitizeFilename(docTitle || '외관조사망도')];
+    const parts = [sanitizeFilename(docTitle || defaultDocTitle())];
     if(surveyLocation) parts.push(sanitizeFilename(surveyLocation));
     parts.push(ymd);
     return parts.join('_');
@@ -3758,44 +4225,8 @@
     if(line) lines.push(line);
     return lines;
   }
-  function computeLegendLayout(d, exportW, legendMargin, legendFont, rowHeight){
-    const used = usedTypes(d);
-    const measure = document.createElement('canvas').getContext('2d');
-    measure.font = legendFont;
-    const items = used.map(({type,count})=>{
-      const label = `${type.label} (${count})`;
-      return { type, label, itemW: 28 + measure.measureText(label).width + 26 };
-    });
-    const rows = [];
-    let cur = [], curW = legendMargin;
-    items.forEach(it=>{
-      if(cur.length && curW + it.itemW > exportW - legendMargin){ rows.push(cur); cur=[]; curW=legendMargin; }
-      cur.push(it); curW += it.itemW;
-    });
-    if(cur.length) rows.push(cur);
-    if(rows.length===0) rows.push([]);
-    return { items, rows, measure, legendH: rows.length*rowHeight + 22 };
-  }
-  function drawLegendBlock(ctx, rows, measure, legendFont, x0, y0, legendMargin, rowHeight, emptyText){
-    ctx.textAlign='left'; ctx.textBaseline='middle';
-    if(rows.length===1 && rows[0].length===0){
-      ctx.fillStyle = '#898781'; ctx.font = '14px system-ui, -apple-system, "Segoe UI", sans-serif';
-      ctx.fillText(emptyText, x0+legendMargin, y0+rowHeight/2);
-      return;
-    }
-    rows.forEach((row, ri)=>{
-      let lx = x0 + legendMargin;
-      const ly = y0 + 18 + ri*rowHeight;
-      row.forEach(({type,label})=>{
-        drawLegendIcon(ctx, type, lx+12, ly, 12);
-        lx += 28;
-        ctx.font = legendFont;
-        ctx.fillStyle = '#0b0b0b';
-        ctx.fillText(label, lx, ly);
-        lx += measure.measureText(label).width + 26;
-      });
-    });
-  }
+  // (구) 표제란 하단 가로 범례 computeLegendLayout/drawLegendBlock은 1장 수정지시서 1-3에 따라 제거함 —
+  // "NOTE" 박스(overlayLegendGeometry/drawOverlayLegend)가 항상 켜져 있는 유일한 범례가 되었다.
 
   function exportPNG(){
     const d = getActiveDrawing();
@@ -3834,11 +4265,30 @@
 
     const r = markerRadiusNatural(d);
     d.markers.forEach((m, idx)=>{
-      drawMarkerDispatch(ctx, d, m, formatMarkerLabel(m, idx), w, h, r, false);
+      drawMarkerDispatch(ctx, d, m, formatMarkerLabel(m, idx, d), w, h, r, false);
     });
     drawOverlayLegend(ctx, d, w, h);
 
     return off;
+  }
+
+  // 5-4: 방위 심볼(원+N 화살표) — 도곽 좌측 하단, 도면 제목 옆에 그린다.
+  function drawOrientationSymbol(ctx, cx, cy, r){
+    ctx.save();
+    ctx.strokeStyle = '#000000'; ctx.fillStyle = '#000000';
+    ctx.lineWidth = Math.max(1.2, r*0.08);
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(cx, cy-r*0.85);
+    ctx.lineTo(cx-r*0.22, cy+r*0.15);
+    ctx.lineTo(cx, cy-r*0.05);
+    ctx.lineTo(cx+r*0.22, cy+r*0.15);
+    ctx.closePath();
+    ctx.fill();
+    ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+    ctx.font = `700 ${Math.round(r*0.55)}px system-ui, -apple-system, "Segoe UI", sans-serif`;
+    ctx.fillText('N', cx, cy - r - r*0.18);
+    ctx.restore();
   }
 
   // CAD 도곽(표제란) 스타일 — 외곽 사각 테두리 + 상단 가로 표제란(용역명·구분·조사위치·구조형식, 4칸,
@@ -3851,10 +4301,6 @@
     const projName = document.getElementById('projectNameInput').value.trim() || '-';
     const siteName = document.getElementById('siteNameInput').value.trim() || '-';
     const structureType = document.getElementById('structureTypeInput').value.trim() || '-';
-
-    const legendMargin = 18;
-    const legendFont = '600 14px system-ui, -apple-system, "Segoe UI", sans-serif';
-    const legendRowH = 30;
 
     // ---- 외곽 굵은 테두리(도곽)와 용지 가장자리 사이 여백 — 비대칭: 위쪽은 기존(108px)의 1.5배인
     // 162px, 좌·우·아래는 기존(54px)의 2배인 108px로 더 넉넉하게 둔다.
@@ -3933,13 +4379,20 @@
       }
     });
 
-    // ---- 도면(표제란 아래, contain으로 배치 — 현재 회전 상태의 이미지를 그대로 축소/확대만 함) ----
-    const { rows, measure, legendH } = computeLegendLayout(d, contentW, legendMargin, legendFont, legendRowH);
+    // ---- 범례(NOTE) 열 폭을 먼저 예약한다 — 1장 수정지시서 1-2-4: 범례는 항상 도면 이미지 "바깥"
+    // 우측에 그려지므로, 도면은 그 나머지 폭에만 contain 배치한다(하단 가로 범례는 1-3에 따라 제거됨).
+    // legendScale(기본 6배)의 기준이 되는 autoScale(=contentW/naturalW)은 도면 해상도가 페이지 폭보다
+    // 작으면(예: 화면용으로 작게 내보낸 이미지) 1을 훌쩍 넘을 수 있어, 계열이 많거나 라벨이 길면 범례
+    // 열이 도면 자리를 거의 다 잠식할 수 있다 — 페이지 폭의 42%·본문 높이의 90%로 상한을 둔다.
     const contentY0 = contentMarginTop + titleBarH;
-    const contentAreaH = outerH - contentMarginTop - contentMarginBottom - titleBarH - legendH;
+    const contentAreaH = outerH - contentMarginTop - contentMarginBottom - titleBarH;
+    const legendGeo = overlayLegendGeometryCapped(ctx, d, contentW, contentW*0.42, contentAreaH*0.9);
+    const legendColGap = legendGeo ? Math.max(16, 18*legendGeo.scale) : 0;
+    const legendColW = legendGeo ? legendGeo.boxW : 0;
+    const drawAreaW = Math.max(10, contentW - legendColW - legendColGap);
     // 이미지가 표제란/범례/외곽 테두리에 딱 붙지 않도록 도면 배치 영역 안쪽으로 약간의 여백을 둔다.
-    const imageMargin = clamp(Math.min(contentW, contentAreaH)*0.02, 10, 26);
-    const availW = Math.max(10, contentW - imageMargin*2);
+    const imageMargin = clamp(Math.min(drawAreaW, contentAreaH)*0.02, 10, 26);
+    const availW = Math.max(10, drawAreaW - imageMargin*2);
     const availH = Math.max(10, contentAreaH - imageMargin*2);
     // 페이지가 원본 도면보다 넓어도(작은 이미지를 인쇄용 최소 크기로 맞추는 경우 등) 원본 해상도 이상으로
     // 확대하지 않는다 — 화질이 흐려지거나 깨지는 것을 막기 위함. 원본보다 페이지가 크면 남는 공간은 여백이 된다.
@@ -3956,22 +4409,35 @@
       if(type.endStyle === 'rect'){
         const rect = markerRectPx(m, drawW, drawH);
         drawAreaMarker(ctx, type, drawX+rect.x, drawY+rect.y, rect.w, rect.h,
-          drawX+m.xPct/100*drawW, drawY+m.yPct/100*drawH, r, formatMarkerLabel(m, idx), false, m.numRot||0, m.rectAngle||0);
+          drawX+m.xPct/100*drawW, drawY+m.yPct/100*drawH, r, formatMarkerLabel(m, idx, d), false, m.numRot||0, m.rectAngle||0);
       } else {
         const cx = drawX + m.xPct/100*drawW, cy = drawY + m.yPct/100*drawH;
-        drawMarkerWithLeader(ctx, type, cx, cy, r, m.angle||0, leaderLenForMarker(m,r), formatMarkerLabel(m, idx), false, m.numRot||0);
+        drawMarkerWithLeader(ctx, type, cx, cy, r, m.angle||0, leaderLenForMarker(m,r), formatMarkerLabel(m, idx, d), false, m.numRot||0);
       }
     });
-    // 도면 위 NOTE 박스(자유배치 범례) — 좌표계를 도면이 실제로 그려진 영역(drawX,drawY,drawW,drawH)
-    // 기준으로 옮겨서 그리면, drawOverlayLegend 내부의 %→px 환산이 화면 미리보기와 똑같이 맞는다.
-    ctx.save();
-    ctx.translate(drawX, drawY);
-    drawOverlayLegend(ctx, d, drawW, drawH);
-    ctx.restore();
+    // ---- 범례(NOTE) — 예약해둔 열의 맨 위(표제란 바로 아래)에 고정 배치. 도면 이미지 밖이라
+    // 자유 드래그가 필요 없어 항상 이 자리 하나로 그린다(legendPct는 "표제란 없이 저장"·화면
+    // 캔버스 쪽 자유배치 전용으로만 계속 쓰인다).
+    if(legendGeo){
+      const legendX = contentMarginSide + drawAreaW + legendColGap;
+      const legendY0 = contentY0 + imageMargin;
+      drawOverlayLegend(ctx, d, contentW, contentAreaH, { anchor:'fixed', x: legendX, y: legendY0, refW: contentW,
+        maxW: contentW*0.42, maxH: contentAreaH*0.9 });
+    }
 
-    // ---- 범례 (도면 아래, 페이지 전체 폭) — 배경 없이 흰 바탕 그대로 두어 하단에 회색 줄이 보이지 않게 함 ----
-    const legendY = outerH - contentMarginBottom - legendH;
-    drawLegendBlock(ctx, rows, measure, legendFont, contentMarginSide, legendY, legendMargin, legendRowH, '표시된 결함이 없습니다');
+    // ---- 5-4: 도곽 좌측 하단에 방위 심볼(⊕N) + 도면 제목. 부록 PDF들처럼 "⊕ 부동침하 위치도" 형태로
+    // 표시한다. 도면 제목을 비워두면 defaultDocTitle()이 활성 프리셋 이름으로 채운다.
+    {
+      const titleText = document.getElementById('docTitleInput').value.trim() || defaultDocTitle();
+      const orientR = clamp(contentAreaH*0.028, 14, 28);
+      const orientCx = contentMarginSide + orientR + 4;
+      const orientCy = outerH - contentMarginBottom - orientR - 4;
+      drawOrientationSymbol(ctx, orientCx, orientCy, orientR);
+      ctx.font = `700 ${Math.round(orientR*1.15)}px system-ui, -apple-system, "Segoe UI", sans-serif`;
+      ctx.fillStyle = '#000000';
+      ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+      ctx.fillText(titleText, orientCx + orientR + 10, orientCy);
+    }
 
     // ---- 외곽 굵은 테두리(도곽) — 용지 가장자리에서 비대칭 여백(위 162px, 좌·우·아래 108px)만큼
     // 떨어뜨려서 표제란·도면·범례 전체를 감싸는 굵은 사각형 하나. 안쪽 내용물과는 항상
@@ -4156,19 +4622,30 @@
     // 직전에 전체 도면을 조용히(토스트 없이) 재정렬해 seq를 맞춘다.
     renumberAllDrawings({silent:true});
     const header = ['도면명','번호','위치유형','X(%)','Y(%)','각도','인출선길이배율','범위X(%)','범위Y(%)','범위폭(%)','범위높이(%)',
-      '유형','부재명','결함명','폭','길이','개수','#','사진','비고','UID'];
+      '유형','부재명','결함명','폭','길이','개수','#','사진','비고','UID',
+      // 2·4장: 기울기·부동침하 전용 값 — 다른 프리셋의 마커는 빈 칸으로 남는다(기존 CSV/XLSX 소비 코드와
+      // 자리를 맞추기 위해 항상 맨 끝에 추가).
+      '기울기_구분','기울기_측점','기울기_상부시준(도분초)','기울기_하부시준(도분초)','기울기_수평거리(mm)','기울기_방향','기울기_수평각차(자동)',
+      'LV그룹','LV측정값(cm)','LV경간(mm)',
+      // 3-2: 장비조사(SH/PH/DM) 전용 값. 계열마다 쓰는 칸이 달라 빈 칸이 섞여도 정상이다.
+      '장비_층수','장비_위치','장비_부재명','장비_비고','장비_탄산화깊이(mm)','장비_피복두께(mm)','장비_실측상(mm)'];
     const rows = [];
     drawings.forEach(d=>{
       d.markers.forEach((m, idx)=>{
         const type = getType(m.typeKey);
         const lenStr = (typeof m.lenMult==='number' && isFinite(m.lenMult)) ? m.lenMult.toFixed(2) : '';
         const isRect = type.endStyle==='rect';
-        rows.push({ typeKey: m.typeKey, cells: [d.name, formatMarkerLabel(m, idx), type.label, m.xPct.toFixed(1), m.yPct.toFixed(1), Math.round(m.angle||0), lenStr,
+        const upDms = (m.tiltUpD||m.tiltUpM||m.tiltUpS) ? `${m.tiltUpD||0}°${m.tiltUpM||0}′${m.tiltUpS||0}″` : '';
+        const loDms = (m.tiltLoD||m.tiltLoM||m.tiltLoS) ? `${m.tiltLoD||0}°${m.tiltLoM||0}′${m.tiltLoS||0}″` : '';
+        rows.push({ typeKey: m.typeKey, cells: [d.name, formatMarkerLabel(m, idx, d), type.label, m.xPct.toFixed(1), m.yPct.toFixed(1), Math.round(m.angle||0), lenStr,
           isRect ? (m.rectXPct||0).toFixed(1) : '', isRect ? (m.rectYPct||0).toFixed(1) : '',
           isRect ? (m.rectWPct||0).toFixed(1) : '', isRect ? (m.rectHPct||0).toFixed(1) : '',
           m.rptType||'', m.rptMember||'', m.rptDefect||'', m.rptWidth||'', m.rptLength||'', m.rptCount||'', m.rptTag||'',
           (m.photos&&m.photos.length) ? `${m.photos.length}장` : '',
-          (m.note||'').replace(/\r?\n/g,' '), m.uid||m.id||''] });
+          (m.note||'').replace(/\r?\n/g,' '), m.uid||m.id||'',
+          m.tiltBldg||'', m.tiltPt||'', upDms, loDms, m.tiltDist||'', (m.tiltDir&&m.tiltDir!=='자동')?m.tiltDir:(tiltHasAngleInput(m)?computeTiltDiff(m).direction:''), tiltHasAngleInput(m)?tiltResultText(m):'',
+          m.lvGroup||'', m.lvValue||'', m.lvSpan||'',
+          m.eqFloor||'', m.eqLoc||'', m.eqMember||'', m.eqNote||'', m.eqCarbDepth||'', m.eqCoverDepth||'', m.eqMeasured||''] });
       });
     });
     return { header, rows };
@@ -4406,11 +4883,13 @@
         // 번호(seq) 뒤에 불변 uid 앞 8자리를 붙여, 같은 번호가 재정렬로 바뀌어도(또는 여러 프로젝트의
         // 사진을 한 폴더에 모아도) 파일명만으로 어느 결함의 사진인지 항상 구분할 수 있게 한다.
         const uid8 = String(m.uid||m.id||'').slice(0,8);
-        const nameParts = [formatMarkerLabel(m, idx)];
+        const nameParts = [formatMarkerLabel(m, idx, d)];
         if(uid8) nameParts.push(uid8);
         if(m.rptType) nameParts.push(m.rptType);
         if(m.rptMember) nameParts.push(m.rptMember);
         if(m.rptDefect) nameParts.push(m.rptDefect);
+        if(m.eqLoc) nameParts.push(m.eqLoc);
+        if(m.eqMember) nameParts.push(m.eqMember);
         const baseName = sanitizeFilename(nameParts.join('_'));
         const folder = multiDrawing ? sanitizeFilename(d.name) + '/' : '';
         photos.forEach((photo, pi)=>{
@@ -4758,8 +5237,11 @@
     targets.forEach(target=>{
       // %좌표·각도·인출선 길이·계열(typeKey)·보고서 라벨은 그대로 옮기고, uid/id만 새로 발급(원본과
       // 겹치면 안 됨), seq는 아래 renumberAllDrawings가 대상 도면 순서에 맞춰 다시 매긴다. 사진은 제외.
+      // linkedDirId/linkedFromId(기울기 짝 마커 연결)는 복제하지 않는다 — 원본 도면의 마커 id를
+      // 그대로 들고 가면 대상 도면에는 존재하지 않는 id를 가리키게 되어 죽은 참조가 남기 때문.
+      // 각도 입력을 다시 손대면 updateTiltMarker()가 새 짝을 만들어주므로 기능은 그대로 유지된다.
       const cloned = source.markers.map(m=>{
-        const { photos, id, uid: _uid, seq, ...rest } = m;
+        const { photos, id, uid: _uid, seq, linkedDirId, linkedFromId, ...rest } = m;
         return { ...rest, ...newMarkerIdPair() };
       });
       target.markers = (mode==='overwrite') ? cloned : target.markers.concat(cloned);
@@ -5432,9 +5914,15 @@
       // uid 필드가 없는 예전 프로젝트 파일(1단계 이전)은 여는 시점에 한 번 발급해 채워준다 —
       // 이미 uid()로 만들어진 값인 기존 id를 그대로 재사용하므로 다음에 저장해도 값이 바뀌지 않는다.
       drawings.forEach(d=> d.markers.forEach(m=>{ if(!m.uid) m.uid = m.id || uid(); }));
+      // 5-1: 첫 도면이 프로젝트 전체와 다른 프리셋에 묶여 있으면(예: 첫 도면이 부동침하) 그 프리셋으로
+      // 맞춰 연다 — 이미 존재하는 프리셋일 때만(커스텀 프리셋이 그 사이 삭제된 경우는 지금 프리셋 유지).
+      const firstD = drawings[0];
+      if(firstD && firstD.presetName && firstD.presetName!==activePresetName && allPresets().some(p=>p.name===firstD.presetName)){
+        setActivePreset(firstD.presetName, {fromDrawingSwitch:true});
+      }
       // 전체 도면 번호(seq)도 불러온 직후 한 번 맞춰둔다 — 재정렬 토스트 없이 조용히(silent) 처리.
       renumberAllDrawings({silent:true});
-      renderDrawingTabs(); renderCanvas(); renderTable(); syncSurveyLocationField();
+      renderDrawingTabs(); renderCanvas(); renderTable(); syncSurveyLocationField(); syncLegendScaleField();
       isDirty = false;
       if(failedNames.length>0){
         const tail = drawings.length>0
@@ -5460,6 +5948,8 @@
         nd.surveyLocation = dd.surveyLocation || '';
         nd.markers = Array.isArray(dd.markers) ? dd.markers : [];
         nd.legendPct = (dd.legendPct && typeof dd.legendPct.x==='number' && typeof dd.legendPct.y==='number') ? dd.legendPct : null;
+        nd.legendScale = (typeof dd.legendScale==='number' && dd.legendScale>0) ? dd.legendScale : null;
+        nd.presetName = dd.presetName || nd.presetName; // 없으면 buildDrawingFromImage가 넣어둔 "지금 프리셋" 유지(구버전 파일 호환)
         drawings.push(nd);
         settled++; finishIfDone();
       };
@@ -5482,7 +5972,7 @@
       docTitle: document.getElementById('docTitleInput').value,
       seriesPresetName: activePresetName,
       seriesSnapshot: DEFECT_TYPES,
-      drawings: drawings.map(d=>({ id:d.id, name:d.name, surveyLocation:d.surveyLocation||'', imgSrc:d.imgSrc, markers:d.markers, legendPct:d.legendPct||null }))
+      drawings: drawings.map(d=>({ id:d.id, name:d.name, surveyLocation:d.surveyLocation||'', imgSrc:d.imgSrc, markers:d.markers, legendPct:d.legendPct||null, legendScale:d.legendScale||null, presetName:d.presetName||null }))
     };
   }
 
@@ -5643,6 +6133,14 @@
   // 프로젝트 상단 정보(현장명·구조형식 등)도 저장 파일 내용에 포함되므로 편집 시 미저장 표시가 되어야 함.
   ['projectNameInput','siteNameInput','structureTypeInput','docTitleInput'].forEach(id=>{
     document.getElementById(id).addEventListener('input', markDirty);
+  });
+  document.getElementById('legendScaleSlider').addEventListener('input', e=>{
+    const d = getActiveDrawing(); if(!d) return;
+    d.legendScale = parseFloat(e.target.value) || DEFAULT_LEGEND_SCALE;
+    document.getElementById('legendScaleLabel').textContent = d.legendScale.toFixed(1);
+    markDirty();
+    renderCanvas();
+    refreshTbPreviewIfOpen();
   });
   document.getElementById('btnApplyTemplate').addEventListener('click', applyTbTemplate);
   document.getElementById('btnSaveTemplate').addEventListener('click', saveTbTemplate);
@@ -6441,6 +6939,7 @@
       seriesSnapshot: DEFECT_TYPES,
       drawings: drawings.map(d=>({
         id: d.id, name: d.name, surveyLocation: d.surveyLocation||'', legendPct: d.legendPct||null,
+        legendScale: d.legendScale||null, presetName: d.presetName||null,
         markers: d.markers.map(m=>{ const {photos, ...rest} = m; return rest; }),
       })),
     };
@@ -6737,6 +7236,7 @@
   renderTypeGrid();
   renderSeriesPresetSelect();
   renderDrawingTabs();
+  syncLegendScaleField();
   updateModeButtonsUI();
   updateModeHint();
   renderCanvas();
