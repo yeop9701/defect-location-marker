@@ -1,0 +1,141 @@
+{
+  "version": 2,
+  "projectUuid": "legacy-fixture-0000-0000-0000-000000000001",
+  "projectName": "2026년 정밀안전점검(회귀테스트)",
+  "siteName": "OO아파트 1동",
+  "structureType": "철근콘크리트 벽식구조",
+  "docTitle": "",
+  "drawings": [
+    {
+      "id": "d_legacy_1",
+      "name": "1층 평면도",
+      "surveyLocation": "1층 계단실",
+      "imgSrc": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=",
+      "markers": [
+        {
+          "id": "m_legacy_a1",
+          "typeKey": "wall",
+          "xPct": 20.5,
+          "yPct": 30.2,
+          "angle": 45,
+          "lenMult": 1,
+          "numRot": 0,
+          "note": "",
+          "rptType": "벽체",
+          "rptMember": "콘크리트",
+          "rptDefect": "수직균열",
+          "rptWidth": "0.3",
+          "rptLength": "1200",
+          "rptCount": "1",
+          "rptTag": "1",
+          "photos": [
+            "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="
+          ]
+        },
+        {
+          "id": "m_legacy_a2",
+          "typeKey": "wall",
+          "xPct": 55.0,
+          "yPct": 40.8,
+          "angle": 135,
+          "lenMult": 1.4,
+          "numRot": 0,
+          "note": "재도장 이력 있음",
+          "rptType": "벽체",
+          "rptMember": "마감재",
+          "rptDefect": "박리",
+          "rptWidth": "",
+          "rptLength": "",
+          "rptCount": "2",
+          "rptTag": "2"
+        },
+        {
+          "id": "m_legacy_d1",
+          "typeKey": "flat",
+          "xPct": 70.3,
+          "yPct": 15.6,
+          "angle": 0,
+          "lenMult": 1,
+          "numRot": 0,
+          "note": "",
+          "rptType": "천장",
+          "rptMember": "콘크리트",
+          "rptDefect": "누수흔적",
+          "rptWidth": "",
+          "rptLength": "",
+          "rptCount": "",
+          "rptTag": ""
+        },
+        {
+          "id": "m_legacy_r1",
+          "typeKey": "wall_area",
+          "xPct": 45.0,
+          "yPct": 60.0,
+          "rectXPct": 32.0,
+          "rectYPct": 50.0,
+          "rectWPct": 10.0,
+          "rectHPct": 8.0,
+          "rectAngle": 0,
+          "angle": 0,
+          "lenMult": 1,
+          "numRot": 0,
+          "note": "광범위 박락 구간",
+          "rptType": "벽체",
+          "rptMember": "철근",
+          "rptDefect": "노출",
+          "rptWidth": "",
+          "rptLength": "",
+          "rptCount": "1",
+          "rptTag": "3"
+        }
+      ]
+    },
+    {
+      "id": "d_legacy_2",
+      "name": "2층 평면도",
+      "surveyLocation": "2층 복도",
+      "imgSrc": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=",
+      "markers": [
+        {
+          "id": "m_legacy_d2",
+          "typeKey": "flat",
+          "xPct": 12.0,
+          "yPct": 82.5,
+          "angle": 270,
+          "lenMult": 1,
+          "numRot": 0,
+          "note": "",
+          "rptType": "바닥",
+          "rptMember": "마감재",
+          "rptDefect": "백태흔적",
+          "rptWidth": "",
+          "rptLength": "",
+          "rptCount": "",
+          "rptTag": ""
+        },
+        {
+          "id": "m_legacy_r2",
+          "typeKey": "flat_area",
+          "xPct": 68.0,
+          "yPct": 25.0,
+          "rectXPct": 58.0,
+          "rectYPct": 18.0,
+          "rectWPct": 14.0,
+          "rectHPct": 9.0,
+          "rectAngle": 0,
+          "angle": 0,
+          "lenMult": 1,
+          "numRot": 0,
+          "note": "",
+          "rptType": "바닥",
+          "rptMember": "콘크리트",
+          "rptDefect": "망상균열",
+          "rptWidth": "",
+          "rptLength": "",
+          "rptCount": "3",
+          "rptTag": ""
+        }
+      ]
+    }
+  ]
+}
