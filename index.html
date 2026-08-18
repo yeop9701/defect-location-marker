@@ -894,6 +894,10 @@
         <div class="side-field">도면 제목 (비워두면 자동 생성)
           <input type="text" class="side-input" id="docTitleInput" placeholder="예: 외관조사망도" />
         </div>
+        <div class="side-field" style="margin-top:10px;" title="화면·표제란 인쇄 미리보기·PNG/PDF 저장에 항상 표시되는 NOTE 범례 박스의 크기입니다. 도면마다 따로 저장됩니다.">
+          범례(NOTE) 크기 <span id="legendScaleLabel">6.0</span>배
+          <input type="range" id="legendScaleSlider" min="1" max="12" step="0.5" value="6" style="width:100%;" />
+        </div>
       </div>
 
       <div class="footer-note">
@@ -1305,13 +1309,22 @@
   // 남는다(다른 프리셋 소속이라도 getType()이 TYPE_MAP에 없으면 DEFECT_TYPES[0]로 안전하게 대체
   // 표시하므로 죽지 않는다 — 다만 도면을 섞어 쓰면 예전 계열 마커가 새 프리셋 색으로 잘못 보일 수
   // 있으니, 실무에서는 위치도 종류(도면)별로 프리셋을 통일해 쓰는 것을 권장한다).
-  function setActivePreset(name){
+  // opts.fromDrawingSwitch: 도면 탭 전환이 유발한 자동 프리셋 전환이면 true — 이때는 그 도면의
+  // d.presetName을 다시 자기 자신으로 덮어쓸 필요가 없으므로 건너뛴다. 사용자가 좌측 select에서
+  // 직접 프리셋을 바꾼 경우(fromDrawingSwitch 없음)에는 지금 활성 도면의 d.presetName을 갱신해,
+  // 그 도면은 이제부터 이 프리셋에 묶인다(5-1).
+  function setActivePreset(name, opts){
+    opts = opts || {};
     const preset = findPreset(name);
     activePresetName = preset.name;
     saveActivePresetName(activePresetName);
     DEFECT_TYPES = cloneSeriesList(preset.series);
     rebuildTypeMap();
     if(!TYPE_MAP[activeTypeKey]) activeTypeKey = DEFECT_TYPES[0] ? DEFECT_TYPES[0].key : activeTypeKey;
+    if(!opts.fromDrawingSwitch){
+      const d = getActiveDrawing();
+      if(d) d.presetName = activePresetName;
+    }
     renderTypeGrid();
     renderSeriesPresetSelect();
     const editorPanel = document.getElementById('seriesEditorPanel');
@@ -1736,16 +1749,26 @@
     }
     return type.label;
   }
+  // 마커 유무와 무관하게 "지금 활성 프리셋의 계열 전체"를 범례 대상으로 삼는다(legendShow:false만 제외).
+  // 예전에는 usedTypes(d)로 "이 도면에 1개 이상 찍힌 계열"만 걸러냈는데, 그 결과 마커를 찍기 전에는
+  // 범례가 아예 안 그려지는 문제가 있었다(1장 수정지시서 1-1) — 항상 표시하도록 바꿈.
   function overlayLegendItems(d){
-    return usedTypes(d).filter(({type})=> type.legendShow!==false);
+    return DEFECT_TYPES.filter(type=> type.legendShow!==false).map(type=>({type}));
   }
-  // 캔버스(screen 또는 export)에 그리고, 다음 히트테스트·드래그에 쓸 사각형(캔버스 backing-px 기준)을
-  // 돌려준다. items가 없으면(그릴 게 없으면) null을 돌려주고 아무것도 그리지 않는다.
-  function drawOverlayLegend(ctx, d, w, h, opts){
-    opts = opts || {};
+  const DEFAULT_LEGEND_SCALE = 6; // 도면별 슬라이더(1~12) 미지정 시 기본 배율. 기존 글자가 10~11px로
+  // 너무 작아 안 보이던 문제(1-1) 때문에 기존 크기의 6배를 기본값으로 삼는다.
+  function legendScaleFor(d){
+    const v = d && d.legendScale;
+    return (typeof v==='number' && isFinite(v) && v>0) ? v : DEFAULT_LEGEND_SCALE;
+  }
+  // 그리기 전에 필요한 크기·글자 폭을 먼저 계산 — drawOverlayLegend 자신과, 표제란 내보내기가 범례 열
+  // 폭을 미리 예약할 때(도면을 그 나머지 폭에 배치하기 위해) 공통으로 쓴다. refW은 "1배율" 크기의
+  // 기준이 되는 폭(보통 도면 폭 또는 도곽 콘텐츠 폭)이고, 실제 배율은 legendScaleFor(d)를 곱해서 얻는다.
+  function overlayLegendGeometry(ctx, d, refW){
     const items = overlayLegendItems(d);
     if(items.length===0) return null;
-    const scale = clamp(w / (d.naturalW||w||1), 0.05, 20);
+    const autoScale = clamp(refW / (d.naturalW||refW||1), 0.05, 20);
+    const scale = autoScale * legendScaleFor(d);
     const pad = Math.max(7, 9*scale);
     const rowH = Math.max(15, 19*scale);
     const titleH = Math.max(17, 21*scale);
@@ -1760,11 +1783,30 @@
       maxTextW = Math.max(maxTextW, ctx.measureText(label).width);
       return label;
     });
+    ctx.restore();
     const boxW = Math.max(pad*2 + swatchR*2 + 6*scale + maxTextW, 70*scale);
     const boxH = pad + titleH + items.length*rowH + pad*0.4;
-    const pos = d.legendPct;
-    const x = (pos && typeof pos.x==='number') ? pos.x/100*w : (w - boxW - 12*scale);
-    const y = (pos && typeof pos.y==='number') ? pos.y/100*h : 12*scale;
+    return { items, labels, scale, pad, rowH, titleH, swatchR, font, titleFont, boxW, boxH };
+  }
+  // 캔버스(screen 또는 export)에 그리고, 다음 히트테스트·드래그에 쓸 사각형(캔버스 backing-px 기준)을
+  // 돌려준다. items가 없으면(그릴 게 없으면) null을 돌려주고 아무것도 그리지 않는다.
+  // opts.anchor==='fixed'면 opts.x/opts.y를 그대로 좌상단으로 쓴다(표제란 내보내기의 "범례 전용 열"용,
+  // 도면 이미지 바깥에 항상 고정). 그 외에는 기존처럼 d.legendPct(도면 % 좌표, 없으면 우측 상단
+  // 기본값)로 이미지 위에 떠 있는 자유배치 박스를 그린다(화면 캔버스·표제란 없이 저장하는 경로).
+  function drawOverlayLegend(ctx, d, w, h, opts){
+    opts = opts || {};
+    const geo = overlayLegendGeometry(ctx, d, (typeof opts.refW==='number') ? opts.refW : w);
+    if(!geo) return null;
+    const { items, labels, scale, pad, rowH, titleH, swatchR, font, titleFont, boxW, boxH } = geo;
+    let x, y;
+    if(opts.anchor==='fixed'){
+      x = opts.x; y = opts.y;
+    } else {
+      const pos = d.legendPct;
+      x = (pos && typeof pos.x==='number') ? pos.x/100*w : (w - boxW - 12*scale);
+      y = (pos && typeof pos.y==='number') ? pos.y/100*h : 12*scale;
+    }
+    ctx.save();
     ctx.fillStyle = 'rgba(255,255,255,0.92)';
     ctx.strokeStyle = opts.selected ? '#2a78d6' : 'rgba(11,11,11,0.55)';
     ctx.lineWidth = opts.selected ? Math.max(1.6, 2*scale) : Math.max(1, 1.2*scale);
@@ -1973,8 +2015,10 @@
     const {baseW,baseH} = fitBaseSize(naturalW,naturalH);
     // name(도면 탭 이름)은 업로드한 파일명에서 따오지만, surveyLocation(표제란의 "조사위치")은 이와
     // 별개로 사용자가 직접 입력하는 값이라 빈 문자열로 시작한다(파일명이 그대로 표제란에 들어가지 않도록).
+    // presetName: 새 도면은 지금 화면에 켜져 있는 프리셋을 그대로 물려받는다(5-1). 이후 도면 탭을
+    // 오갈 때마다 setActiveDrawing()이 이 값을 보고 프리셋을 자동으로 맞춰준다.
     return {id: uid(), name: name || ('도면 '+(drawings.length+1)), surveyLocation: '', imgSrc: dataURL, imgEl: img,
-      naturalW, naturalH, baseW, baseH, markers: []};
+      naturalW, naturalH, baseW, baseH, markers: [], presetName: activePresetName};
   }
 
   function renderDrawingTabs(){
@@ -2015,10 +2059,19 @@
     activeDrawingId = id;
     selectedIds = new Set();
     legendSelected = false;
+    // 5-1: 도면마다 저장해둔 presetName이 지금 켜진 프리셋과 다르면, 이 도면으로 전환하는 순간
+    // 자동으로 그 프리셋을 활성화한다 — 외관조사·장비조사·기울기·부동침하 도면이 한 프로젝트에
+    // 섞여 있어도 도면을 바꿀 때마다 색·번호가 어긋나지 않는다. 프리셋이 삭제되어 더는 존재하지
+    // 않으면(커스텀 프리셋을 지운 경우 등) 조용히 지금 프리셋을 유지한다.
+    const d = getActiveDrawing();
+    if(d && d.presetName && d.presetName!==activePresetName && allPresets().some(p=>p.name===d.presetName)){
+      setActivePreset(d.presetName, {fromDrawingSwitch:true});
+    }
     renderDrawingTabs();
     renderCanvas();
     renderTable();
     syncSurveyLocationField();
+    syncLegendScaleField();
   }
 
   // 표제란의 "조사위치"는 도면 탭 이름(d.name, 보통 업로드한 파일명에서 옴)과는 별개인, 도면마다
@@ -2029,6 +2082,16 @@
     const d = getActiveDrawing();
     inp.value = d ? (d.surveyLocation||'') : '';
     refreshTbPreviewIfOpen();
+  }
+  // 1장 1-2-3: 범례 크기 슬라이더는 도면별 값(d.legendScale)을 보여준다 — 도면을 바꿀 때마다 갱신.
+  function syncLegendScaleField(){
+    const slider = document.getElementById('legendScaleSlider');
+    if(!slider) return;
+    const d = getActiveDrawing();
+    const v = legendScaleFor(d || {});
+    slider.value = String(v);
+    const label = document.getElementById('legendScaleLabel');
+    if(label) label.textContent = v.toFixed(1);
   }
 
   // ---------- 표제란(도곽) 인쇄 미리보기 ----------
@@ -2609,14 +2672,9 @@
   }
   function toggleGridView(){ setGridView(!gridViewMode); }
 
-  // 결함 목록 하단 범례: "유형"(rptType, 카드의 3번째 칸) 값 기준으로 묶는다. rptType을 입력하지 않은
-  // 마커는 예전처럼 마킹 색상유형(DEFECT_TYPES) 라벨 — "벽체(1)"·"바닥/천장(2)" 등 — 로 표시한다.
-  // 마킹 색상유형(DEFECT_TYPES) 기준 집계 — 인쇄되는 표제란 하단 범례(computeLegendLayout)가 쓴다.
-  // 도면에 실제로 찍히는 색·모양과 항상 일치해야 하므로 rptType과는 별개로 유지한다.
-  function usedTypes(d){
-    return DEFECT_TYPES.map(type=>({type, count: d.markers.filter(m=>m.typeKey===type.key).length}))
-      .filter(x=>x.count>0);
-  }
+  // (구) usedTypes(d)는 표제란 하단 가로 범례(computeLegendLayout, 1-3에 따라 제거)에서만 쓰였던
+  // "마커가 1개 이상 찍힌 계열만" 집계 함수였다 — overlayLegendItems가 항상 전체 계열을 쓰도록
+  // 바뀌면서 더 이상 호출되지 않아 제거함(5장 5-6 정리 대상).
 
   // 결함 목록 하단 범례(사이드바)용 집계 — "유형"(rptType, 카드의 3번째 칸) 값 기준으로 묶는다. rptType을
   // 입력하지 않은 마커는 예전처럼 마킹 색상유형 라벨 — "벽체(1)"·"바닥/천장(2)" 등 — 로 표시한다.
@@ -3758,44 +3816,8 @@
     if(line) lines.push(line);
     return lines;
   }
-  function computeLegendLayout(d, exportW, legendMargin, legendFont, rowHeight){
-    const used = usedTypes(d);
-    const measure = document.createElement('canvas').getContext('2d');
-    measure.font = legendFont;
-    const items = used.map(({type,count})=>{
-      const label = `${type.label} (${count})`;
-      return { type, label, itemW: 28 + measure.measureText(label).width + 26 };
-    });
-    const rows = [];
-    let cur = [], curW = legendMargin;
-    items.forEach(it=>{
-      if(cur.length && curW + it.itemW > exportW - legendMargin){ rows.push(cur); cur=[]; curW=legendMargin; }
-      cur.push(it); curW += it.itemW;
-    });
-    if(cur.length) rows.push(cur);
-    if(rows.length===0) rows.push([]);
-    return { items, rows, measure, legendH: rows.length*rowHeight + 22 };
-  }
-  function drawLegendBlock(ctx, rows, measure, legendFont, x0, y0, legendMargin, rowHeight, emptyText){
-    ctx.textAlign='left'; ctx.textBaseline='middle';
-    if(rows.length===1 && rows[0].length===0){
-      ctx.fillStyle = '#898781'; ctx.font = '14px system-ui, -apple-system, "Segoe UI", sans-serif';
-      ctx.fillText(emptyText, x0+legendMargin, y0+rowHeight/2);
-      return;
-    }
-    rows.forEach((row, ri)=>{
-      let lx = x0 + legendMargin;
-      const ly = y0 + 18 + ri*rowHeight;
-      row.forEach(({type,label})=>{
-        drawLegendIcon(ctx, type, lx+12, ly, 12);
-        lx += 28;
-        ctx.font = legendFont;
-        ctx.fillStyle = '#0b0b0b';
-        ctx.fillText(label, lx, ly);
-        lx += measure.measureText(label).width + 26;
-      });
-    });
-  }
+  // (구) 표제란 하단 가로 범례 computeLegendLayout/drawLegendBlock은 1장 수정지시서 1-3에 따라 제거함 —
+  // "NOTE" 박스(overlayLegendGeometry/drawOverlayLegend)가 항상 켜져 있는 유일한 범례가 되었다.
 
   function exportPNG(){
     const d = getActiveDrawing();
@@ -3851,10 +3873,6 @@
     const projName = document.getElementById('projectNameInput').value.trim() || '-';
     const siteName = document.getElementById('siteNameInput').value.trim() || '-';
     const structureType = document.getElementById('structureTypeInput').value.trim() || '-';
-
-    const legendMargin = 18;
-    const legendFont = '600 14px system-ui, -apple-system, "Segoe UI", sans-serif';
-    const legendRowH = 30;
 
     // ---- 외곽 굵은 테두리(도곽)와 용지 가장자리 사이 여백 — 비대칭: 위쪽은 기존(108px)의 1.5배인
     // 162px, 좌·우·아래는 기존(54px)의 2배인 108px로 더 넉넉하게 둔다.
@@ -3933,13 +3951,17 @@
       }
     });
 
-    // ---- 도면(표제란 아래, contain으로 배치 — 현재 회전 상태의 이미지를 그대로 축소/확대만 함) ----
-    const { rows, measure, legendH } = computeLegendLayout(d, contentW, legendMargin, legendFont, legendRowH);
+    // ---- 범례(NOTE) 열 폭을 먼저 예약한다 — 1장 수정지시서 1-2-4: 범례는 항상 도면 이미지 "바깥"
+    // 우측에 그려지므로, 도면은 그 나머지 폭에만 contain 배치한다(하단 가로 범례는 1-3에 따라 제거됨).
+    const legendGeo = overlayLegendGeometry(ctx, d, contentW);
+    const legendColGap = legendGeo ? Math.max(16, 18*legendGeo.scale) : 0;
+    const legendColW = legendGeo ? legendGeo.boxW : 0;
     const contentY0 = contentMarginTop + titleBarH;
-    const contentAreaH = outerH - contentMarginTop - contentMarginBottom - titleBarH - legendH;
+    const contentAreaH = outerH - contentMarginTop - contentMarginBottom - titleBarH;
+    const drawAreaW = Math.max(10, contentW - legendColW - legendColGap);
     // 이미지가 표제란/범례/외곽 테두리에 딱 붙지 않도록 도면 배치 영역 안쪽으로 약간의 여백을 둔다.
-    const imageMargin = clamp(Math.min(contentW, contentAreaH)*0.02, 10, 26);
-    const availW = Math.max(10, contentW - imageMargin*2);
+    const imageMargin = clamp(Math.min(drawAreaW, contentAreaH)*0.02, 10, 26);
+    const availW = Math.max(10, drawAreaW - imageMargin*2);
     const availH = Math.max(10, contentAreaH - imageMargin*2);
     // 페이지가 원본 도면보다 넓어도(작은 이미지를 인쇄용 최소 크기로 맞추는 경우 등) 원본 해상도 이상으로
     // 확대하지 않는다 — 화질이 흐려지거나 깨지는 것을 막기 위함. 원본보다 페이지가 크면 남는 공간은 여백이 된다.
@@ -3962,16 +3984,14 @@
         drawMarkerWithLeader(ctx, type, cx, cy, r, m.angle||0, leaderLenForMarker(m,r), formatMarkerLabel(m, idx), false, m.numRot||0);
       }
     });
-    // 도면 위 NOTE 박스(자유배치 범례) — 좌표계를 도면이 실제로 그려진 영역(drawX,drawY,drawW,drawH)
-    // 기준으로 옮겨서 그리면, drawOverlayLegend 내부의 %→px 환산이 화면 미리보기와 똑같이 맞는다.
-    ctx.save();
-    ctx.translate(drawX, drawY);
-    drawOverlayLegend(ctx, d, drawW, drawH);
-    ctx.restore();
-
-    // ---- 범례 (도면 아래, 페이지 전체 폭) — 배경 없이 흰 바탕 그대로 두어 하단에 회색 줄이 보이지 않게 함 ----
-    const legendY = outerH - contentMarginBottom - legendH;
-    drawLegendBlock(ctx, rows, measure, legendFont, contentMarginSide, legendY, legendMargin, legendRowH, '표시된 결함이 없습니다');
+    // ---- 범례(NOTE) — 예약해둔 열의 맨 위(표제란 바로 아래)에 고정 배치. 도면 이미지 밖이라
+    // 자유 드래그가 필요 없어 항상 이 자리 하나로 그린다(legendPct는 "표제란 없이 저장"·화면
+    // 캔버스 쪽 자유배치 전용으로만 계속 쓰인다).
+    if(legendGeo){
+      const legendX = contentMarginSide + drawAreaW + legendColGap;
+      const legendY0 = contentY0 + imageMargin;
+      drawOverlayLegend(ctx, d, contentW, contentAreaH, { anchor:'fixed', x: legendX, y: legendY0, refW: contentW });
+    }
 
     // ---- 외곽 굵은 테두리(도곽) — 용지 가장자리에서 비대칭 여백(위 162px, 좌·우·아래 108px)만큼
     // 떨어뜨려서 표제란·도면·범례 전체를 감싸는 굵은 사각형 하나. 안쪽 내용물과는 항상
@@ -5432,9 +5452,15 @@
       // uid 필드가 없는 예전 프로젝트 파일(1단계 이전)은 여는 시점에 한 번 발급해 채워준다 —
       // 이미 uid()로 만들어진 값인 기존 id를 그대로 재사용하므로 다음에 저장해도 값이 바뀌지 않는다.
       drawings.forEach(d=> d.markers.forEach(m=>{ if(!m.uid) m.uid = m.id || uid(); }));
+      // 5-1: 첫 도면이 프로젝트 전체와 다른 프리셋에 묶여 있으면(예: 첫 도면이 부동침하) 그 프리셋으로
+      // 맞춰 연다 — 이미 존재하는 프리셋일 때만(커스텀 프리셋이 그 사이 삭제된 경우는 지금 프리셋 유지).
+      const firstD = drawings[0];
+      if(firstD && firstD.presetName && firstD.presetName!==activePresetName && allPresets().some(p=>p.name===firstD.presetName)){
+        setActivePreset(firstD.presetName, {fromDrawingSwitch:true});
+      }
       // 전체 도면 번호(seq)도 불러온 직후 한 번 맞춰둔다 — 재정렬 토스트 없이 조용히(silent) 처리.
       renumberAllDrawings({silent:true});
-      renderDrawingTabs(); renderCanvas(); renderTable(); syncSurveyLocationField();
+      renderDrawingTabs(); renderCanvas(); renderTable(); syncSurveyLocationField(); syncLegendScaleField();
       isDirty = false;
       if(failedNames.length>0){
         const tail = drawings.length>0
@@ -5460,6 +5486,8 @@
         nd.surveyLocation = dd.surveyLocation || '';
         nd.markers = Array.isArray(dd.markers) ? dd.markers : [];
         nd.legendPct = (dd.legendPct && typeof dd.legendPct.x==='number' && typeof dd.legendPct.y==='number') ? dd.legendPct : null;
+        nd.legendScale = (typeof dd.legendScale==='number' && dd.legendScale>0) ? dd.legendScale : null;
+        nd.presetName = dd.presetName || nd.presetName; // 없으면 buildDrawingFromImage가 넣어둔 "지금 프리셋" 유지(구버전 파일 호환)
         drawings.push(nd);
         settled++; finishIfDone();
       };
@@ -5482,7 +5510,7 @@
       docTitle: document.getElementById('docTitleInput').value,
       seriesPresetName: activePresetName,
       seriesSnapshot: DEFECT_TYPES,
-      drawings: drawings.map(d=>({ id:d.id, name:d.name, surveyLocation:d.surveyLocation||'', imgSrc:d.imgSrc, markers:d.markers, legendPct:d.legendPct||null }))
+      drawings: drawings.map(d=>({ id:d.id, name:d.name, surveyLocation:d.surveyLocation||'', imgSrc:d.imgSrc, markers:d.markers, legendPct:d.legendPct||null, legendScale:d.legendScale||null, presetName:d.presetName||null }))
     };
   }
 
@@ -5643,6 +5671,14 @@
   // 프로젝트 상단 정보(현장명·구조형식 등)도 저장 파일 내용에 포함되므로 편집 시 미저장 표시가 되어야 함.
   ['projectNameInput','siteNameInput','structureTypeInput','docTitleInput'].forEach(id=>{
     document.getElementById(id).addEventListener('input', markDirty);
+  });
+  document.getElementById('legendScaleSlider').addEventListener('input', e=>{
+    const d = getActiveDrawing(); if(!d) return;
+    d.legendScale = parseFloat(e.target.value) || DEFAULT_LEGEND_SCALE;
+    document.getElementById('legendScaleLabel').textContent = d.legendScale.toFixed(1);
+    markDirty();
+    renderCanvas();
+    refreshTbPreviewIfOpen();
   });
   document.getElementById('btnApplyTemplate').addEventListener('click', applyTbTemplate);
   document.getElementById('btnSaveTemplate').addEventListener('click', saveTbTemplate);
@@ -6441,6 +6477,7 @@
       seriesSnapshot: DEFECT_TYPES,
       drawings: drawings.map(d=>({
         id: d.id, name: d.name, surveyLocation: d.surveyLocation||'', legendPct: d.legendPct||null,
+        legendScale: d.legendScale||null, presetName: d.presetName||null,
         markers: d.markers.map(m=>{ const {photos, ...rest} = m; return rest; }),
       })),
     };
@@ -6737,6 +6774,7 @@
   renderTypeGrid();
   renderSeriesPresetSelect();
   renderDrawingTabs();
+  syncLegendScaleField();
   updateModeButtonsUI();
   updateModeHint();
   renderCanvas();
