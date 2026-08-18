@@ -1399,6 +1399,10 @@
   let rectCreateCurX = 0, rectCreateCurY = 0; // 3클릭 진행 중 현재 마우스 위치(미리보기용)
   let coordGuideOn = false; // true = 좌표 안내(10% 간격 점선 그리드 + 커서 위치 % 실시간 표시) 켜짐
   let lastMouseCanvasPt = null; // {x,y} 캔버스 backing-px — 좌표 안내 커서 표시용
+  // 범례(NOTE 박스) 드래그·선택 상태. legendSelected면 방향키로 미세 이동(데스크톱), legendDragState는
+  // Pointer Events 드래그 중에만 채워진다(마우스·터치·펜 공용 — 별도 마우스 전용 로직을 두지 않음).
+  let legendSelected = false;
+  let legendDragState = null; // {startClientX, startClientY, startPct:{x,y}}
 
   function uid(){ return 'm'+Math.random().toString(36).slice(2,10)+Date.now().toString(36); }
   function clamp(v,lo,hi){ return Math.max(lo, Math.min(hi, v)); }
@@ -1687,6 +1691,72 @@
     return `<img src="${c.toDataURL()}" alt="${type.label}"/>`;
   }
 
+  // ---------- 범례(NOTE 박스) 자유 배치 ----------
+  // 표제란 하단의 기존 가로 범례(computeLegendLayout/drawLegendBlock, 인쇄용)와는 별개로, 도면
+  // 이미지 위에 직접 겹쳐 그리는 "NOTE" 박스 — CAD 도면 범례처럼 도면의 빈 공간으로 드래그해 옮길 수
+  // 있다. 위치는 도면별로 d.legendPct = {x,y}(도면 원본 크기 기준 % 좌표, 박스의 좌상단)에 저장하고,
+  // 없으면(한 번도 안 옮겼으면) 기본값인 우측 상단에 그린다. 화면 캔버스(줌 배율 적용된 w×h)든
+  // PNG/PDF 내보내기 캔버스(항상 naturalW×naturalH 그대로)든 이 함수 하나가 그리므로, scale = w/naturalW
+  // 하나만 캔버스마다 다르게 넘기면 미리보기와 실제 저장 결과가 항상 같은 상대적 위치·크기로 맞는다.
+  function seriesLegendLabel(type){
+    if(type.legendLabel) return type.legendLabel;
+    if(type.prefix){
+      const digits = Math.max(2, (type.numbering && type.numbering.digits) || 2);
+      return `${type.prefix}-${'0'.repeat(digits)} : ${type.label}`;
+    }
+    return type.label;
+  }
+  function overlayLegendItems(d){
+    return usedTypes(d).filter(({type})=> type.legendShow!==false);
+  }
+  // 캔버스(screen 또는 export)에 그리고, 다음 히트테스트·드래그에 쓸 사각형(캔버스 backing-px 기준)을
+  // 돌려준다. items가 없으면(그릴 게 없으면) null을 돌려주고 아무것도 그리지 않는다.
+  function drawOverlayLegend(ctx, d, w, h, opts){
+    opts = opts || {};
+    const items = overlayLegendItems(d);
+    if(items.length===0) return null;
+    const scale = clamp(w / (d.naturalW||w||1), 0.05, 20);
+    const pad = Math.max(7, 9*scale);
+    const rowH = Math.max(15, 19*scale);
+    const titleH = Math.max(17, 21*scale);
+    const swatchR = Math.max(6, 7.5*scale);
+    const font = `600 ${Math.max(10, Math.round(11.5*scale))}px system-ui, -apple-system, "Segoe UI", sans-serif`;
+    const titleFont = `800 ${Math.max(10.5, Math.round(12*scale))}px system-ui, -apple-system, "Segoe UI", sans-serif`;
+    ctx.save();
+    ctx.font = font;
+    let maxTextW = 0;
+    const labels = items.map(({type})=>{
+      const label = seriesLegendLabel(type);
+      maxTextW = Math.max(maxTextW, ctx.measureText(label).width);
+      return label;
+    });
+    const boxW = Math.max(pad*2 + swatchR*2 + 6*scale + maxTextW, 70*scale);
+    const boxH = pad + titleH + items.length*rowH + pad*0.4;
+    const pos = d.legendPct;
+    const x = (pos && typeof pos.x==='number') ? pos.x/100*w : (w - boxW - 12*scale);
+    const y = (pos && typeof pos.y==='number') ? pos.y/100*h : 12*scale;
+    ctx.fillStyle = 'rgba(255,255,255,0.92)';
+    ctx.strokeStyle = opts.selected ? '#2a78d6' : 'rgba(11,11,11,0.55)';
+    ctx.lineWidth = opts.selected ? Math.max(1.6, 2*scale) : Math.max(1, 1.2*scale);
+    roundedRectXYWH(ctx, x, y, boxW, boxH, Math.max(3, 4*scale));
+    ctx.fill(); ctx.stroke();
+    ctx.textBaseline = 'middle';
+    ctx.font = titleFont;
+    ctx.fillStyle = '#1f1f1d';
+    ctx.textAlign = 'left';
+    ctx.fillText('NOTE', x+pad, y+pad+titleH/2);
+    ctx.font = font;
+    items.forEach(({type}, i)=>{
+      const ry = y + pad + titleH + i*rowH + rowH/2;
+      const cx = x+pad+swatchR;
+      drawLegendIcon(ctx, type, cx, ry, swatchR);
+      ctx.fillStyle = '#1f1f1d';
+      ctx.fillText(labels[i], x+pad+swatchR*2+6*scale, ry);
+    });
+    ctx.restore();
+    return { x, y, w:boxW, h:boxH };
+  }
+
   // ---------- 인출선(리더선) : 벽체=삼각형 화살표 끝, 바닥/천장=원형 끝 ----------
   // 마커별로 다른 인출선 길이(lenMult, 드래그로 지정)를 지원. 지정 안 된 마커는 전역 슬라이더 기본값 사용.
   function leaderLenForMarker(m, r){
@@ -1914,6 +1984,7 @@
     pendingRectCreate = null; eraseCursorPt = null; pendingAction = null;
     activeDrawingId = id;
     selectedIds = new Set();
+    legendSelected = false;
     renderDrawingTabs();
     renderCanvas();
     renderTable();
@@ -2244,6 +2315,9 @@
     d.markers.forEach((m,idx)=>{
       drawMarkerDispatch(ctx, d, m, formatMarkerLabel(m, idx), w, h, r, selectedIds.has(m.id));
     });
+    // 히트테스트·드래그(hitTestLegendBox)가 쓸 수 있도록, 방금 그린 자리를 캔버스 backing-px 기준으로
+    // 도면 객체에 캐시해둔다 — 매 프레임 다시 그리면서 함께 갱신되므로 항상 최신 위치를 반영한다.
+    d.__legendBox = drawOverlayLegend(ctx, d, w, h, { selected: legendSelected && d.id===activeDrawingId });
     renderLegendPreview(d);
     drawInteractionOverlay(ctx, w, h);
     drawCoordGuideOverlay(ctx, w, h);
@@ -2573,6 +2647,7 @@
     else if(rowRect.bottom > wrapRect.bottom) wrap.scrollTop += rowRect.bottom - wrapRect.bottom;
   }
   function selectOnly(id){
+    legendSelected = false; // 마커 선택과 범례 선택은 배타적
     selectedIds = new Set([id]);
     renderCanvas(); renderTable();
     scrollMarkerCardIntoView(id);
@@ -2580,6 +2655,7 @@
     if(canvas) canvas.focus({preventScroll:true});
   }
   function toggleSelect(id){
+    legendSelected = false;
     if(selectedIds.has(id)) selectedIds.delete(id); else selectedIds.add(id);
     renderCanvas(); renderTable();
   }
@@ -2600,6 +2676,16 @@
   }
   // 터치(손가락) 입력으로 발생한 이벤트인지 판별 — 손잡이 히트 반경을 넓힐지 결정하는 데만 쓴다.
   function isTouchEvent(e){ return !!((e.touches && e.touches.length) || (e.changedTouches && e.changedTouches.length)); }
+
+  // renderMarkerLayer가 매 프레임 d.__legendBox에 캐시해둔 사각형(캔버스 backing-px)과 점(x,y)을
+  // 비교한다 — 범례가 안 그려진 프레임(계열이 하나도 안 쓰인 도면)이면 캐시가 없어 항상 false.
+  // isTouch면 손가락/펜으로도 테두리 근처를 쉽게 잡을 수 있도록 판정 영역을 살짝 넓힌다.
+  function hitTestLegendBox(d, x, y, isTouch){
+    const box = d && d.__legendBox;
+    if(!box) return false;
+    const pad = isTouch ? 14 : 0;
+    return x>=box.x-pad && x<=box.x+box.w+pad && y>=box.y-pad && y<=box.y+box.h+pad;
+  }
 
   // 배지(번호 원)뿐 아니라 인출선(화살표·선)이나 범위 마커의 사각형 몸통을 클릭해도 그 마커가
   // 잡히도록(선택/이동) 확장 — "화살표, 선, 원 모두 각각 클릭만으로도 선택 가능"
@@ -3679,6 +3765,7 @@
     d.markers.forEach((m, idx)=>{
       drawMarkerDispatch(ctx, d, m, formatMarkerLabel(m, idx), w, h, r, false);
     });
+    drawOverlayLegend(ctx, d, w, h);
 
     return off;
   }
@@ -3804,6 +3891,12 @@
         drawMarkerWithLeader(ctx, type, cx, cy, r, m.angle||0, leaderLenForMarker(m,r), formatMarkerLabel(m, idx), false, m.numRot||0);
       }
     });
+    // 도면 위 NOTE 박스(자유배치 범례) — 좌표계를 도면이 실제로 그려진 영역(drawX,drawY,drawW,drawH)
+    // 기준으로 옮겨서 그리면, drawOverlayLegend 내부의 %→px 환산이 화면 미리보기와 똑같이 맞는다.
+    ctx.save();
+    ctx.translate(drawX, drawY);
+    drawOverlayLegend(ctx, d, drawW, drawH);
+    ctx.restore();
 
     // ---- 범례 (도면 아래, 페이지 전체 폭) — 배경 없이 흰 바탕 그대로 두어 하단에 회색 줄이 보이지 않게 함 ----
     const legendY = outerH - contentMarginBottom - legendH;
@@ -5191,6 +5284,7 @@
         nd.id = dd.id || nd.id;
         nd.surveyLocation = dd.surveyLocation || '';
         nd.markers = Array.isArray(dd.markers) ? dd.markers : [];
+        nd.legendPct = (dd.legendPct && typeof dd.legendPct.x==='number' && typeof dd.legendPct.y==='number') ? dd.legendPct : null;
         drawings.push(nd);
         settled++; finishIfDone();
       };
@@ -5213,7 +5307,7 @@
       docTitle: document.getElementById('docTitleInput').value,
       seriesPresetName: activePresetName,
       seriesSnapshot: DEFECT_TYPES,
-      drawings: drawings.map(d=>({ id:d.id, name:d.name, surveyLocation:d.surveyLocation||'', imgSrc:d.imgSrc, markers:d.markers }))
+      drawings: drawings.map(d=>({ id:d.id, name:d.name, surveyLocation:d.surveyLocation||'', imgSrc:d.imgSrc, markers:d.markers, legendPct:d.legendPct||null }))
     };
   }
 
@@ -5416,6 +5510,7 @@
       if(isTableInputOpen()){ e.preventDefault(); closeTableInputModal(); return; }
       if(cropMode){ e.preventDefault(); exitCropMode(); return; }
       if(pendingRectCreate){ e.preventDefault(); cancelRectCreate(); return; }
+      if(!isEditing && legendSelected){ e.preventDefault(); legendSelected=false; renderCanvas(); return; }
       if(!isEditing && selectedIds.size>0){ e.preventDefault(); clearSelection(); return; }
       return;
     }
@@ -5446,6 +5541,22 @@
     }
     const typeByShortcut = typeByShortcutKey(e.key);
     if(typeByShortcut){ e.preventDefault(); setActiveType(typeByShortcut.key); return; }
+    // 범례(NOTE 박스)가 선택된 상태에서의 방향키 미세 이동 — 1px(Shift: 10px). 실제 화면 픽셀 기준으로
+    // 옮긴 뒤 그 결과를 다시 %로 저장하므로, 확대 배율이 달라도 "화면에서 보이는 이동량"은 항상 같다.
+    if(legendSelected && ['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)){
+      e.preventDefault();
+      const d = getActiveDrawing();
+      if(d && d.__legendBox){
+        if(!d.legendPct) d.legendPct = { x: d.__legendBox.x/canvas.width*100, y: d.__legendBox.y/canvas.height*100 };
+        const stepPx = e.shiftKey ? 10 : 1;
+        const dxPct = (e.key==='ArrowLeft' ? -stepPx : e.key==='ArrowRight' ? stepPx : 0) / canvas.width * 100;
+        const dyPct = (e.key==='ArrowUp' ? -stepPx : e.key==='ArrowDown' ? stepPx : 0) / canvas.height * 100;
+        d.legendPct = { x: d.legendPct.x+dxPct, y: d.legendPct.y+dyPct };
+        markDirty();
+        renderCanvas();
+      }
+      return;
+    }
     if((e.key==='ArrowLeft' || e.key==='ArrowRight') && selectedIds.size>0){
       e.preventDefault();
       const step = e.shiftKey ? 45 : 10;
@@ -5495,6 +5606,20 @@
       return;
     }
 
+    if(hitTestLegendBox(d, p.x, p.y, isTouchEvent(e))){
+      legendSelected = true;
+      clearSelection(); // 마커 선택과 범례 선택은 배타적 — 방향키가 어느 쪽을 움직일지 헷갈리지 않게 한다
+      if(!d.legendPct){
+        // 아직 한 번도 옮긴 적 없는(기본 위치) 범례를 드래그하기 시작하면, 지금 그려진 자리를 그대로
+        // 첫 좌표로 확정해둔다 — 기본 위치도 %로 저장해야 드래그 델타를 더할 기준이 생긴다.
+        const box = d.__legendBox;
+        d.legendPct = { x: box.x/canvas.width*100, y: box.y/canvas.height*100 };
+      }
+      legendDragState = { startX:p.x, startY:p.y, startPct: { x:d.legendPct.x, y:d.legendPct.y } };
+      canvas.style.cursor = 'move';
+      renderMarkerLayer();
+      return;
+    }
     const rectRotHit = hitTestRectRotateHandle(d, p.x, p.y, isTouchEvent(e));
     if(rectRotHit){
       pushUndo();
@@ -5560,6 +5685,17 @@
   // touchmove/mousemove 핸들러 — 드래그 중 매 이벤트마다 renderMarkerLayer()를 직접 부르지 않고
   // scheduleMarkerRender()로 rAF 프레임당 한 번만 그리도록 스로틀한다(위 정의 참고).
   function onPointerMove(e){
+    if(legendDragState){
+      const d = getActiveDrawing(); if(!d){ legendDragState=null; return; }
+      const p = canvasPointFromEvent(e);
+      const w = canvas.width, h = canvas.height;
+      const dxPct = (p.x-legendDragState.startX)/w*100;
+      const dyPct = (p.y-legendDragState.startY)/h*100;
+      d.legendPct = { x: legendDragState.startPct.x+dxPct, y: legendDragState.startPct.y+dyPct };
+      markDirty(); // legendPct는 가벼운 메타데이터라 이미지 전용 자동저장(markImagesDirty)이 아니라 일반 저장 플래그만 세운다
+      scheduleMarkerRender();
+      return;
+    }
     if(pendingAction && pendingAction.mode==='pan'){
       const wrap = document.getElementById('canvasWrap');
       wrap.scrollLeft = pendingAction.startScrollLeft - (e.clientX - pendingAction.startClientX);
@@ -5588,7 +5724,8 @@
       }
       const rectRotHover = hitTestRectRotateHandle(d0, p0.x, p0.y, isTouchEvent(e));
       const rectHandleHover = hitTestRectResizeHandle(d0, p0.x, p0.y, isTouchEvent(e));
-      if(rectRotHover) canvas.style.cursor = 'grab';
+      if(hitTestLegendBox(d0, p0.x, p0.y, isTouchEvent(e))) canvas.style.cursor = 'move'; // 데스크톱: 범례 위에서 move 커서
+      else if(rectRotHover) canvas.style.cursor = 'grab';
       else if(rectHandleHover) canvas.style.cursor = RESIZE_CURSORS[rectHandleHover.corner] || 'pointer';
       else if(hitTestHandle(d0, p0.x, p0.y, isTouchEvent(e))) canvas.style.cursor = 'alias';
       else if(hitTestMarker(d0, p0.x, p0.y)) canvas.style.cursor = 'move';
@@ -5695,6 +5832,11 @@
   canvas.addEventListener('mousemove', onPointerMove);
 
   function onPointerUp(e){
+    if(legendDragState){
+      legendDragState = null;
+      canvas.style.cursor = 'crosshair';
+      return;
+    }
     if(!pendingAction) return;
     // 먼저 전역 상태를 비우고 로컬 변수로만 마무리 처리를 진행한다 — 그래야 아래에서 호출하는
     // renderCanvas()가 "드래그 중" 오버레이(러버밴드 점선 사각형 등)를 그리지 않고 즉시 사라진다.
@@ -5958,7 +6100,7 @@
     if(pinchState && e.touches.length<2) endPinch();
     if(e.touches.length===0) onPointerUp(e);
   }, { passive:false });
-  window.addEventListener('touchcancel', ()=>{ endPinch(); pendingAction = null; renderCanvas(); });
+  window.addEventListener('touchcancel', ()=>{ endPinch(); pendingAction = null; legendDragState = null; renderCanvas(); });
 
   // iOS 사파리는 캔버스에서 touch-action:none + preventDefault로 막아도, 두 손가락 제스처를
   // 표준 touch 이벤트보다 먼저 자체 gesturestart/gesturechange/gestureend로 가로채 페이지 전체를
@@ -6123,7 +6265,7 @@
       seriesPresetName: activePresetName,
       seriesSnapshot: DEFECT_TYPES,
       drawings: drawings.map(d=>({
-        id: d.id, name: d.name, surveyLocation: d.surveyLocation||'',
+        id: d.id, name: d.name, surveyLocation: d.surveyLocation||'', legendPct: d.legendPct||null,
         markers: d.markers.map(m=>{ const {photos, ...rest} = m; return rest; }),
       })),
     };
