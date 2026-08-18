@@ -3250,7 +3250,7 @@
   // 최신 값을 바로 반영하도록.
   function computeCardSearchIndex(m){
     return [getType(m.typeKey).label, m.rptType, m.rptMember, m.rptDefect, m.rptTag,
-        m.tiltBldg, m.tiltPt, m.lvGroup]
+        m.tiltBldg, m.tiltPt, m.lvGroup, m.eqFloor, m.eqLoc, m.eqMember, m.eqNote]
       .filter(Boolean).join(' ').toLowerCase();
   }
   function updateCardSearchIndex(card, m){
@@ -3474,6 +3474,67 @@
     });
   }
 
+  // ---------- 장비조사 전용 카드(SH/PH/DM, 3장 3-2) ----------
+  // 기울기·부동침하와 같은 이유로 typeKey가 'sh'/'ph'/'dm'(BUILTIN_PRESETS 정의, 계열 편집에서
+  // 라벨·색만 바뀌고 key는 안 바뀜)인지로 분기한다. 장비조사 프리셋은 한 도면 안에 SH·PH·DM 마커가
+  // 섞일 수 있어(기울기·부동침하와 달리 "도면당 스키마 하나" 전제가 안 맞음) 고정된 한 줄 헤더로는
+  // 계열마다 다른 칸을 정확히 표시할 수 없다 — 그래서 헤더는 안내 문구로 남겨두고, 각 칸은
+  // placeholder·title(툴팁)·data-label(태블릿에서 실제로 라벨로 렌더됨, 260줄 근처 CSS 참고)로
+  // 구분한다. 세 계열이 공통으로 쓰는 값(층수·위치·부재명 등)은 필드 이름을 공유한다(eqFloor 등) —
+  // 한 마커는 항상 세 계열 중 하나뿐이라 값이 섞일 일이 없다.
+  function buildShCardHTML(m, idx){
+    return `
+      <div class="mc-row">
+        <input type="text" class="mc-num" data-role="pos" tabindex="-1" value="${m.seq||idx+1}" title="번호"/>
+        <select data-role="type" class="mc-marktype" tabindex="-1" title="마킹 색상·모양">${DEFECT_TYPES.map(t=>`<option value="${t.key}" ${t.key===m.typeKey?'selected':''}>${t.label}</option>`).join('')}</select>
+        <span class="mc-field" data-label="층수"><input type="text" data-role="eqFloor" placeholder="층수" title="층수" value="${escapeAttr(m.eqFloor||'')}"/></span>
+        <span class="mc-field" data-label="위치"><input type="text" data-role="eqLoc" placeholder="위치" title="위치" value="${escapeAttr(m.eqLoc||'')}"/></span>
+        <span class="mc-field" data-label="부재명"><input type="text" data-role="eqMember" placeholder="부재명" title="부재명" value="${escapeAttr(m.eqMember||'')}"/></span>
+        <span class="mc-field" data-label="비고" style="flex:1.4 1 100px;"><input type="text" data-role="eqNote" placeholder="비고" title="비고" value="${escapeAttr(m.eqNote||'')}"/></span>
+        <button class="mc-photo" data-role="photo" tabindex="-1" title="사진 첨부"><svg class="icon"><use href="#i-camera"/></svg>${(m.photos&&m.photos.length)?`<span class="photo-count">${m.photos.length}</span>`:''}</button>
+        <button class="row-del" data-role="del" tabindex="-1" title="삭제"><svg class="icon"><use href="#i-close"/></svg></button>
+      </div>`;
+  }
+  function buildPhCardHTML(m, idx){
+    return `
+      <div class="mc-row">
+        <input type="text" class="mc-num" data-role="pos" tabindex="-1" value="${m.seq||idx+1}" title="번호"/>
+        <select data-role="type" class="mc-marktype" tabindex="-1" title="마킹 색상·모양">${DEFECT_TYPES.map(t=>`<option value="${t.key}" ${t.key===m.typeKey?'selected':''}>${t.label}</option>`).join('')}</select>
+        <span class="mc-suffix" data-label="구분" title="자동 채번(PH-01…)">${escapeHTML(formatMarkerLabel(m, idx))}</span>
+        <span class="mc-field" data-label="위치"><input type="text" data-role="eqLoc" placeholder="위치" title="위치" value="${escapeAttr(m.eqLoc||'')}"/></span>
+        <span class="mc-field" data-label="부재"><input type="text" data-role="eqMember" placeholder="부재" title="부재" value="${escapeAttr(m.eqMember||'')}"/></span>
+        <span class="mc-suffix" data-label="탄산화깊이"><input type="text" data-role="eqCarbDepth" placeholder="깊이" title="탄산화 깊이(mm)" value="${escapeAttr(m.eqCarbDepth||'')}"/><span>mm</span></span>
+        <span class="mc-suffix" data-label="피복두께"><input type="text" data-role="eqCoverDepth" placeholder="두께" title="피복두께(mm)" value="${escapeAttr(m.eqCoverDepth||'')}"/><span>mm</span></span>
+        <button class="mc-photo" data-role="photo" tabindex="-1" title="사진 첨부"><svg class="icon"><use href="#i-camera"/></svg>${(m.photos&&m.photos.length)?`<span class="photo-count">${m.photos.length}</span>`:''}</button>
+        <button class="row-del" data-role="del" tabindex="-1" title="삭제"><svg class="icon"><use href="#i-close"/></svg></button>
+      </div>`;
+  }
+  function buildDmCardHTML(m, idx){
+    return `
+      <div class="mc-row">
+        <input type="text" class="mc-num" data-role="pos" tabindex="-1" value="${m.seq||idx+1}" title="번호"/>
+        <select data-role="type" class="mc-marktype" tabindex="-1" title="마킹 색상·모양">${DEFECT_TYPES.map(t=>`<option value="${t.key}" ${t.key===m.typeKey?'selected':''}>${t.label}</option>`).join('')}</select>
+        <span class="mc-suffix" data-label="No." title="자동 채번(DM-01…)">${escapeHTML(formatMarkerLabel(m, idx))}</span>
+        <span class="mc-field" data-label="층수"><input type="text" data-role="eqFloor" placeholder="층수" title="층수" value="${escapeAttr(m.eqFloor||'')}"/></span>
+        <span class="mc-field" data-label="위치"><input type="text" data-role="eqLoc" placeholder="위치" title="위치" value="${escapeAttr(m.eqLoc||'')}"/></span>
+        <span class="mc-field" data-label="부재명"><input type="text" data-role="eqMember" placeholder="부재명" title="부재명" value="${escapeAttr(m.eqMember||'')}"/></span>
+        <span class="mc-suffix" data-label="실측상"><input type="text" data-role="eqMeasured" placeholder="실측상" title="실측상(mm)" value="${escapeAttr(m.eqMeasured||'')}"/><span>mm</span></span>
+        <button class="mc-photo" data-role="photo" tabindex="-1" title="사진 첨부"><svg class="icon"><use href="#i-camera"/></svg>${(m.photos&&m.photos.length)?`<span class="photo-count">${m.photos.length}</span>`:''}</button>
+        <button class="row-del" data-role="del" tabindex="-1" title="삭제"><svg class="icon"><use href="#i-close"/></svg></button>
+      </div>`;
+  }
+  function wireEqTextFields(card, m, keys){
+    keys.forEach(key=>{
+      card.querySelector(`[data-role="${key}"]`).addEventListener('input', e=>{
+        markDirty(); m[key] = e.target.value;
+        updateCardSearchIndex(card, m);
+      });
+    });
+  }
+  function wireShCard(card, m){ wireEqTextFields(card, m, ['eqFloor','eqLoc','eqMember','eqNote']); }
+  function wirePhCard(card, m){ wireEqTextFields(card, m, ['eqLoc','eqMember','eqCarbDepth','eqCoverDepth']); }
+  function wireDmCard(card, m){ wireEqTextFields(card, m, ['eqFloor','eqLoc','eqMember','eqMeasured']); }
+
   // ---------- 퀵 입력 시트(태블릿 전용) ----------
   // 마커를 찍으면 서랍(우측 결함 목록)을 열지 않고도 유형·부재명·결함명만 바로 채울 수 있게, 캔버스
   // 하단에 작은 시트를 띄운다. reportFieldOptions(유형/부재명/결함명 선택지)를 카드와 동일하게 쓰지만,
@@ -3584,11 +3645,18 @@
     <span class="mc-suffix">측점</span>
     <span class="mc-suffix">측정값(cm)</span>
     <span class="mc-suffix">경간(mm)</span>`;
+  // 장비조사는 한 도면에 SH/PH/DM이 섞일 수 있어(계열마다 칸 구성이 다름) 고정된 한 줄 헤더로 정확한
+  // 컬럼명을 달 수 없다 — 안내 문구만 두고, 각 칸은 카드의 placeholder·title(툴팁)로 구분한다.
+  const EQ_MARKER_LIST_HEAD_HTML = `
+    <span class="mc-num"></span>
+    <span class="mc-marktype"></span>
+    <span class="mc-field" style="flex:1;color:var(--text-secondary);font-weight:400;">SH(층수·위치·부재명·비고) · PH(위치·부재·탄산화깊이·피복두께) · DM(층수·위치·부재명·실측상) — 계열마다 칸이 다릅니다</span>`;
   function renderMarkerListHead(){
     const row = document.querySelector('.marker-list-head .mc-row');
     if(!row) return;
     row.innerHTML = activePresetName==='기울기' ? TILT_MARKER_LIST_HEAD_HTML
       : activePresetName==='부동침하' ? LV_MARKER_LIST_HEAD_HTML
+      : activePresetName==='장비조사' ? EQ_MARKER_LIST_HEAD_HTML
       : DEFAULT_MARKER_LIST_HEAD_HTML;
   }
 
@@ -3625,9 +3693,13 @@
       // marker-list-wrap에 가로 스크롤이 생겨서 대응한다.
       const isTiltPos = m.typeKey==='tilt_pos', isTiltDir = m.typeKey==='tilt_dir';
       const isLv = m.typeKey==='lv_x' || m.typeKey==='lv_y';
+      const isSh = m.typeKey==='sh', isPh = m.typeKey==='ph', isDm = m.typeKey==='dm';
       if(isTiltPos) card.innerHTML = buildTiltPosCardHTML(m, idx);
       else if(isTiltDir) card.innerHTML = buildTiltDirCardHTML(m, idx);
       else if(isLv) card.innerHTML = buildLvCardHTML(m, idx);
+      else if(isSh) card.innerHTML = buildShCardHTML(m, idx);
+      else if(isPh) card.innerHTML = buildPhCardHTML(m, idx);
+      else if(isDm) card.innerHTML = buildDmCardHTML(m, idx);
       else {
         const typeOptions = DEFECT_TYPES.map(t=>`<option value="${t.key}" ${t.key===m.typeKey?'selected':''}>${t.label}</option>`).join('');
         card.innerHTML = `
@@ -3673,6 +3745,12 @@
         wireTiltPosCard(card, m);
       } else if(isLv){
         wireLvCard(card, m);
+      } else if(isSh){
+        wireShCard(card, m);
+      } else if(isPh){
+        wirePhCard(card, m);
+      } else if(isDm){
+        wireDmCard(card, m);
       } else if(!isTiltDir){
         wireReportSelect(card, 'rptType', m);
         wireReportSelect(card, 'rptMember', m);
@@ -4515,7 +4593,9 @@
       // 2·4장: 기울기·부동침하 전용 값 — 다른 프리셋의 마커는 빈 칸으로 남는다(기존 CSV/XLSX 소비 코드와
       // 자리를 맞추기 위해 항상 맨 끝에 추가).
       '기울기_구분','기울기_측점','기울기_상부시준(도분초)','기울기_하부시준(도분초)','기울기_수평거리(mm)','기울기_방향','기울기_수평각차(자동)',
-      'LV그룹','LV측정값(cm)','LV경간(mm)'];
+      'LV그룹','LV측정값(cm)','LV경간(mm)',
+      // 3-2: 장비조사(SH/PH/DM) 전용 값. 계열마다 쓰는 칸이 달라 빈 칸이 섞여도 정상이다.
+      '장비_층수','장비_위치','장비_부재명','장비_비고','장비_탄산화깊이(mm)','장비_피복두께(mm)','장비_실측상(mm)'];
     const rows = [];
     drawings.forEach(d=>{
       d.markers.forEach((m, idx)=>{
@@ -4531,7 +4611,8 @@
           (m.photos&&m.photos.length) ? `${m.photos.length}장` : '',
           (m.note||'').replace(/\r?\n/g,' '), m.uid||m.id||'',
           m.tiltBldg||'', m.tiltPt||'', upDms, loDms, m.tiltDist||'', (m.tiltDir&&m.tiltDir!=='자동')?m.tiltDir:(tiltHasAngleInput(m)?computeTiltDiff(m).direction:''), tiltHasAngleInput(m)?tiltResultText(m):'',
-          m.lvGroup||'', m.lvValue||'', m.lvSpan||''] });
+          m.lvGroup||'', m.lvValue||'', m.lvSpan||'',
+          m.eqFloor||'', m.eqLoc||'', m.eqMember||'', m.eqNote||'', m.eqCarbDepth||'', m.eqCoverDepth||'', m.eqMeasured||''] });
       });
     });
     return { header, rows };
@@ -4774,6 +4855,8 @@
         if(m.rptType) nameParts.push(m.rptType);
         if(m.rptMember) nameParts.push(m.rptMember);
         if(m.rptDefect) nameParts.push(m.rptDefect);
+        if(m.eqLoc) nameParts.push(m.eqLoc);
+        if(m.eqMember) nameParts.push(m.eqMember);
         const baseName = sanitizeFilename(nameParts.join('_'));
         const folder = multiDrawing ? sanitizeFilename(d.name) + '/' : '';
         photos.forEach((photo, pi)=>{
