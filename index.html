@@ -4730,10 +4730,6 @@
     while(n>0){ const r = (n-1)%26; s = String.fromCharCode(65+r) + s; n = Math.floor((n-1)/26); }
     return s;
   }
-  // buildDefectExportData()가 만드는 열 순서 기준, "숫자로 봐도 되는" 열의 0-based 인덱스.
-  // (번호·X%·Y%·각도·인출선길이배율·범위X/Y/폭/높이%·폭·길이·개수). 도면명·위치유형·유형·부재명·
-  // 결함명·#(자유 태그)·사진·비고·UID는 사람이 읽는 라벨/자유 텍스트이므로 항상 문자열로 둔다.
-  const XLSX_NUMERIC_COL_IDX = new Set([1,3,4,5,6,7,8,9,10,14,15,16]);
   function looksNumeric(v){
     return v!==null && v!==undefined && v!=='' && /^-?\d+(\.\d+)?$/.test(String(v).trim());
   }
@@ -4749,8 +4745,102 @@
     if(bb > rr + 30) return 4; // 푸른 계열
     return 2; // 그 외(녹색 등)는 중립 테두리만
   }
-  function buildXLSXBlob(header, rows){
-    const colCount = header.length;
+  // ---------- 엑셀 멀티시트: 프리셋마다 8장 사용자 지정 서식으로 별도 시트 ----------
+  // 각 시트는 { name, header, rows:[{typeKey,cells}], numericColIdx:Set } 모양. header의 빈 문자열('')은
+  // 8장 사용자 설명대로 "칸은 있지만 제목은 비워둔다"는 뜻(마킹유형 배지·단위·# 같은 보조 칸).
+  function buildOegwanSheet(items){
+    const header = ['NO','','자재','부재','결함','폭','','길이','','개수','','','사진번호'];
+    const rows = items.map(({m,idx,d})=>{
+      const type = getType(m.typeKey);
+      return { typeKey: m.typeKey, cells: [
+        m.seq||idx+1, type.label, m.rptType||'', m.rptMember||'', m.rptDefect||'',
+        m.rptWidth||'', 'mm', m.rptLength||'', 'mm', m.rptCount||'', '개', '#', m.rptTag||'',
+      ]};
+    });
+    return { name:'외관조사', header, rows, numericColIdx: new Set([0,5,7,9]) };
+  }
+  function buildEquipSheet(items){
+    const header = ['NO','구분','층수','위치','부재','사진번호'];
+    const rows = items.map(({m,idx,d})=> ({ typeKey: m.typeKey, cells: [
+      m.seq||idx+1, formatMarkerLabel(m,idx,d), m.eqFloor||'', m.eqLoc||'', m.eqMember||'', m.eqTag||'',
+    ]}));
+    return { name:'장비조사', header, rows, numericColIdx: new Set([0]) };
+  }
+  // 측정방향(tilt_dir) 마커는 독자적인 각도 입력이 없는 자동 생성 짝 마커라 이 시트에서는 뺀다
+  // (측정위치 행 하나가 그 짝의 데이터까지 전부 담고 있음).
+  function buildTiltSheet(items){
+    const header = ['NO','구분','도','분','초','도','분','초','수평거리','도','분','초'];
+    const rows = items.filter(x=>x.m.typeKey==='tilt_pos').map(({m,idx,d})=>{
+      const calc = tiltHasAngleInput(m) ? computeTiltDiff(m) : null;
+      return { typeKey: m.typeKey, cells: [
+        formatMarkerLabel(m,idx,d), m.tiltBldg||'',
+        m.tiltUpD||'', m.tiltUpM||'', m.tiltUpS||'',
+        m.tiltLoD||'', m.tiltLoM||'', m.tiltLoS||'',
+        m.tiltDist||'',
+        calc?calc.dms.d:'', calc?calc.dms.m:'', calc?calc.dms.s:'',
+      ]};
+    });
+    return { name:'기울기', header, rows, numericColIdx: new Set([2,3,4,5,6,7,8,9,10,11]) };
+  }
+  // 부동침하는 사용자 확인대로 LV그룹·경간을 유지한다(9단계) — 자동계산에 필요한 값이라 표에서 뺄 수 없음.
+  function buildLvSheet(items){
+    const header = ['NO','LV그룹','측점','측정값(cm)','경간(mm)'];
+    const rows = items.map(({m,idx,d})=> ({ typeKey: m.typeKey, cells: [
+      m.seq||idx+1, m.lvGroup||'', formatMarkerLabel(m,idx,d), m.lvValue||'', m.lvSpan||'',
+    ]}));
+    return { name:'부동침하', header, rows, numericColIdx: new Set([0,3,4]) };
+  }
+  // 빌트인 4종이 아닌 프리셋(사용자가 계열 편집으로 새로 만든 커스텀 프리셋 등)은 전용 서식이 없으므로
+  // 예전 통합 표와 같은 일반 컬럼 구성으로 시트를 만든다.
+  function buildGenericPresetSheet(name, items){
+    const header = ['도면명','번호','위치유형','X(%)','Y(%)','각도','자재','부재','결함','폭','길이','개수','사진번호','비고','UID'];
+    const rows = items.map(({m,idx,d})=>{
+      const type = getType(m.typeKey);
+      return { typeKey: m.typeKey, cells: [
+        d.name, formatMarkerLabel(m,idx,d), type.label, m.xPct.toFixed(1), m.yPct.toFixed(1), Math.round(m.angle||0),
+        m.rptType||'', m.rptMember||'', m.rptDefect||'', m.rptWidth||'', m.rptLength||'', m.rptCount||'', m.rptTag||'',
+        (m.note||'').replace(/\r?\n/g,' '), m.uid||m.id||'',
+      ]};
+    });
+    return { name, header, rows, numericColIdx: new Set([3,4,5,9,10,11]) };
+  }
+  function buildSheetForPreset(preset, items){
+    if(preset.name==='외관조사') return buildOegwanSheet(items);
+    if(preset.name==='장비조사') return buildEquipSheet(items);
+    if(preset.name==='기울기') return buildTiltSheet(items);
+    if(preset.name==='부동침하') return buildLvSheet(items);
+    return buildGenericPresetSheet(preset.name, items);
+  }
+  // 프로젝트 전체 마커를 프리셋별로 나눠 각각의 서식으로 시트 데이터를 만든다. 마커가 하나도 없는
+  // 프리셋은 건너뛴다(빈 시트를 만들지 않음). 어떤 빌트인/커스텀 프리셋에도 속하지 않는 typeKey(계열
+  // 자체가 삭제된 예전 마커 등)가 있으면 맨 끝에 "기타" 시트 하나로 모은다.
+  function buildPresetSheets(){
+    renumberAllDrawings({silent:true});
+    const allItems = [];
+    drawings.forEach(d=> d.markers.forEach((m, idx)=> allItems.push({ m, idx, d })));
+    const sheets = [];
+    const coveredKeys = new Set();
+    allPresets().forEach(preset=>{
+      preset.series.forEach(s=>coveredKeys.add(s.key));
+      const items = allItems.filter(x=> preset.series.some(s=>s.key===x.m.typeKey));
+      if(items.length>0) sheets.push(buildSheetForPreset(preset, items));
+    });
+    const leftover = allItems.filter(x=> !coveredKeys.has(x.m.typeKey));
+    if(leftover.length>0) sheets.push(buildGenericPresetSheet('기타', leftover));
+    return sheets;
+  }
+  // 엑셀 시트 이름 제약(최대 31자, \ / ? * [ ] : 금지)에 맞추고, 같은 이름이 이미 쓰였으면 뒤에 번호를 붙인다.
+  function sanitizeXlsxSheetName(name, usedNames){
+    let s = String(name||'Sheet').replace(/[\\\/\?\*\[\]:]/g,' ').trim().slice(0,31) || 'Sheet';
+    if(usedNames.has(s)){
+      let n = 2;
+      while(usedNames.has(`${s.slice(0,28)}_${n}`)) n++;
+      s = `${s.slice(0,28)}_${n}`;
+    }
+    usedNames.add(s);
+    return s;
+  }
+  function buildXLSXBlob(sheets){
     // 스타일: 0=기본, 1=헤더(굵게+회색배경+테두리), 2=일반 데이터(테두리만), 3=벽체계(옅은 빨강), 4=바닥/천장계(옅은 파랑)
     const stylesXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
@@ -4776,35 +4866,43 @@
   </cellXfs>
   <cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>
 </styleSheet>`;
-    const colsXml = `<cols>${header.map((h,i)=>`<col min="${i+1}" max="${i+1}" width="${Math.min(30, Math.max(8, h.length*1.6+4))}" customWidth="1"/>`).join('')}</cols>`;
-    const headerRow = `<row r="1">${header.map((h,i)=>`<c r="${xlsxColLetter(i+1)}1" t="inlineStr" s="1"><is><t>${xmlEscape(h)}</t></is></c>`).join('')}</row>`;
-    const dataRows = rows.map((row,ri)=>{
-      const type = getType(row.typeKey);
-      const style = xlsxRowStyleForType(type);
-      const r = ri+2;
-      const cells = row.cells.map((v,ci)=>{
-        // 숫자 열이면서 값이 실제로 순수한 숫자 형태일 때만 숫자 셀(t 속성 없음 = 기본 numeric)로 쓴다.
-        // 엑셀에서 계산·정렬·필터가 문자열이 아니라 진짜 숫자로 동작한다.
-        if(XLSX_NUMERIC_COL_IDX.has(ci) && looksNumeric(v)){
-          return `<c r="${xlsxColLetter(ci+1)}${r}" s="${style}"><v>${Number(v)}</v></c>`;
-        }
-        return `<c r="${xlsxColLetter(ci+1)}${r}" t="inlineStr" s="${style}"><is><t>${xmlEscape(v)}</t></is></c>`;
+    // 시트마다(프리셋마다) 컬럼 구성이 다르므로, 워크시트 XML도 시트별로 따로 만든다.
+    const usedNames = new Set();
+    const sheetFiles = sheets.map((sheet, si)=>{
+      const sheetName = sanitizeXlsxSheetName(sheet.name, usedNames);
+      const colCount = sheet.header.length;
+      const colsXml = `<cols>${sheet.header.map((h,i)=>`<col min="${i+1}" max="${i+1}" width="${Math.min(30, Math.max(8, (h||'').length*1.6+6))}" customWidth="1"/>`).join('')}</cols>`;
+      const headerRow = `<row r="1">${sheet.header.map((h,i)=>`<c r="${xlsxColLetter(i+1)}1" t="inlineStr" s="1"><is><t>${xmlEscape(h)}</t></is></c>`).join('')}</row>`;
+      const dataRows = sheet.rows.map((row,ri)=>{
+        const type = getType(row.typeKey);
+        const style = xlsxRowStyleForType(type);
+        const r = ri+2;
+        const cells = row.cells.map((v,ci)=>{
+          // 숫자 열이면서 값이 실제로 순수한 숫자 형태일 때만 숫자 셀(t 속성 없음 = 기본 numeric)로 쓴다.
+          // 엑셀에서 계산·정렬·필터가 문자열이 아니라 진짜 숫자로 동작한다.
+          if(sheet.numericColIdx.has(ci) && looksNumeric(v)){
+            return `<c r="${xlsxColLetter(ci+1)}${r}" s="${style}"><v>${Number(v)}</v></c>`;
+          }
+          return `<c r="${xlsxColLetter(ci+1)}${r}" t="inlineStr" s="${style}"><is><t>${xmlEscape(v)}</t></is></c>`;
+        }).join('');
+        return `<row r="${r}">${cells}</row>`;
       }).join('');
-      return `<row r="${r}">${cells}</row>`;
-    }).join('');
-    const sheetXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+      const sheetXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
   <sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>
   ${colsXml}
   <sheetData>${headerRow}${dataRows}</sheetData>
-  <autoFilter ref="A1:${xlsxColLetter(colCount)}${rows.length+1}"/>
+  <autoFilter ref="A1:${xlsxColLetter(colCount)}${sheet.rows.length+1}"/>
 </worksheet>`;
+      return { sheetName, fileName: `sheet${si+1}.xml`, rId: `rId${si+1}`, xml: sheetXml };
+    });
+    const stylesRelId = `rId${sheetFiles.length+1}`;
     const contentTypesXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
   <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
   <Default Extension="xml" ContentType="application/xml"/>
   <Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
-  <Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
+  ${sheetFiles.map(f=>`<Override PartName="/xl/worksheets/${f.fileName}" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join('\n  ')}
   <Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>
 </Types>`;
     const rootRelsXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
@@ -4813,12 +4911,12 @@
 </Relationships>`;
     const workbookXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
-  <sheets><sheet name="결함목록" sheetId="1" r:id="rId1"/></sheets>
+  <sheets>${sheetFiles.map((f,i)=>`<sheet name="${xmlEscape(f.sheetName)}" sheetId="${i+1}" r:id="${f.rId}"/>`).join('')}</sheets>
 </workbook>`;
     const workbookRelsXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>
-  <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
+  ${sheetFiles.map(f=>`<Relationship Id="${f.rId}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/${f.fileName}"/>`).join('\n  ')}
+  <Relationship Id="${stylesRelId}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
 </Relationships>`;
     const files = [
       { name:'[Content_Types].xml', data: strToBytes(contentTypesXml) },
@@ -4826,14 +4924,14 @@
       { name:'xl/workbook.xml', data: strToBytes(workbookXml) },
       { name:'xl/_rels/workbook.xml.rels', data: strToBytes(workbookRelsXml) },
       { name:'xl/styles.xml', data: strToBytes(stylesXml) },
-      { name:'xl/worksheets/sheet1.xml', data: strToBytes(sheetXml) },
+      ...sheetFiles.map(f=> ({ name:`xl/worksheets/${f.fileName}`, data: strToBytes(f.xml) })),
     ];
     return buildZipBlob(files);
   }
   function exportXLSX(){
     if(!hasAnyMarkers()){ showToast('내보낼 결함 데이터가 없습니다.'); return; }
-    const { header, rows } = buildDefectExportData();
-    const blob = buildXLSXBlob(header, rows);
+    const sheets = buildPresetSheets();
+    const blob = buildXLSXBlob(sheets);
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url; a.download = filenameBase() + '_결함목록.xlsx';
