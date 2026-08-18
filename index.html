@@ -377,8 +377,11 @@
      최소 폭을 보장). 고정 헤더(.marker-list-head)가 카드와 똑같은 flex 클래스를 그대로 써서 칸이
      항상 나란히 맞고, 헤더·본문이 같은 컨테이너 안에서 함께 가로 스크롤된다. */
   .marker-list-wrap{max-height:46vh;overflow:auto;margin-top:6px;border:1px solid var(--gridline);border-radius:8px;}
+  /* 좌우 패딩이 6px 7px가 아니라 6px 13px인 이유: 카드는 .marker-list(패딩 6px) 안에 .marker-card(패딩
+     6px 7px)가 한 겹 더 있어 좌우로 6+7=13px씩 안으로 들어가 있다. 헤더(.marker-list-head)는 그
+     감싸는 겹이 하나뿐이라 패딩을 13px로 맞춰야 카드 내용과 좌우 시작 위치가 정확히 일치한다. */
   .marker-list-head{position:sticky;top:0;z-index:1;min-width:660px;
-    background:var(--surface-2);border-bottom:1px solid var(--gridline);padding:6px 7px;
+    background:var(--surface-2);border-bottom:1px solid var(--gridline);padding:6px 13px;
     font-size:10px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.02em;}
   .marker-list-head span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .marker-list{display:flex;flex-direction:column;gap:6px;padding:6px;min-width:660px;}
@@ -388,8 +391,12 @@
   .mc-row{display:flex;align-items:center;gap:5px;width:100%;}
   .marker-card input,.marker-card select{font-size:11.5px;padding:4px 5px;border-radius:5px;border:1px solid var(--gridline);
     background:var(--surface-1);color:var(--text-primary);}
-  .marker-card .mc-num{width:28px;flex:0 0 28px;text-align:center;padding:4px 2px;font-weight:700;}
-  .marker-card select.mc-marktype{width:58px;flex:0 0 58px;}
+  /* .marker-list-head(표 제목 줄)도 .marker-card와 똑같은 번호·유형 칸 너비를 가져야 아래 데이터 칸과
+     열이 맞는다 — 예전엔 .marker-card로만 범위를 좁혀서 헤더의 mc-num/mc-marktype span에는 이 너비가
+     전혀 안 먹었고(내용이 비어 있어 폭이 거의 0으로 쪼그라듦), 그 뒤로 이어지는 모든 헤더 칸이 실제
+     데이터 칸보다 왼쪽으로 밀려 표 제목과 내용의 열이 어긋나 보였다. */
+  .marker-card .mc-num,.marker-list-head .mc-num{width:28px;flex:0 0 28px;text-align:center;padding:4px 2px;font-weight:700;}
+  .marker-card select.mc-marktype,.marker-list-head .mc-marktype{width:58px;flex:0 0 58px;}
   .mc-field{display:flex;align-items:center;gap:3px;flex:1 1 70px;min-width:56px;}
   .mc-field select{flex:1 1 auto;min-width:46px;width:auto;}
   .mc-field input.mc-custom{flex:1 1 60px;min-width:46px;}
@@ -861,7 +868,7 @@
           <button id="btnExportCSV" class="primary" style="width:100%;"><svg class="icon"><use href="#i-upload"/></svg> CSV로 저장</button>
           <button id="btnExportXLSX" class="primary" style="width:100%;"><svg class="icon"><use href="#i-spreadsheet"/></svg> 엑셀로 저장</button>
         </div>
-        <div style="font-size:10.5px;color:var(--text-secondary);margin-top:5px;">모든 도면의 결함을 표로 저장합니다(엑셀은 색상·서식 포함).</div>
+        <div style="font-size:10.5px;color:var(--text-secondary);margin-top:5px;">모든 도면의 결함을 표로 저장합니다.</div>
         <button id="btnExportPhotosZip" style="width:100%;margin-top:10px;" title="모든 도면의 결함 사진을 zip으로 한 번에 저장합니다. 파일명은 번호·유형·부재명·결함명 순으로 자동 생성됩니다"><svg class="icon"><use href="#i-camera"/></svg> 사진 일괄저장</button>
         <button id="btnShowStats" style="width:100%;margin-top:10px;"><svg class="icon"><use href="#i-chart"/></svg> 통계 보기</button>
       </div>
@@ -1100,12 +1107,13 @@
   </div>
 </div>
 
-<!-- 표제란(도곽) 인쇄 미리보기 — "미리보기" 버튼을 누르면 실제 PNG/PDF 저장 결과와 같은 모습을 미리 보여준다 -->
+<!-- 인쇄 미리보기(도면틀·범례) — "미리보기" 버튼을 누르면 실제 PNG/PDF 저장 결과와 같은 모습을 미리 보여준다.
+     "도면틀"이 꺼져 있어도 "범례"만 켜져 있으면 열 수 있다(updateTbPreviewButtonVisibility 참고). -->
 <div class="modal-backdrop" id="tbPreviewBackdrop" style="display:none;">
   <div class="modal-panel" style="width:min(1100px, 96vw);">
     <div class="modal-header">
       <div>
-        <div class="modal-title">표제란(도곽) 인쇄 미리보기</div>
+        <div class="modal-title">인쇄 미리보기</div>
         <div class="modal-sub">PNG/PDF로 저장했을 때의 실제 모습입니다. 입력값을 바꾸면 자동으로 갱신됩니다.</div>
       </div>
       <button type="button" id="btnTbPreviewClose" class="icon-btn"><svg class="icon icon-lg"><use href="#i-close"/></svg></button>
@@ -1116,10 +1124,10 @@
     </div>
     <div class="modal-footer" style="flex-wrap:wrap;">
       <label style="display:flex;align-items:center;gap:8px;font-size:11px;color:var(--text-secondary);" title="이 도면의 NOTE 범례 박스 크기입니다(도면마다 따로 저장됩니다).">
-        범례(NOTE) 크기 <span id="tbPreviewLegendScaleLabel">6.0</span>배
-        <input type="range" id="tbPreviewLegendScaleSlider" min="1" max="12" step="0.5" value="6" style="width:140px;" />
+        범례(NOTE) 크기 <span id="tbPreviewLegendScaleLabel">1.5</span>배
+        <input type="range" id="tbPreviewLegendScaleSlider" min="1" max="12" step="0.5" value="1.5" style="width:140px;" />
       </label>
-      <div style="font-size:11px;color:var(--text-secondary);flex:1;">이 창을 닫아도 "도면틀" 설정은 유지되어 저장 시 계속 포함됩니다.</div>
+      <div style="font-size:11px;color:var(--text-secondary);flex:1;">이 창을 닫아도 "도면틀"·"범례" 설정은 유지되어 저장 시 계속 포함됩니다.</div>
       <button type="button" id="btnTbPreviewCloseFooter">닫기</button>
     </div>
   </div>
@@ -1263,6 +1271,9 @@
       labelSep: o.labelSep!==undefined ? o.labelSep : '-',
       numbering: Object.assign({mode:'global', digits:0, start:1}, o.numbering || {}),
       legendShow: o.legendShow!==false,
+      // 번호 배지(원)를 아예 그리지 않는 계열 — 기울기 "측정방향"처럼 선·화살촉만 있으면 되고
+      // 번호를 매길 필요가 없는 자동 계산 표시용.
+      noBadge: !!o.noBadge,
     };
   }
   // 기본 프리셋 3개. "외관조사"는 기존 4종을 그대로 이관한 것이라 프리셋을 바꾸지 않는 한 지금까지와
@@ -1282,8 +1293,9 @@
       makeSeries({key:'dm', label:'철근탐사', color:'#188038', endStyle:'dot', badgeShape:'box', prefix:'DM', numbering:{mode:'independent', digits:2, start:1}}),
     ]},
     { name:'기울기', series:[
-      makeSeries({key:'tilt_pos', label:'측정위치', color:'#D93025', endStyle:'dot', badgeShape:'circle', numbering:{mode:'independent', digits:0, start:1}}),
-      makeSeries({key:'tilt_dir', label:'측정방향', color:'#1A73E8', endStyle:'arrow', badgeShape:'circle', numbering:{mode:'independent', digits:0, start:1}}),
+      makeSeries({key:'tilt_pos', label:'측정위치', color:'#D93025', endStyle:'arrow', badgeShape:'circle', numbering:{mode:'independent', digits:0, start:1}}),
+      // 측정방향은 항상 자동으로만 그려지는 보조 화살표라 번호 배지가 필요 없다(noBadge:true) — 선+화살촉만 표시.
+      makeSeries({key:'tilt_dir', label:'측정방향', color:'#1A73E8', endStyle:'arrow', badgeShape:'circle', noBadge:true, numbering:{mode:'independent', digits:0, start:1}}),
     ]},
     // 4-1: 부동침하 위치도 신규 프리셋(부록35 기준) — 횡방향(X)·종방향(Y) 두 계열, 배지는 "P1"처럼
     // 접두+번호. 범례 표기는 seriesLegendLabel()이 "P-0 : 횡방향(X방향)" 형태로 자동 생성한다.
@@ -1811,8 +1823,7 @@
   function overlayLegendItems(d){
     return DEFECT_TYPES.filter(type=> type.legendShow!==false).map(type=>({type}));
   }
-  const DEFAULT_LEGEND_SCALE = 6; // 도면별 슬라이더(1~12) 미지정 시 기본 배율. 기존 글자가 10~11px로
-  // 너무 작아 안 보이던 문제(1-1) 때문에 기존 크기의 6배를 기본값으로 삼는다.
+  const DEFAULT_LEGEND_SCALE = 1.5; // 도면별 슬라이더(1~12) 미지정 시 기본 배율.
   function legendScaleFor(d){
     const v = d && d.legendScale;
     return (typeof v==='number' && isFinite(v) && v>0) ? v : DEFAULT_LEGEND_SCALE;
@@ -1835,6 +1846,9 @@
     const autoScale = clamp(refW / (d.naturalW||refW||1), 0.05, 20);
     const scale = (typeof scaleOverride==='number' && scaleOverride>0) ? scaleOverride : autoScale * legendScaleFor(d);
     const pad = Math.max(7, 9*scale);
+    // "NOTE" 제목 위쪽 여백만 별도로 줄인다(좌우 여백 pad는 그대로) — 예전엔 pad를 위쪽에도 그대로 써서
+    // 제목 위에 빈 줄 하나가 있는 것처럼 보였다.
+    const padTop = Math.max(4, pad*0.45);
     const rowH = Math.max(15, 19*scale);
     const titleH = Math.max(17, 21*scale);
     const swatchR = Math.max(6, 7.5*scale);
@@ -1850,8 +1864,8 @@
     });
     ctx.restore();
     const boxW = Math.max(pad*2 + swatchR*2 + 6*scale + maxTextW, 70*scale);
-    const boxH = pad + titleH + items.length*rowH + pad*0.4;
-    return { items, labels, scale, pad, rowH, titleH, swatchR, font, titleFont, boxW, boxH };
+    const boxH = padTop + titleH + items.length*rowH + pad*0.4;
+    return { items, labels, scale, pad, padTop, rowH, titleH, swatchR, font, titleFont, boxW, boxH };
   }
   // legendScale(기본 6배)이 계열 라벨이 길고 refW(도면·페이지 폭) 대비 naturalW가 작을 때는 박스가
   // 감당 안 되게 커질 수 있다(화면에서는 마커를 찍기 어려워지고, 표제란 내보내기에서는 예약해둔 열
@@ -1878,7 +1892,7 @@
     const refW = (typeof opts.refW==='number') ? opts.refW : w;
     const geo = overlayLegendGeometryCapped(ctx, d, refW, opts.maxW, opts.maxH);
     if(!geo) return null;
-    const { items, labels, scale, pad, rowH, titleH, swatchR, font, titleFont, boxW, boxH } = geo;
+    const { items, labels, scale, pad, padTop, rowH, titleH, swatchR, font, titleFont, boxW, boxH } = geo;
     let x, y;
     if(opts.anchor==='fixed'){
       x = opts.x; y = opts.y;
@@ -1897,10 +1911,10 @@
     ctx.font = titleFont;
     ctx.fillStyle = '#1f1f1d';
     ctx.textAlign = 'left';
-    ctx.fillText('NOTE', x+pad, y+pad+titleH/2);
+    ctx.fillText('NOTE', x+pad, y+padTop+titleH/2);
     ctx.font = font;
     items.forEach(({type}, i)=>{
-      const ry = y + pad + titleH + i*rowH + rowH/2;
+      const ry = y + padTop + titleH + i*rowH + rowH/2;
       const cx = x+pad+swatchR;
       drawLegendIcon(ctx, type, cx, ry, swatchR);
       ctx.fillStyle = '#1f1f1d';
@@ -1953,7 +1967,7 @@
       ctx.fill();
     }
     ctx.restore();
-    drawMarker(ctx, type, cx, cy, r, numberLabel, selected, numRot);
+    if(!type.noBadge) drawMarker(ctx, type, cx, cy, r, numberLabel, selected, numRot);
     return { tipX, tipY };
   }
 
@@ -2180,7 +2194,10 @@
   // 않기 위해 renderTbPreview()와 분리해둠).
   function drawTbPreviewCanvas(d){
     const canvasEl = document.getElementById('tbPreviewCanvas');
-    const off = buildExportCanvasTitleBlock(d);
+    // "도면틀"이 꺼져 있어도 "범례"만 켜져 있으면 미리보기를 열 수 있다 — 이때는 실제 PNG/PDF 저장과
+    // 똑같이 도곽 없는 단순 캔버스(buildExportCanvasSimple)에 범례만 얹은 모습을 보여준다.
+    const useTitleBlock = document.getElementById('titleBlockToggle').checked;
+    const off = useTitleBlock ? buildExportCanvasTitleBlock(d) : buildExportCanvasSimple(d);
     canvasEl.width = off.width; canvasEl.height = off.height;
     canvasEl.getContext('2d').drawImage(off, 0, 0);
   }
@@ -3692,10 +3709,10 @@
     <span class="mc-num"></span>
     <span class="mc-marktype"></span>
     <span class="mc-field">구분</span>
-    <span class="mc-suffix">상부(도분초)</span>
-    <span class="mc-suffix">하부(도분초)</span>
+    <span class="mc-suffix tilt-dms-group">상부(도분초)</span>
+    <span class="mc-suffix tilt-dms-group">하부(도분초)</span>
     <span class="mc-suffix">수평거리</span>
-    <span class="mc-suffix">수평각차(자동)</span>`;
+    <span class="mc-suffix tilt-dms-group tilt-result">수평각차(자동)</span>`;
   const LV_MARKER_LIST_HEAD_HTML = `
     <span class="mc-num"></span>
     <span class="mc-marktype"></span>
@@ -3712,13 +3729,21 @@
     <span class="mc-field">위치</span>
     <span class="mc-field">부재</span>
     <span class="mc-suffix">사진번호</span>`;
+  // 모든 카드는 맨 끝에 사진·삭제 버튼(mc-photo/row-del, 둘 다 flex:0 0 auto라 내용물 크기만큼만 차지)이
+  // 붙는데, 헤더에는 그 두 칸이 아예 없었다 — flex 컨테이너에서 형제 요소 구성이 다르면 growable
+  // 칸(mc-field)이 남는 공간을 나눠 갖는 비율도 달라지므로, 카드의 사진·삭제 버튼과 똑같은 마크업을
+  // (안 보이게만) 헤더 끝에도 넣어야 자재/부재/결함 같은 growable 칸의 실제 폭이 카드와 정확히 같아진다.
+  const MARKER_LIST_HEAD_TAIL_HTML = `
+    <button class="mc-photo" tabindex="-1" style="visibility:hidden;" aria-hidden="true"><svg class="icon"><use href="#i-camera"/></svg></button>
+    <button class="row-del" tabindex="-1" style="visibility:hidden;" aria-hidden="true"><svg class="icon"><use href="#i-close"/></svg></button>`;
   function renderMarkerListHead(){
     const row = document.querySelector('.marker-list-head .mc-row');
     if(!row) return;
-    row.innerHTML = activePresetName==='기울기' ? TILT_MARKER_LIST_HEAD_HTML
+    const body = activePresetName==='기울기' ? TILT_MARKER_LIST_HEAD_HTML
       : activePresetName==='부동침하' ? LV_MARKER_LIST_HEAD_HTML
       : activePresetName==='장비조사' ? EQ_MARKER_LIST_HEAD_HTML
       : DEFAULT_MARKER_LIST_HEAD_HTML;
+    row.innerHTML = body + MARKER_LIST_HEAD_TAIL_HTML;
   }
 
   function renderTable(){
@@ -4358,7 +4383,11 @@
     // (①용역명·②구분 한 줄, ③조사위치·④구조형식 한 줄), 눕히지 않은 정방향 글씨.
     // 글자 크기(titleFontScale=1.43)가 커진 만큼 라벨 배지·표제란 높이 상한도 함께 넉넉히 늘려
     // 값이 배지 밖으로 넘치지 않게 한다.
-    const titleBarH = clamp(outerH*0.135, 142, 220);
+    // 표 자체의 높이는 기존(clamp 결과)의 0.8배로 줄이되, 배지·글자 크기는 "줄이기 전" 높이
+    // (titleBarHForFont/rowHForFont) 기준으로 그대로 계산해 글자 크기가 함께 작아지지 않게 한다.
+    const titleBarHForFont = clamp(outerH*0.135, 142, 220);
+    const titleBarH = titleBarHForFont * 0.8;
+    const rowHForFont = titleBarHForFont/2;
     const rowH = titleBarH/2, colW = contentW/2;
     const tbCells = [
       { r:0, c:0, label:'용 역 명', value: projName },
@@ -4367,7 +4396,9 @@
       { r:1, c:1, label:'구조형식', value: structureType },
     ];
     const badgeW = clamp(colW*0.22, 102, 178);
-    const badgeH = clamp(rowH*0.52, 35, 62);
+    // badgeH(및 이로부터 파생되는 라벨·값 글자 크기)는 표를 줄이기 전 높이(rowHForFont) 기준으로
+    // 고정한다 — 그래야 표 높이만 0.8배로 줄고 글자 크기는 그대로 유지된다.
+    const badgeH = clamp(rowHForFont*0.52, 35, 62);
     const badgeMarginX = clamp(colW*0.035, 9, 20);
     const titleFontScale = 1.43; // 도곽 상단 표제란 글자 크기(라벨/값) — 1.1배였던 것을 다시 1.3배 키워 총 1.43배
     const labelFont = `700 ${Math.round(clamp(badgeH*0.42,13,22)*titleFontScale)}px system-ui, -apple-system, "Segoe UI", sans-serif`;
@@ -6266,10 +6297,14 @@
     markDirty();
     refreshTbPreviewIfOpen();
   });
-  document.getElementById('titleBlockToggle').addEventListener('change', e=>{
-    document.getElementById('btnReopenTbPreview').style.display = e.target.checked ? 'inline-block' : 'none';
-    if(!e.target.checked) closeTbPreview();
-  });
+  // "미리보기" 버튼은 "도면틀"·"범례" 둘 중 하나라도 켜져 있으면 보인다 — 범례만 켜둔 상태에서도
+  // (도면틀 없이) 저장했을 때 범례가 어떻게 나오는지 미리 볼 수 있어야 하기 때문.
+  function updateTbPreviewButtonVisibility(){
+    const anyOn = document.getElementById('titleBlockToggle').checked || document.getElementById('legendToggle').checked;
+    document.getElementById('btnReopenTbPreview').style.display = anyOn ? 'inline-block' : 'none';
+    if(!anyOn) closeTbPreview();
+  }
+  document.getElementById('titleBlockToggle').addEventListener('change', updateTbPreviewButtonVisibility);
   document.getElementById('btnReopenTbPreview').addEventListener('click', openTbPreview);
   document.getElementById('btnTbPreviewClose').addEventListener('click', closeTbPreview);
   document.getElementById('btnTbPreviewCloseFooter').addEventListener('click', closeTbPreview);
@@ -6292,8 +6327,10 @@
   });
   document.getElementById('legendToggle').addEventListener('change', ()=>{
     markDirty();
+    updateTbPreviewButtonVisibility();
     refreshTbPreviewIfOpen();
   });
+  updateTbPreviewButtonVisibility(); // 초기 상태 반영(기본값: 도면틀 꺼짐·범례 켜짐 → 버튼 보임)
   document.getElementById('btnApplyTemplate').addEventListener('click', applyTbTemplate);
   document.getElementById('btnSaveTemplate').addEventListener('click', saveTbTemplate);
   document.getElementById('btnDeleteTemplate').addEventListener('click', deleteTbTemplate);
