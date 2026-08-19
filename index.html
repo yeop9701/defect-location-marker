@@ -1151,7 +1151,12 @@
       </div>
       <button type="button" id="btnTbPreviewClose" class="icon-btn"><svg class="icon icon-lg"><use href="#i-close"/></svg></button>
     </div>
-    <div class="modal-body" style="background:#e7e6e1;display:flex;justify-content:center;">
+    <!-- align-items를 반드시 명시할 것: flex 컨테이너의 기본값(stretch)이 canvas를 세로로
+         꽉 채워 늘려버려, 실제 저장 파일과 다른 비율로 보이는 버그가 있었다(캔버스의 실제 픽셀
+         크기(width/height 속성)는 정상이었고 화면에 그려지는 CSS 박스만 눌리거나 늘어났던 것 —
+         저장되는 PNG/PDF 자체는 항상 정확했다). flex-start로 고정해 canvas 자신의 max-width:100%;
+         height:auto가 원본 비율 그대로 적용되게 한다. -->
+    <div class="modal-body" style="background:#e7e6e1;display:flex;justify-content:center;align-items:flex-start;">
       <canvas id="tbPreviewCanvas" style="max-width:100%;height:auto;box-shadow:0 2px 14px rgba(11,11,11,0.25);"></canvas>
       <div class="empty-marker-note" id="tbPreviewNote" style="display:none;">먼저 도면을 추가해주세요.</div>
     </div>
