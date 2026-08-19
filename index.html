@@ -248,7 +248,7 @@
   body.layout-tablet select,
   body.layout-tablet input[type=text]{min-height:44px;font-size:13.5px;}
   body.layout-tablet .icon{width:17px;height:17px;}
-  body.layout-tablet .marker-card .mc-num,
+  body.layout-tablet .marker-card .mc-seq,
   body.layout-tablet .marker-card select.mc-marktype,
   body.layout-tablet .marker-card .mc-photo,
   body.layout-tablet .marker-card .row-del{min-width:44px;}
@@ -257,10 +257,6 @@
      이미 큰 버튼으로 접근 가능하므로 텍스트 목록 대신 그 버튼들을 그대로 쓰면 된다. */
   body.layout-tablet #helpSecShortcuts{display:none;}
 
-  /* 결함 목록: 가로로 넓은 한 줄 카드 대신, 태블릿에서는 칸이 줄바꿈되어 세로로 쌓이는 카드가 된다.
-     칸을 나란히 맞추던 고정 헤더(marker-list-head)는 쌓인 카드와는 맞지 않으므로 숨기고, 대신
-     각 칸 위에 data-label(값은 renderTable()이 채움)로 라벨을 붙인다. */
-  body.layout-tablet .marker-list-head{display:none;}
   /* 태블릿에서는 getUserMedia 웹캠 미리보기 대신 카메라 앱을 직접 여는 capture=environment
      입력(photoCaptureInput)을 쓰므로, 데스크톱 전용 폴백인 "사진 촬영" 버튼은 숨긴다.
      반대로 촬영 전용 버튼(btnPhotoCaptureLabel)은 데스크톱에서는 "앨범에서 선택"과 기능이 겹치므로
@@ -268,20 +264,7 @@
   body.layout-tablet #btnOpenCamera{display:none;}
   #btnPhotoCaptureLabel{display:none;}
   body.layout-tablet #btnPhotoCaptureLabel{display:block;}
-  body.layout-tablet .marker-list-wrap{overflow-x:hidden;max-height:none;}
-  body.layout-tablet .marker-list{min-width:0;}
-  body.layout-tablet .marker-card .mc-row{flex-wrap:wrap;row-gap:10px;}
-  body.layout-tablet .marker-card .mc-field,
-  body.layout-tablet .marker-card .mc-suffix{
-    flex:1 1 auto;width:calc(50% - 5px);min-width:130px;position:relative;padding-top:14px;
-  }
-  body.layout-tablet .marker-card .mc-field::before,
-  body.layout-tablet .marker-card .mc-suffix::before{
-    content:attr(data-label);position:absolute;top:0;left:1px;font-size:9.5px;
-    color:var(--muted);text-transform:uppercase;letter-spacing:.03em;
-  }
-  body.layout-tablet .marker-card .mc-field select,
-  body.layout-tablet .marker-card .mc-field input.mc-custom{width:100%;}
+  /* 결함 목록 표(헤더 숨김·칸 2열 쌓기 등)의 태블릿 전용 규칙은 표 grid 정의 옆(.marker-table 부근)에 모아뒀다. */
 
   /* 드래그가 필요한 슬라이더(아이콘 크기·브러시 굵기)는 태블릿에서 숨기고 +/- 버튼으로 대신한다. */
   body.layout-tablet .tool-slider input[type=range]{display:none;}
@@ -372,50 +355,106 @@
     background:#1f1f1d;color:#fff;font-size:10px;font-weight:700;flex:0 0 auto;}
   .row-del{background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;padding:2px 4px;}
   .row-del:hover{color:var(--danger);}
-  /* 결함 목록: 카드 한 줄에 번호·색상·유형·부재명·결함명·폭·길이·개수·사진번호·사진·삭제가 전부 들어간다.
-     사이드바가 좁아지면 칸을 줄이거나 접는 대신 marker-list-wrap 전체에 가로 스크롤이 생긴다(min-width로
-     최소 폭을 보장). 고정 헤더(.marker-list-head)가 카드와 똑같은 flex 클래스를 그대로 써서 칸이
-     항상 나란히 맞고, 헤더·본문이 같은 컨테이너 안에서 함께 가로 스크롤된다. */
-  .marker-list-wrap{max-height:46vh;overflow:auto;margin-top:6px;border:1px solid var(--gridline);border-radius:8px;}
-  /* 좌우 패딩이 6px 7px가 아니라 6px 13px인 이유: 카드는 .marker-list(패딩 6px) 안에 .marker-card(패딩
-     6px 7px)가 한 겹 더 있어 좌우로 6+7=13px씩 안으로 들어가 있다. 헤더(.marker-list-head)는 그
-     감싸는 겹이 하나뿐이라 패딩을 13px로 맞춰야 카드 내용과 좌우 시작 위치가 정확히 일치한다. */
-  .marker-list-head{position:sticky;top:0;z-index:1;min-width:660px;
-    background:var(--surface-2);border-bottom:1px solid var(--gridline);padding:6px 13px;
-    font-size:10px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.02em;}
-  .marker-list-head span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-  .marker-list{display:flex;flex-direction:column;gap:6px;padding:6px;min-width:660px;}
-  .marker-card{display:flex;align-items:center;gap:5px;background:var(--surface-3);border:1px solid var(--gridline);
-    border-radius:8px;padding:6px 7px;}
-  .marker-card.selected{background:var(--accent-soft);border-color:color-mix(in srgb, var(--accent) 40%, transparent);}
-  .mc-row{display:flex;align-items:center;gap:5px;width:100%;}
-  .marker-card input,.marker-card select{font-size:11.5px;padding:4px 5px;border-radius:5px;border:1px solid var(--gridline);
-    background:var(--surface-1);color:var(--text-primary);}
-  /* .marker-list-head(표 제목 줄)도 .marker-card와 똑같은 번호·유형 칸 너비를 가져야 아래 데이터 칸과
-     열이 맞는다 — 예전엔 .marker-card로만 범위를 좁혀서 헤더의 mc-num/mc-marktype span에는 이 너비가
-     전혀 안 먹었고(내용이 비어 있어 폭이 거의 0으로 쪼그라듦), 그 뒤로 이어지는 모든 헤더 칸이 실제
-     데이터 칸보다 왼쪽으로 밀려 표 제목과 내용의 열이 어긋나 보였다. */
-  .marker-card .mc-num,.marker-list-head .mc-num{width:28px;flex:0 0 28px;text-align:center;padding:4px 2px;font-weight:700;}
-  .marker-card select.mc-marktype,.marker-list-head .mc-marktype{width:58px;flex:0 0 58px;}
-  .mc-field{display:flex;align-items:center;gap:3px;flex:1 1 70px;min-width:56px;}
-  .mc-field select{flex:1 1 auto;min-width:46px;width:auto;}
-  .mc-field input.mc-custom{flex:1 1 60px;min-width:46px;}
-  /* 폭/길이/개수/사진번호 — 입력칸 + 단위(mm·개) 또는 접두(#)를 한 칸에 고정폭(66px)으로 묶는다 */
-  .mc-suffix{display:flex;align-items:center;gap:3px;flex:0 0 66px;width:66px;}
-  .mc-suffix input{flex:1 1 auto;min-width:0;width:0;text-align:center;}
-  .mc-suffix span{font-size:10.5px;color:var(--muted);flex:0 0 auto;}
-  /* 기울기 카드: 상부/하부 시준 도·분·초 3칸을 한 mc-suffix 안에 묶어 보여준다(2-2) */
-  .tilt-dms-group{flex:0 0 118px;width:118px;gap:1px;font-size:10px;color:var(--muted);}
-  .tilt-dms{width:0;flex:1 1 auto;min-width:0;text-align:center;padding:4px 1px !important;}
-  /* 수평각차(자동) 결과 칸은 이제 .tilt-dms-group과 같은 도분초 3칸 레이아웃을 쓰되(입력칸 대신
-     읽기전용 텍스트), 폭만 조금 더 넓게 둔다. */
-  .tilt-result{flex:0 0 130px;width:130px;font-size:11px;color:var(--text-secondary);}
-  .tilt-result span{display:inline-block;min-width:14px;text-align:center;}
-  .marker-card .mc-photo,.marker-card .row-del{flex:0 0 auto;}
-  .mc-photo{background:none;border:none;color:var(--muted);cursor:pointer;padding:2px 4px;position:relative;flex:0 0 auto;}
-  .mc-photo:hover{color:var(--accent);}
-  .mc-photo .photo-count{position:absolute;top:-4px;right:-3px;background:var(--accent);color:#fff;font-size:9px;font-weight:700;
-    border-radius:8px;padding:0 4px;line-height:14px;min-width:14px;text-align:center;}
+  /* 결함 목록 표 — 헤더와 모든 행이 하나의 grid 트랙을 공유한다(subgrid).
+     예전에는 헤더와 카드가 서로 다른 flex 컨테이너라 열을 맞추려고 (a) 폭 규칙을 양쪽에 중복
+     선언하고 (b) 헤더에 보이지 않는 사진·삭제 버튼을 복제하고 (c) 패딩 13px를 손으로 계산했는데,
+     그중 하나만 어긋나도 표 제목과 내용의 열이 틀어졌다(12단계에서 실제로 발생).
+     이제 열 정의는 --cols 한 곳에만 있고, 프리셋이 바뀌면 그 한 줄만 갈아끼운다. */
+  .marker-list-wrap{
+    max-height:min(62vh, 720px);   /* 46vh는 1440×900에서 9행뿐이었다 */
+    overflow:auto;margin-top:6px;
+    border:1px solid var(--gridline);border-radius:10px;background:var(--surface-1);
+  }
+  .marker-table{
+    --cols: 34px 62px minmax(64px,1.1fr) minmax(64px,1.1fr) minmax(64px,1.1fr)
+            62px 62px 52px 68px 30px 30px;
+    display:grid;grid-template-columns:var(--cols);
+    column-gap:6px;row-gap:5px;padding:0 8px 8px;min-width:640px;
+  }
+  .marker-table[data-preset="기울기"]{
+    --cols: 34px minmax(64px,1fr) 118px 118px 88px 128px 30px 30px;
+  }
+  .marker-table[data-preset="부동침하"]{
+    --cols: 34px 62px minmax(80px,1.4fr) 84px 84px 30px 30px;
+  }
+  .marker-table[data-preset="장비조사"]{
+    --cols: 34px 90px minmax(64px,1fr) minmax(64px,1fr) minmax(64px,1fr) 68px 30px 30px;
+  }
+  .marker-list-head,.marker-card{
+    display:grid;grid-template-columns:subgrid;grid-column:1/-1;
+    align-items:center;column-gap:6px;
+  }
+  .marker-list-head{
+    position:sticky;top:0;z-index:2;background:var(--surface-1);
+    padding:9px 0 7px;border-bottom:1px solid var(--gridline);
+    font-size:8.8px;font-weight:700;color:var(--text-secondary);
+    /* text-transform:uppercase / letter-spacing은 한글에 아무 효과가 없고 자간만 벌어져서 제거 */
+  }
+  /* 표제목·표내용 전부 가운데 정렬(사용자 요청) — 폭·개수 같은 숫자 칸도 자릿수 비교보다
+     표 전체의 시각적 통일감을 우선한다. 글자 크기는 기존의 약 0.8배(11px→8.8px, 12px→9.6px). */
+  .marker-list-head > *{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center;}
+  /* 카드 테두리를 border로 그리면 그만큼 트랙이 밀린다 — box-shadow는 레이아웃에 영향이 없다.
+     좌우 padding도 금지(트랙 기준이 어긋남). 세로 여백만 padding-block으로 준다. */
+  .marker-card{
+    padding-block:5px;border-radius:8px;background:var(--surface-3);
+    box-shadow:0 0 0 1px var(--gridline);
+  }
+  .marker-card.selected{background:var(--accent-soft);box-shadow:0 0 0 1px rgba(42,120,214,.45);}
+  .marker-card:hover{background:var(--surface-hover);}
+  .mc-cell{min-width:0;font-size:9.6px;text-align:center;}
+  .marker-card input,.marker-card select{
+    width:100%;height:28px;font-size:9.6px;padding:0 6px;border-radius:6px;
+    border:1px solid var(--gridline);background:var(--surface-1);color:var(--text-primary);
+    font-family:inherit;text-align:center;
+  }
+  .marker-card select{padding-right:2px;}
+  .marker-card input:focus,.marker-card select:focus{
+    outline:2px solid var(--accent);outline-offset:-1px;border-color:var(--accent);
+  }
+  .mc-cell .num,.marker-list-head .num{font-variant-numeric:tabular-nums;}
+  .mc-seq{text-align:center;font-weight:700;font-variant-numeric:tabular-nums;font-size:9.6px;}
+  .marker-list-head .mc-seq{text-align:center;}
+  .marker-card .mc-photo,.marker-card .row-del{
+    width:100%;height:28px;display:grid;place-items:center;background:none;border:none;
+    color:var(--muted);cursor:pointer;border-radius:6px;position:relative;padding:0;
+  }
+  .marker-card .mc-photo:hover{background:var(--surface-hover);color:var(--accent);}
+  .marker-card .row-del:hover{background:var(--surface-hover);color:var(--danger);}
+  .marker-card .mc-photo .photo-count{position:absolute;top:0;right:0;background:var(--accent);color:#fff;
+    font-size:9px;font-weight:700;border-radius:8px;padding:0 4px;line-height:14px;
+    min-width:14px;text-align:center;}
+  /* 기울기 전용 복합 셀 — 폭은 --cols가 정하므로 여기서는 내부 배치만 */
+  .tilt-dms-group{display:flex;gap:2px;min-width:0;}
+  .tilt-dms{flex:1 1 0;min-width:0;text-align:center;padding:0 2px !important;}
+  /* 장비조사·부동침하 유형 칸 — 마킹 색상 선택(select)과 자동 채번 배지(SH-01·P1 등)를 한 칸에
+     가로로 나란히 놓는다("구분"/"측점" 같은 별도 열 없이 유형 칸 안에서 배지를 보여줌). 배지는
+     select 우측에 작게 표시(요청: "유형 아래"가 아니라 "유형 내용 우측에 작게"). */
+  .mc-type-badge-cell{display:flex;flex-direction:row;align-items:center;gap:4px;}
+  .mc-type-badge-cell select{flex:1 1 0;min-width:0;}
+  .mc-type-badge{flex:0 0 auto;font-size:8px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap;}
+
+  /* 태블릿에서는 한 줄 표 대신 칸이 2열로 쌓이는 카드가 된다. 열을 맞추던 헤더는 의미가 없어
+     숨기고, 각 칸 위에 data-label을 의사요소로 붙여 무슨 값인지 알려준다.
+     (그래서 셀은 반드시 .mc-cell 래퍼여야 한다 — <input>에는 ::before가 붙지 않는다.) */
+  body.layout-tablet .marker-list-head{display:none;}
+  body.layout-tablet .marker-list-wrap{overflow-x:hidden;max-height:none;}
+  body.layout-tablet .marker-table{
+    display:flex;flex-direction:column;gap:8px;min-width:0;padding:8px;
+  }
+  body.layout-tablet .marker-card{
+    display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:10px 8px;padding:10px;
+  }
+  body.layout-tablet .marker-card .mc-seq,
+  body.layout-tablet .marker-card select.mc-marktype{grid-column:span 1;}
+  body.layout-tablet .mc-cell{position:relative;padding-top:14px;}
+  body.layout-tablet .mc-cell::before{
+    content:attr(data-label);position:absolute;top:0;left:1px;font-size:9.5px;color:var(--muted);
+  }
+  body.layout-tablet .marker-card input,
+  body.layout-tablet .marker-card select{min-height:44px;font-size:13.5px;}
+  body.layout-tablet .marker-card .mc-photo,
+  body.layout-tablet .marker-card .row-del{min-height:44px;height:44px;}
   .photo-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:8px;}
   .photo-thumb{position:relative;border-radius:6px;overflow:hidden;border:1px solid var(--gridline);cursor:pointer;
     aspect-ratio:1/1;background:#eee;}
@@ -822,33 +861,27 @@
           <button type="button" class="tool" id="btnEditFieldOptions" style="font-size:10.5px;padding:3px 7px;font-weight:400;text-transform:none;letter-spacing:0;" title="유형·부재명·결함명 드롭다운의 선택지 목록을 수정합니다"><svg class="icon"><use href="#i-settings"/></svg> 목록수정</button>
         </div>
         <input type="text" class="side-input" id="markerSearchInput" placeholder="검색 (유형·부재명·결함명·사진번호)" style="width:100%;margin:2px 0 8px;" />
-        <!-- 고정 컬럼 헤더: 카드와 똑같은 mc-num/mc-marktype/mc-field/mc-suffix 클래스를 그대로
-             써서, 사이드바 폭이 바뀌어도(가로 스크롤이 생겨도) 헤더 칸과 카드 칸이 항상 나란히 맞는다.
-             1·2번째(번호·색상)는 값 자체로 이미 의미가 드러나므로 헤더 글자는 비워둔다. -->
+        <!-- 결함 목록 표: 헤더(.marker-list-head)와 카드(.marker-card)가 .marker-table의 직계
+             자식으로 열 트랙(subgrid)을 공유한다 — 사이에 다른 래퍼를 넣으면 subgrid가 끊긴다.
+             헤더 내용은 renderMarkerListHead()가 활성 프리셋에 맞춰 채운다(renderTable()이 최초 호출). -->
         <div id="tableWrap">
           <div class="marker-list-wrap">
-            <div class="marker-list-head">
-              <div class="mc-row">
-                <span class="mc-num"></span>
-                <span class="mc-marktype"></span>
-                <span class="mc-field">자재</span>
-                <span class="mc-field">부재</span>
-                <span class="mc-field">결함</span>
-                <span class="mc-suffix">폭</span>
-                <span class="mc-suffix">길이</span>
-                <span class="mc-suffix">개수</span>
-                <span class="mc-suffix">사진번호</span>
-              </div>
+            <div class="marker-table" id="markerTable">
+              <div class="marker-list-head"></div>
             </div>
-            <div class="marker-list" id="markerList"></div>
             <div class="empty-marker-note" id="emptyMarkerNote">표시된 결함이 없습니다. 도면을 클릭해 추가해보세요.</div>
           </div>
         </div>
+        <!-- 자재/부재/결함 datalist 3개 — 카드마다 만들면 400개가 중복되므로 문서에 하나씩만 두고
+             모든 카드의 <input list="dl-..."> 가 id로 재참조한다(renderReportFieldDatalists()가 채움). -->
+        <div id="reportFieldDatalists" hidden></div>
         <div class="legend-preview" id="legendPreview"></div>
-        <!-- 부동침하 프리셋에서만 보이는 LV 그룹 자동계산 표(4-2). 마커의 LV그룹·측정값·경간 입력을
-             그룹별로 묶어 상대값·측정길이·Max-Min·기울기·등급을 자동으로 계산해 보여준다. -->
+        <!-- 부동침하 프리셋에서만 보이는 그룹별 자동계산 표(4-2). 마커의 그룹명·측정값·경간 입력을
+             그룹별로 묶어 상대값·측정길이·Max-Min·기울기·등급을 자동으로 계산해 보여준다.
+             ("LV그룹"이라는 용어가 처음 보는 사람에게 낯설다는 피드백으로 화면 문구에서는 "LV"를 뺐다 —
+             데이터 필드명(m.lvGroup 등)은 그대로 둬서 저장 파일 하위호환에는 영향 없음.) -->
         <div id="lvSummaryPanel" style="display:none;margin-top:10px;">
-          <div class="panel-title">LV 그룹 자동계산</div>
+          <div class="panel-title">그룹별 자동계산</div>
           <div id="lvSummaryBody" style="font-size:11.5px;line-height:1.6;"></div>
         </div>
       </div>
@@ -1118,7 +1151,12 @@
       </div>
       <button type="button" id="btnTbPreviewClose" class="icon-btn"><svg class="icon icon-lg"><use href="#i-close"/></svg></button>
     </div>
-    <div class="modal-body" style="background:#e7e6e1;display:flex;justify-content:center;">
+    <!-- align-items를 반드시 명시할 것: flex 컨테이너의 기본값(stretch)이 canvas를 세로로
+         꽉 채워 늘려버려, 실제 저장 파일과 다른 비율로 보이는 버그가 있었다(캔버스의 실제 픽셀
+         크기(width/height 속성)는 정상이었고 화면에 그려지는 CSS 박스만 눌리거나 늘어났던 것 —
+         저장되는 PNG/PDF 자체는 항상 정확했다). flex-start로 고정해 canvas 자신의 max-width:100%;
+         height:auto가 원본 비율 그대로 적용되게 한다. -->
+    <div class="modal-body" style="background:#e7e6e1;display:flex;justify-content:center;align-items:flex-start;">
       <canvas id="tbPreviewCanvas" style="max-width:100%;height:auto;box-shadow:0 2px 14px rgba(11,11,11,0.25);"></canvas>
       <div class="empty-marker-note" id="tbPreviewNote" style="display:none;">먼저 도면을 추가해주세요.</div>
     </div>
@@ -1181,10 +1219,16 @@
   function setTabletModeOverride(v){
     try{ if(v) localStorage.setItem(TABLET_MODE_STORE_KEY, v); else localStorage.removeItem(TABLET_MODE_STORE_KEY); } catch(err){ /* 저장 실패해도 전환 자체는 동작 */ }
   }
+  // 폭만으로 판정하면 아이패드 가로(1133~1366px)가 전부 기준(1100px)을 넘어 데스크톱 레이아웃으로
+  // 떨어진다 — manifest가 landscape를 강제하므로 현장에서는 사실상 항상 가로다. 그래서 폭과 무관하게
+  // "정밀한 포인터가 없는 기기"(pointer:coarse = 손가락·펜슬)면 태블릿 레이아웃을 쓴다.
+  // 키보드+트랙패드를 붙인 아이패드처럼 데스크톱이 더 편한 경우는 상단 "태블릿 모드" 수동 전환이
+  // 계속 우선하므로(override) 이 판정에 갇히지 않는다.
   function isTabletModeActive(){
     const override = getTabletModeOverride();
     if(override) return override==='on';
-    return window.innerWidth <= TABLET_BREAKPOINT_PX;
+    const coarsePointer = !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
+    return coarsePointer || window.innerWidth <= TABLET_BREAKPOINT_PX;
   }
   function closeAllDrawers(){
     document.querySelectorAll('.sidebar.left, .sidebar.right').forEach(el=> el.classList.remove('open'));
@@ -1237,6 +1281,14 @@
     if(getTabletModeOverride()) return; // 수동으로 켜거나 껐으면 화면 폭이 바뀌어도 자동 재판정하지 않음
     applyTabletMode();
   });
+  // 아이패드에 키보드/트랙패드를 붙였다 떼면 pointer 종류가 바뀐다 — resize가 안 일어나므로
+  // 미디어쿼리 자체의 변화도 구독해야 레이아웃이 따라온다.
+  if(window.matchMedia){
+    const mq = window.matchMedia('(pointer: coarse)');
+    const onChange = ()=>{ if(!getTabletModeOverride()) applyTabletMode(); };
+    if(mq.addEventListener) mq.addEventListener('change', onChange);
+    else if(mq.addListener) mq.addListener(onChange); // 구형 사파리 폴백
+  }
 
   // ---------- 마커 계열(series) 정의 ----------
   // 예전에는 "위치 유형"이 벽체/바닥·천장 4종으로 코드에 고정돼 있었다. 지금은 그 4종도 "프리셋"
@@ -1276,6 +1328,46 @@
       noBadge: !!o.noBadge,
     };
   }
+  // 프로젝트 파일의 seriesSnapshot과 localStorage의 커스텀 프리셋은 둘 다 "외부에서 온 데이터"다 —
+  // 프로젝트 파일은 협력업체가 보낸 것일 수 있고, localStorage 값은 같은 오리진의 다른 경로(과거
+  // XSS, 수동 편집 등)로 손상됐을 수 있다. 그 객체를 그대로 믿지 않고 알려진 필드만, 알려진 타입으로
+  // 다시 만들어 쓴다. (문자열 필드에 태그가 들어와도 innerHTML 경로에서 이스케이프되지만, 애초에
+  // 모르는 필드가 계열 객체에 섞여 들어오지 않게 하는 편이 안전하다.)
+  function sanitizeSeriesSnapshot(list){
+    if(!Array.isArray(list)) return null;
+    const ENDSTYLE = ['arrow','dot','rect','badge'];
+    const BADGE = ['circle','text','box'];
+    const HATCH = ['none','diagonal','cross','dot'];
+    const str = (v, fallback)=> typeof v === 'string' ? v.slice(0, 200) : fallback;
+    const pick = (v, allowed, fallback)=> allowed.includes(v) ? v : fallback;
+    const num = (v, lo, hi, fallback)=>{
+      const n = Number(v);
+      return Number.isFinite(n) ? Math.min(hi, Math.max(lo, Math.round(n))) : fallback;
+    };
+    const hex = v => typeof v === 'string' && /^#[0-9a-fA-F]{3,8}$/.test(v);
+    // makeSeries()가 만드는 필드 전부(key, label, color, text, endStyle, badgeShape, hatch, prefix,
+    // labelSep, numbering, legendShow, noBadge)를 담는다. 여기 없는 필드가 makeSeries()에 늘어나면
+    // 프로젝트를 열었을 때 그 설정이 에러 없이 조용히 기본값으로 초기화되므로, 필드를 추가할 때는
+    // makeSeries()와 이 화이트리스트를 함께 고쳐야 한다.
+    return list.slice(0, 40).map(t=>({
+      key:        str(t && t.key, 'unknown'),
+      label:      str(t && t.label, '(이름 없음)'),
+      color:      hex(t && t.color) ? t.color : '#e23c3c',
+      text:       hex(t && t.text) ? t.text : '#ffffff',
+      endStyle:   pick(t && t.endStyle, ENDSTYLE, 'arrow'),
+      badgeShape: pick(t && t.badgeShape, BADGE, 'circle'),
+      hatch:      pick(t && t.hatch, HATCH, 'none'),
+      prefix:     str(t && t.prefix, ''),
+      labelSep:   str(t && t.labelSep, '-'),   // 부동침하는 ''(P1처럼 붙여쓰기) — 빠뜨리면 라벨이 P-1로 바뀜
+      legendShow: (t && t.legendShow) !== false,
+      noBadge:    !!(t && t.noBadge),
+      numbering: {
+        mode:   (t && t.numbering && t.numbering.mode === 'independent') ? 'independent' : 'global',
+        digits: num(t && t.numbering && t.numbering.digits, 0, 4, 0),
+        start:  num(t && t.numbering && t.numbering.start, 1, 9999, 1),
+      },
+    }));
+  }
   // 기본 프리셋 3개. "외관조사"는 기존 4종을 그대로 이관한 것이라 프리셋을 바꾸지 않는 한 지금까지와
   // 화면·번호 표기가 완전히 동일하다(접두 없음·전역채번·circle 배지). "장비조사"·"기울기"는 라벨/색만
   // 지시대로 채운 기본값이며, 실제 현장 용어는 다를 수 있으니 좌측 "계열 편집"에서 이름을 바로 고칠
@@ -1288,22 +1380,27 @@
       makeSeries({key:'flat_area', label:'바닥/천장(범위)', color:'#0047AB', endStyle:'rect'}),
     ]},
     { name:'장비조사', series:[
-      makeSeries({key:'sh', label:'반발경도(강도)', color:'#D93025', endStyle:'dot', badgeShape:'box', prefix:'SH', numbering:{mode:'independent', digits:2, start:1}}),
-      makeSeries({key:'ph', label:'중성화(탄산화)', color:'#1A73E8', endStyle:'dot', badgeShape:'box', prefix:'PH', numbering:{mode:'independent', digits:2, start:1}}),
+      // 빨강/파랑은 외관조사(wall/flat)와 완전히 같은 색상코드로 통일했다(#FF0000/#0047AB) — 예전엔
+      // 구글 머티리얼 색(#D93025/#1A73E8)이라 프리셋마다 마킹 색이 미묘하게 달라 보였다.
+      makeSeries({key:'sh', label:'반발경도(강도)', color:'#FF0000', endStyle:'dot', badgeShape:'box', prefix:'SH', numbering:{mode:'independent', digits:2, start:1}}),
+      makeSeries({key:'ph', label:'중성화(탄산화)', color:'#0047AB', endStyle:'dot', badgeShape:'box', prefix:'PH', numbering:{mode:'independent', digits:2, start:1}}),
       makeSeries({key:'dm', label:'철근탐사', color:'#188038', endStyle:'dot', badgeShape:'box', prefix:'DM', numbering:{mode:'independent', digits:2, start:1}}),
     ]},
     { name:'기울기', series:[
-      makeSeries({key:'tilt_pos', label:'측정위치', color:'#D93025', endStyle:'arrow', badgeShape:'circle', numbering:{mode:'independent', digits:0, start:1}}),
+      // 빨강/파랑은 외관조사와 동일한 색상코드로 통일(위 장비조사와 같은 이유).
+      makeSeries({key:'tilt_pos', label:'측정위치', color:'#FF0000', endStyle:'arrow', badgeShape:'circle', numbering:{mode:'independent', digits:0, start:1}}),
       // 측정방향은 항상 자동으로만 그려지는 보조 화살표라 번호 배지가 필요 없다(noBadge:true) — 선+화살촉만 표시.
-      makeSeries({key:'tilt_dir', label:'측정방향', color:'#1A73E8', endStyle:'arrow', badgeShape:'circle', noBadge:true, numbering:{mode:'independent', digits:0, start:1}}),
+      makeSeries({key:'tilt_dir', label:'측정방향', color:'#0047AB', endStyle:'arrow', badgeShape:'circle', noBadge:true, numbering:{mode:'independent', digits:0, start:1}}),
     ]},
     // 4-1: 부동침하 위치도 신규 프리셋(부록35 기준) — 횡방향(X)·종방향(Y) 두 계열, 배지는 "P1"처럼
-    // 접두+번호. 범례 표기는 seriesLegendLabel()이 "P-0 : 횡방향(X방향)" 형태로 자동 생성한다.
+    // 접두+번호. 범례 표기는 seriesLegendLabel()이 "P-0 : X(횡방향)" 형태로 자동 생성한다.
+    // label을 "횡방향(X방향)"에서 "X(횡방향)"으로 바꿔(처음 보는 사람도 X/Y축을 바로 알아보도록) 드롭다운·
+    // 좌측 유형 그리드·범례가 전부 typeOptionsHTML()/renderTypeGrid() 등 label 하나를 공유해 자동으로 같이 바뀐다.
     { name:'부동침하', series:[
       // endStyle:'badge' — 인출선(선)과 점 없이 클릭한 자리에 번호 배지만 찍는다. labelSep:''이라 배지 표기는
       // "P-1"이 아니라 "P1"처럼 접두+번호가 붙어서 나온다.
-      makeSeries({key:'lv_x', label:'횡방향(X방향)', color:'#FF0000', endStyle:'badge', badgeShape:'circle', prefix:'P', labelSep:'', numbering:{mode:'independent', digits:0, start:1}}),
-      makeSeries({key:'lv_y', label:'종방향(Y방향)', color:'#0047AB', endStyle:'badge', badgeShape:'circle', prefix:'P', labelSep:'', numbering:{mode:'independent', digits:0, start:1}}),
+      makeSeries({key:'lv_x', label:'X(횡방향)', color:'#FF0000', endStyle:'badge', badgeShape:'circle', prefix:'P', labelSep:'', numbering:{mode:'independent', digits:0, start:1}}),
+      makeSeries({key:'lv_y', label:'Y(종방향)', color:'#0047AB', endStyle:'badge', badgeShape:'circle', prefix:'P', labelSep:'', numbering:{mode:'independent', digits:0, start:1}}),
     ]},
   ];
   const SERIES_PRESET_STORE_KEY = 'defectMarkerSeriesPresets_v1'; // 사용자가 저장한 커스텀 프리셋 목록
@@ -1312,7 +1409,12 @@
     try{
       const raw = localStorage.getItem(SERIES_PRESET_STORE_KEY);
       const parsed = raw ? JSON.parse(raw) : [];
-      return Array.isArray(parsed) ? parsed : [];
+      if(!Array.isArray(parsed)) return [];
+      // 프로젝트 파일과 동일하게, localStorage에 저장된 계열도 화이트리스트로 재구성해서 쓴다.
+      return parsed.map(p=>({
+        name: typeof (p && p.name) === 'string' ? p.name.slice(0,100) : '(이름 없음)',
+        series: sanitizeSeriesSnapshot(p && p.series) || [],
+      }));
     } catch(err){ return []; }
   }
   function saveCustomPresets(list){
@@ -1798,7 +1900,7 @@
     const c = document.createElement('canvas'); c.width=32; c.height=32;
     const ctx = c.getContext('2d');
     drawLegendIcon(ctx, type, 16, 16, 11);
-    return `<img src="${c.toDataURL()}" alt="${type.label}"/>`;
+    return `<img src="${c.toDataURL()}" alt="${escapeAttr(type.label)}"/>`;
   }
 
   // ---------- 범례(NOTE 박스) 자유 배치 ----------
@@ -3022,8 +3124,16 @@
   // JSON으로 통째로 복제해 이력에 쌓이면(가장 큰 메모리 낭비 원인) 마커가 많아질수록 캔버스가
   // 버벅이므로, 사진만은 깊은 복사에서 제외한다. 마커가 삭제됐다 되돌려져도(undo) 사진은 같은
   // 배열 참조를 그대로 들고 있으므로 데이터가 사라지지 않는다.
+  // {...m}은 얕은 복사라 배열·객체 필드(photos)가 원본과 참조를 공유한다. 그 상태에서
+  // photos.splice() 같은 제자리 변경을 하면 실행취소 스택에 들어있는 "이전 상태"까지 같이
+  // 바뀌어 되돌릴 수 없다. 앞으로 배열/객체 필드가 늘어나도 같은 함정을 밟지 않도록,
+  // 값 타입이 아닌 필드는 여기서 명시적으로 한 겹 더 복사한다.
   function cloneMarkersForUndo(markers){
-    return markers.map(m=>({...m}));
+    return markers.map(m=>{
+      const c = {...m};
+      if(Array.isArray(m.photos)) c.photos = m.photos.slice();
+      return c;
+    });
   }
   // targetDrawing을 생략하면 현재 활성 도면을 기록한다. CSV로 여러 도면에 한 번에 결함을 배분할
   // 때처럼 활성 도면이 아닌 다른 도면을 고쳐야 할 때도 undo 기록이 빠지지 않도록 인자로 받을 수 있다.
@@ -3309,6 +3419,12 @@
   }
   function deleteMarker(id){
     const d = getActiveDrawing(); if(!d) return;
+    // 사진이 딸린 마커를 지우면 그 사진도 함께 사라진다 — 실행취소로 되돌아가긴 하지만
+    // 되돌릴 수 있다는 걸 모르면 그대로 잃은 것으로 오해할 수 있어 먼저 알린다.
+    const target = d.markers.find(x=>x.id===id);
+    if(target && target.photos && target.photos.length){
+      if(!confirm(`이 결함에 첨부된 사진 ${target.photos.length}장도 함께 삭제됩니다.\n계속할까요? (실행취소로 되돌릴 수 있습니다)`)) return;
+    }
     pushUndo();
     removeMarkersById(d, idsWithLinkedPairs(d, [id]));
     selectedIds.delete(id);
@@ -3324,26 +3440,29 @@
   }
 
   // ---------- 표(테이블) 렌더링 ----------
-  // 유형(부위)/부재명/결함명 드롭다운 한 칸(select + "직접입력…" 텍스트칸)의 HTML을 만든다.
-  // 값이 선택지 목록에 없으면(=사용자가 직접 입력한 값) select는 "직접입력…"을 선택한 채로 텍스트칸을 보여준다.
-  function buildReportSelectHTML(fieldKey, value, label){
-    const opts = reportFieldOptions[fieldKey] || [];
-    const val = value || '';
-    const isCustom = val!=='' && !opts.includes(val);
-    const optionsHTML = ['<option value="">-</option>']
-      .concat(opts.map(o=>`<option value="${escapeAttr(o)}" ${!isCustom && val===o ? 'selected':''}>${escapeHTML(o)}</option>`))
-      .concat([`<option value="__custom__" ${isCustom?'selected':''}>직접입력…</option>`])
-      .join('');
-    return `<span class="mc-field" title="${label}" data-label="${label}">
-        <select data-role="${fieldKey}" title="${label}">${optionsHTML}</select>
-        <input type="text" class="mc-custom" data-role="${fieldKey}_custom" placeholder="${label} 입력" title="${label}" value="${escapeAttr(isCustom?val:'')}" style="display:${isCustom?'inline-block':'none'};" />
+  // 유형(부위)/부재명/결함명 한 칸의 HTML을 만든다. 예전에는 select + "직접입력…" 옵션 + 숨은 input
+  // 조합이었는데, 직접입력을 고른 행만 셀 안에 컨트롤이 2개가 되어 열 폭이 고정된 표에서 각각
+  // 좁아지는 문제가 있었다. datalist는 입력칸 하나로 목록 선택과 자유 입력을 모두 처리하므로 그
+  // 문제가 구조적으로 사라지고, 타이핑으로 목록이 바로 필터링돼 결함이 많을 때 입력 속도도 빨라진다.
+  function buildReportFieldHTML(fieldKey, value, label){
+    return `<span class="mc-cell" data-label="${escapeAttr(label)}">
+        <input type="text" list="dl-${fieldKey}" data-role="${fieldKey}"
+               placeholder="${escapeAttr(label)}" title="${escapeAttr(label)}"
+               value="${escapeAttr(value||'')}" autocomplete="off"/>
       </span>`;
   }
-  // 위에서 만든 select+커스텀입력 한 쌍에 변경 이벤트를 연결 — select에서 "직접입력…"을 고르면 텍스트칸이
-  // 나타나 포커스되고, 텍스트칸에 입력하는 값이 곧 그 마커의 실제 값이 된다.
+  // datalist 본체는 카드마다 만들면 400개가 중복되므로 문서에 3개만 두고 재사용한다 — 선택지 목록이
+  // 바뀌는 시점(앱 초기화, "목록수정" 모달 저장 직후)에만 다시 채우면 된다.
+  function renderReportFieldDatalists(){
+    const host = document.getElementById('reportFieldDatalists');
+    if(!host) return;
+    host.innerHTML = ['rptType','rptMember','rptDefect'].map(k=>
+      `<datalist id="dl-${k}">${(reportFieldOptions[k]||[])
+        .map(o=>`<option value="${escapeAttr(o)}"></option>`).join('')}</datalist>`
+    ).join('');
+  }
   // 카드의 유형/부재명/결함명/사진번호 값이 바뀔 때마다 검색 색인(card.dataset.search)도 함께
-  // 갱신한다 — renderTable()이 다시 호출되지 않는 필드 편집(직접입력 텍스트 등)에서도 검색이
-  // 최신 값을 바로 반영하도록.
+  // 갱신한다 — renderTable()이 다시 호출되지 않는 필드 편집에서도 검색이 최신 값을 바로 반영하도록.
   function computeCardSearchIndex(m){
     return [getType(m.typeKey).label, m.rptType, m.rptMember, m.rptDefect, m.rptTag,
         m.tiltBldg, m.lvGroup, m.eqFloor, m.eqLoc, m.eqMember, m.eqTag]
@@ -3353,21 +3472,11 @@
     card.dataset.search = computeCardSearchIndex(m);
     applyMarkerSearchFilter();
   }
-  function wireReportSelect(card, fieldKey, m){
-    const sel = card.querySelector(`[data-role="${fieldKey}"]`);
-    const custom = card.querySelector(`[data-role="${fieldKey}_custom"]`);
-    sel.addEventListener('change', ()=>{
-      markDirty();
-      if(sel.value==='__custom__'){
-        custom.style.display = 'block'; custom.value = ''; custom.focus();
-        m[fieldKey] = '';
-      } else {
-        custom.style.display = 'none';
-        m[fieldKey] = sel.value;
-      }
-      updateCardSearchIndex(card, m);
+  function wireReportField(card, fieldKey, m){
+    const el = card.querySelector(`[data-role="${fieldKey}"]`);
+    el.addEventListener('input', ()=>{
+      markDirty(); m[fieldKey] = el.value; updateCardSearchIndex(card, m);
     });
-    custom.addEventListener('input', ()=>{ markDirty(); m[fieldKey] = custom.value; updateCardSearchIndex(card, m); });
   }
 
   // ---------- 기울기 전용 카드(측정위치/측정방향) ----------
@@ -3448,49 +3557,55 @@
   }
   // 8장 사용자 피드백: 측점번호 입력칸과 방향(자동/좌/우) 드롭다운은 표에서 뺐다 — 방향은 항상
   // 자동으로 계산해 캔버스의 파란 화살표로만 보여준다(수평각차 결과는 도·분·초 3칸으로 표시).
+  // 수평각차는 기본은 상부-하부 시준각 차이로 자동 계산되어 m.tiltDiffD/M/S에 채워지지만
+  // (updateTiltMarker), 이제 그 값을 사용자가 직접 입력해 덮어쓸 수도 있다 — 현장에서 별도로
+  // 실측한 값을 그대로 적고 싶을 때를 위해서다. 상부/하부 각도를 다시 바꾸면 updateTiltMarker가
+  // 자동계산 값으로 다시 채워 넣으므로("자동" 컬럼이라는 전제 유지) 수동 입력은 그 전까지만 유지된다.
   function tiltResultParts(m){
-    if(!tiltHasAngleInput(m)) return { d:'-', m:'-', s:'-' };
+    if(m.tiltDiffD!==undefined || m.tiltDiffM!==undefined || m.tiltDiffS!==undefined){
+      return { d: m.tiltDiffD ?? '', m: m.tiltDiffM ?? '', s: m.tiltDiffS ?? '' };
+    }
+    if(!tiltHasAngleInput(m)) return { d:'', m:'', s:'' };
     const calc = computeTiltDiff(m);
     return { d:calc.dms.d, m:calc.dms.m, s:calc.dms.s };
   }
   function buildTiltPosCardHTML(m, idx){
     const res = tiltResultParts(m);
     return `
-      <div class="mc-row">
-        <input type="text" class="mc-num" data-role="pos" tabindex="-1" value="${m.seq||idx+1}" title="번호"/>
-        <select data-role="type" class="mc-marktype" tabindex="-1" title="마킹 색상·모양">${selectableDefectTypes().map(t=>`<option value="${t.key}" ${t.key===m.typeKey?'selected':''}>${t.label}</option>`).join('')}</select>
-        <span class="mc-field" data-label="구분"><input type="text" data-role="tiltBldg" placeholder="구분(예: 205동)" title="구분(동 이름 등)" value="${escapeAttr(m.tiltBldg||'')}"/></span>
-        <span class="mc-suffix tilt-dms-group" data-label="상부(도분초)" title="상부시준 도/분/초">
+        <input type="text" class="mc-seq" data-role="pos" tabindex="-1" value="${m.seq||idx+1}" title="번호"/>
+        <span class="mc-cell" data-label="구분"><input type="text" data-role="tiltBldg" placeholder="예: 205동" title="예: 205동" value="${escapeAttr(m.tiltBldg||'')}"/></span>
+        <span class="mc-cell tilt-dms-group" data-label="상부(도분초)" title="상부시준 도/분/초">
           <input type="text" class="tilt-dms" data-role="tiltUpD" placeholder="도" value="${escapeAttr(m.tiltUpD||'')}"/>°<input type="text" class="tilt-dms" data-role="tiltUpM" placeholder="분" value="${escapeAttr(m.tiltUpM||'')}"/>′<input type="text" class="tilt-dms" data-role="tiltUpS" placeholder="초" value="${escapeAttr(m.tiltUpS||'')}"/>″
         </span>
-        <span class="mc-suffix tilt-dms-group" data-label="하부(도분초)" title="하부시준 도/분/초">
+        <span class="mc-cell tilt-dms-group" data-label="하부(도분초)" title="하부시준 도/분/초">
           <input type="text" class="tilt-dms" data-role="tiltLoD" placeholder="도" value="${escapeAttr(m.tiltLoD||'')}"/>°<input type="text" class="tilt-dms" data-role="tiltLoM" placeholder="분" value="${escapeAttr(m.tiltLoM||'')}"/>′<input type="text" class="tilt-dms" data-role="tiltLoS" placeholder="초" value="${escapeAttr(m.tiltLoS||'')}"/>″
         </span>
-        <span class="mc-suffix" data-label="수평거리"><input type="text" data-role="tiltDist" placeholder="거리" title="수평거리(mm)" value="${escapeAttr(m.tiltDist||'')}"/><span>mm</span></span>
-        <span class="mc-suffix tilt-dms-group tilt-result" data-label="수평각차(자동)" title="자동계산된 상부-하부 수평각차(방향은 도면의 화살표로 표시됩니다)">
-          <span class="tilt-res-d">${res.d}</span>°<span class="tilt-res-m">${res.m}</span>′<span class="tilt-res-s">${res.s}</span>″
+        <span class="mc-cell" data-label="수평거리(mm)"><input type="text" class="num" data-role="tiltDist" placeholder="거리" title="수평거리(mm)" value="${escapeAttr(m.tiltDist||'')}"/></span>
+        <span class="mc-cell tilt-dms-group" data-label="수평각차" title="상부-하부로 자동계산되지만 직접 입력해 덮어쓸 수도 있습니다(방향은 도면의 화살표로 표시됩니다. 상부·하부 각도를 다시 바꾸면 자동계산 값으로 갱신됩니다)">
+          <input type="text" class="tilt-dms" data-role="tiltDiffD" placeholder="도" value="${escapeAttr(res.d)}"/>°<input type="text" class="tilt-dms" data-role="tiltDiffM" placeholder="분" value="${escapeAttr(res.m)}"/>′<input type="text" class="tilt-dms" data-role="tiltDiffS" placeholder="초" value="${escapeAttr(res.s)}"/>″
         </span>
         <button class="mc-photo" data-role="photo" tabindex="-1" title="사진 첨부"><svg class="icon"><use href="#i-camera"/></svg>${(m.photos&&m.photos.length)?`<span class="photo-count">${m.photos.length}</span>`:''}</button>
-        <button class="row-del" data-role="del" tabindex="-1" title="삭제"><svg class="icon"><use href="#i-close"/></svg></button>
-      </div>`;
+        <button class="row-del" data-role="del" tabindex="-1" title="삭제"><svg class="icon"><use href="#i-close"/></svg></button>`;
   }
+  // 측정방향은 항상 측정위치의 종속 마커라 별도 입력칸이 없다 — 구분~수평각차의 5칸 자리를
+  // 하나의 안내문으로 가로질러 채운다(grid-column으로 2~6번째 트랙을 직접 지정. 유형 열을 뺀 뒤라
+  // 번호가 1번째, 구분이 2번째 트랙부터 시작한다).
   function buildTiltDirCardHTML(m, idx){
     const linkedNote = '측정위치 인출선 중앙에 직각으로 자동 표시됨 (클릭·드래그로 직접 옮길 수 없습니다)';
     return `
-      <div class="mc-row">
-        <input type="text" class="mc-num" data-role="pos" tabindex="-1" value="${m.seq||idx+1}" title="번호"/>
-        <select data-role="type" class="mc-marktype" tabindex="-1" title="마킹 색상·모양" disabled>${DEFECT_TYPES.map(t=>`<option value="${t.key}" ${t.key===m.typeKey?'selected':''}>${t.label}</option>`).join('')}</select>
-        <span class="mc-field" style="flex:1;color:var(--text-secondary);font-size:11.5px;">${linkedNote}</span>
-        <button class="mc-photo" data-role="photo" tabindex="-1" title="사진 첨부"><svg class="icon"><use href="#i-camera"/></svg>${(m.photos&&m.photos.length)?`<span class="photo-count">${m.photos.length}</span>`:''}</button>
-        <button class="row-del" data-role="del" tabindex="-1" title="삭제"><svg class="icon"><use href="#i-close"/></svg></button>
-      </div>`;
+        <input type="text" class="mc-seq" data-role="pos" tabindex="-1" value="${m.seq||idx+1}" title="번호"/>
+        <span class="mc-cell" style="grid-column:2 / span 5;color:var(--text-secondary);">${linkedNote}</span>
+        <button class="mc-photo" data-role="photo" tabindex="-1" title="사진 첨부" style="grid-column:7;"><svg class="icon"><use href="#i-camera"/></svg>${(m.photos&&m.photos.length)?`<span class="photo-count">${m.photos.length}</span>`:''}</button>
+        <button class="row-del" data-role="del" tabindex="-1" title="삭제" style="grid-column:8;"><svg class="icon"><use href="#i-close"/></svg></button>`;
   }
+  // 상부/하부 각도가 바뀌면 자동계산 값으로 수평각차 입력칸을 다시 채운다 — 직접 입력한 값이
+  // 있었더라도 "자동" 컬럼이라는 전제대로 여기서 덮어써진다(그 전까지는 수동 값이 유지됨).
   function refreshTiltRowResult(card, m){
     const res = tiltResultParts(m);
-    const dEl = card.querySelector('.tilt-res-d'), mEl = card.querySelector('.tilt-res-m'), sEl = card.querySelector('.tilt-res-s');
-    if(dEl) dEl.textContent = res.d;
-    if(mEl) mEl.textContent = res.m;
-    if(sEl) sEl.textContent = res.s;
+    const dEl = card.querySelector('[data-role="tiltDiffD"]'), mEl = card.querySelector('[data-role="tiltDiffM"]'), sEl = card.querySelector('[data-role="tiltDiffS"]');
+    if(dEl) dEl.value = res.d;
+    if(mEl) mEl.value = res.m;
+    if(sEl) sEl.value = res.s;
   }
   function wireTiltPosCard(card, m){
     card.querySelector('[data-role="tiltBldg"]').addEventListener('input', e=>{ markDirty(); m.tiltBldg=e.target.value; updateCardSearchIndex(card,m); });
@@ -3505,6 +3620,12 @@
         if(!hadLink && m.linkedDirId) renderTable(); // 이번 입력으로 방향 마커가 막 생겼을 때만 목록에 그 행을 추가
       });
       inp.addEventListener('change', ()=> renderTable()); // 포커스를 벗어나는 시점에 번호·정렬을 최종 반영
+    });
+    // 수평각차 직접 입력 — 상부/하부에서 자동계산된 값을 그대로 두거나, 필요하면 여기서 덮어쓴다.
+    ['tiltDiffD','tiltDiffM','tiltDiffS'].forEach(key=>{
+      card.querySelector(`[data-role="${key}"]`).addEventListener('input', e=>{
+        markDirty(); m[key] = e.target.value;
+      });
     });
   }
 
@@ -3552,7 +3673,7 @@
     panel.style.display = isLvPreset ? '' : 'none';
     if(!isLvPreset || !d) return;
     const groups = computeLvGroups(d);
-    if(groups.length===0){ body.innerHTML = '<div style="color:var(--text-secondary);">LV그룹을 입력하면 여기에 자동계산됩니다.</div>'; return; }
+    if(groups.length===0){ body.innerHTML = '<div style="color:var(--text-secondary);">그룹명을 입력하면 여기에 자동계산됩니다.</div>'; return; }
     body.innerHTML = groups.map(g=>{
       if(g.maxV===undefined) return `<div style="margin-bottom:8px;"><b>${escapeHTML(g.key)}</b> — 측정값 입력 대기 중 (${g.count}점)</div>`;
       const ratioStr = isFinite(g.n) ? `1/${g.n}` : '-';
@@ -3564,16 +3685,16 @@
   }
   function buildLvCardHTML(m, idx){
     return `
-      <div class="mc-row">
-        <input type="text" class="mc-num" data-role="pos" tabindex="-1" value="${m.seq||idx+1}" title="번호"/>
-        <select data-role="type" class="mc-marktype" tabindex="-1" title="마킹 색상·모양">${DEFECT_TYPES.map(t=>`<option value="${t.key}" ${t.key===m.typeKey?'selected':''}>${t.label}</option>`).join('')}</select>
-        <span class="mc-field" data-label="LV그룹"><input type="text" data-role="lvGroup" placeholder="예: LV-1 X방향" title="LV 그룹 — 같은 그룹끼리 자동 집계됩니다" value="${escapeAttr(m.lvGroup||'')}"/></span>
-        <span class="mc-suffix" data-label="측점">${escapeHTML(formatMarkerLabel(m, idx))}</span>
-        <span class="mc-suffix" data-label="측정값"><input type="text" data-role="lvValue" placeholder="측정값" title="측정값(cm)" value="${escapeAttr(m.lvValue||'')}"/><span>cm</span></span>
-        <span class="mc-suffix" data-label="경간"><input type="text" data-role="lvSpan" placeholder="경간" title="경간(mm)" value="${escapeAttr(m.lvSpan||'')}"/><span>mm</span></span>
+        <input type="text" class="mc-seq" data-role="pos" tabindex="-1" value="${m.seq||idx+1}" title="번호"/>
+        <span class="mc-cell mc-type-badge-cell" data-label="유형">
+          <select data-role="type" class="mc-marktype" tabindex="-1" title="마킹 색상·모양">${typeOptionsHTML(m.typeKey)}</select>
+          <span class="mc-type-badge" title="자동 채번(P1, P2…)">${escapeHTML(formatMarkerLabel(m, idx))}</span>
+        </span>
+        <span class="mc-cell" data-label="그룹명"><input type="text" data-role="lvGroup" placeholder="예: 1구간" title="그룹명 — 같은 이름을 입력한 위치끼리 자동으로 묶여 침하량이 계산됩니다" value="${escapeAttr(m.lvGroup||'')}"/></span>
+        <span class="mc-cell" data-label="측정값(cm)"><input type="text" class="num" data-role="lvValue" placeholder="측정값" title="측정값(cm)" value="${escapeAttr(m.lvValue||'')}"/></span>
+        <span class="mc-cell" data-label="경간(mm)"><input type="text" class="num" data-role="lvSpan" placeholder="경간" title="경간(mm)" value="${escapeAttr(m.lvSpan||'')}"/></span>
         <button class="mc-photo" data-role="photo" tabindex="-1" title="사진 첨부"><svg class="icon"><use href="#i-camera"/></svg>${(m.photos&&m.photos.length)?`<span class="photo-count">${m.photos.length}</span>`:''}</button>
-        <button class="row-del" data-role="del" tabindex="-1" title="삭제"><svg class="icon"><use href="#i-close"/></svg></button>
-      </div>`;
+        <button class="row-del" data-role="del" tabindex="-1" title="삭제"><svg class="icon"><use href="#i-close"/></svg></button>`;
   }
   function wireLvCard(card, m){
     card.querySelector('[data-role="lvGroup"]').addEventListener('input', e=>{ markDirty(); m.lvGroup=e.target.value; updateCardSearchIndex(card,m); renderLvSummary(); });
@@ -3591,17 +3712,17 @@
   // 문구가 아니라 실제 컬럼명을 보여줄 수 있다.
   function buildEqCardHTML(m, idx){
     return `
-      <div class="mc-row">
-        <input type="text" class="mc-num" data-role="pos" tabindex="-1" value="${m.seq||idx+1}" title="번호"/>
-        <select data-role="type" class="mc-marktype" tabindex="-1" title="마킹 색상·모양">${DEFECT_TYPES.map(t=>`<option value="${t.key}" ${t.key===m.typeKey?'selected':''}>${t.label}</option>`).join('')}</select>
-        <span class="mc-suffix" data-label="구분" title="자동 채번(SH-01, PH-01, DM-01…)">${escapeHTML(formatMarkerLabel(m, idx))}</span>
-        <span class="mc-field" data-label="층수"><input type="text" data-role="eqFloor" placeholder="층수" title="층수" value="${escapeAttr(m.eqFloor||'')}"/></span>
-        <span class="mc-field" data-label="위치"><input type="text" data-role="eqLoc" placeholder="위치" title="위치" value="${escapeAttr(m.eqLoc||'')}"/></span>
-        <span class="mc-field" data-label="부재"><input type="text" data-role="eqMember" placeholder="부재" title="부재" value="${escapeAttr(m.eqMember||'')}"/></span>
-        <span class="mc-suffix" data-label="사진번호"><span>#</span><input type="text" data-role="eqTag" placeholder="사진번호" title="사진번호" value="${escapeAttr(m.eqTag||'')}"/></span>
+        <input type="text" class="mc-seq" data-role="pos" tabindex="-1" value="${m.seq||idx+1}" title="번호"/>
+        <span class="mc-cell mc-type-badge-cell" data-label="유형">
+          <select data-role="type" class="mc-marktype" tabindex="-1" title="마킹 색상·모양">${typeOptionsHTML(m.typeKey)}</select>
+          <span class="mc-type-badge" title="자동 채번(SH-01, PH-01, DM-01…)">${escapeHTML(formatMarkerLabel(m, idx))}</span>
+        </span>
+        <span class="mc-cell" data-label="층수"><input type="text" data-role="eqFloor" placeholder="층수" title="층수" value="${escapeAttr(m.eqFloor||'')}"/></span>
+        <span class="mc-cell" data-label="위치"><input type="text" data-role="eqLoc" placeholder="위치" title="위치" value="${escapeAttr(m.eqLoc||'')}"/></span>
+        <span class="mc-cell" data-label="부재"><input type="text" data-role="eqMember" placeholder="부재" title="부재" value="${escapeAttr(m.eqMember||'')}"/></span>
+        <span class="mc-cell" data-label="사진 #"><input type="text" data-role="eqTag" placeholder="사진번호" title="사진번호" value="${escapeAttr(m.eqTag||'')}"/></span>
         <button class="mc-photo" data-role="photo" tabindex="-1" title="사진 첨부"><svg class="icon"><use href="#i-camera"/></svg>${(m.photos&&m.photos.length)?`<span class="photo-count">${m.photos.length}</span>`:''}</button>
-        <button class="row-del" data-role="del" tabindex="-1" title="삭제"><svg class="icon"><use href="#i-close"/></svg></button>
-      </div>`;
+        <button class="row-del" data-role="del" tabindex="-1" title="삭제"><svg class="icon"><use href="#i-close"/></svg></button>`;
   }
   function wireEqCard(card, m){
     ['eqFloor','eqLoc','eqMember','eqTag'].forEach(key=>{
@@ -3695,75 +3816,91 @@
   // 결함 목록 상단 고정 헤더(marker-list-head)의 컬럼 라벨 — 활성 프리셋이 기울기/부동침하면 그
   // 프리셋 전용 카드(아래)의 칸 이름으로 바꿔 보여준다. 한 도면은 프리셋 하나만 쓴다는 전제(5-1)라
   // 헤더 하나로 항상 정확하다.
+  // 열 개수는 반드시 카드 빌더의 직계 자식 개수, .marker-table[data-preset=...]의 --cols 트랙
+  // 개수와 일치해야 한다 — 셋 중 하나만 달라도 그 프리셋만 조용히 열이 어긋난다(subgrid는 헤더와
+  // 행이 같은 트랙을 그대로 나눠 쓰므로, 예전처럼 보이지 않는 칸을 복제해 폭을 맞출 필요가 없다).
+  // 단위(mm·cm·개)는 이제 행마다 반복하지 않고 여기 헤더에 한 번만 적는다.
   const DEFAULT_MARKER_LIST_HEAD_HTML = `
-    <span class="mc-num"></span>
-    <span class="mc-marktype"></span>
-    <span class="mc-field">자재</span>
-    <span class="mc-field">부재</span>
-    <span class="mc-field">결함</span>
-    <span class="mc-suffix">폭</span>
-    <span class="mc-suffix">길이</span>
-    <span class="mc-suffix">개수</span>
-    <span class="mc-suffix">사진번호</span>`;
+    <span class="mc-seq">번호</span>
+    <span>유형</span>
+    <span>부재</span>
+    <span>자재</span>
+    <span>결함</span>
+    <span class="num">폭 (mm)</span>
+    <span class="num">길이 (mm)</span>
+    <span class="num">개수</span>
+    <span>사진 #</span>
+    <span></span>
+    <span></span>`;
   const TILT_MARKER_LIST_HEAD_HTML = `
-    <span class="mc-num"></span>
-    <span class="mc-marktype"></span>
-    <span class="mc-field">구분</span>
-    <span class="mc-suffix tilt-dms-group">상부(도분초)</span>
-    <span class="mc-suffix tilt-dms-group">하부(도분초)</span>
-    <span class="mc-suffix">수평거리</span>
-    <span class="mc-suffix tilt-dms-group tilt-result">수평각차(자동)</span>`;
+    <span class="mc-seq">번호</span>
+    <span>구분</span>
+    <span>상부(도분초)</span>
+    <span>하부(도분초)</span>
+    <span class="num">수평거리(mm)</span>
+    <span>수평각차</span>
+    <span></span>
+    <span></span>`;
   const LV_MARKER_LIST_HEAD_HTML = `
-    <span class="mc-num"></span>
-    <span class="mc-marktype"></span>
-    <span class="mc-field">LV그룹</span>
-    <span class="mc-suffix">측점</span>
-    <span class="mc-suffix">측정값(cm)</span>
-    <span class="mc-suffix">경간(mm)</span>`;
+    <span class="mc-seq">번호</span>
+    <span>유형</span>
+    <span>그룹명</span>
+    <span class="num">측정값(cm)</span>
+    <span class="num">경간(mm)</span>
+    <span></span>
+    <span></span>`;
   // SH/PH/DM이 이제 전부 같은 칸을 쓰므로(buildEqCardHTML 참고) 실제 컬럼명을 그대로 헤더로 쓸 수 있다.
   const EQ_MARKER_LIST_HEAD_HTML = `
-    <span class="mc-num"></span>
-    <span class="mc-marktype"></span>
-    <span class="mc-suffix">구분</span>
-    <span class="mc-field">층수</span>
-    <span class="mc-field">위치</span>
-    <span class="mc-field">부재</span>
-    <span class="mc-suffix">사진번호</span>`;
-  // 모든 카드는 맨 끝에 사진·삭제 버튼(mc-photo/row-del, 둘 다 flex:0 0 auto라 내용물 크기만큼만 차지)이
-  // 붙는데, 헤더에는 그 두 칸이 아예 없었다 — flex 컨테이너에서 형제 요소 구성이 다르면 growable
-  // 칸(mc-field)이 남는 공간을 나눠 갖는 비율도 달라지므로, 카드의 사진·삭제 버튼과 똑같은 마크업을
-  // (안 보이게만) 헤더 끝에도 넣어야 자재/부재/결함 같은 growable 칸의 실제 폭이 카드와 정확히 같아진다.
-  const MARKER_LIST_HEAD_TAIL_HTML = `
-    <button class="mc-photo" tabindex="-1" style="visibility:hidden;" aria-hidden="true"><svg class="icon"><use href="#i-camera"/></svg></button>
-    <button class="row-del" tabindex="-1" style="visibility:hidden;" aria-hidden="true"><svg class="icon"><use href="#i-close"/></svg></button>`;
+    <span class="mc-seq">번호</span>
+    <span>유형</span>
+    <span>층수</span>
+    <span>위치</span>
+    <span>부재</span>
+    <span>사진 #</span>
+    <span></span>
+    <span></span>`;
   function renderMarkerListHead(){
-    const row = document.querySelector('.marker-list-head .mc-row');
+    const row = document.querySelector('.marker-list-head');
     if(!row) return;
     const body = activePresetName==='기울기' ? TILT_MARKER_LIST_HEAD_HTML
       : activePresetName==='부동침하' ? LV_MARKER_LIST_HEAD_HTML
       : activePresetName==='장비조사' ? EQ_MARKER_LIST_HEAD_HTML
       : DEFAULT_MARKER_LIST_HEAD_HTML;
-    row.innerHTML = body + MARKER_LIST_HEAD_TAIL_HTML;
+    row.innerHTML = body;
+    // subgrid는 --cols 트랙을 .marker-table에서 물려받으므로, 프리셋마다 다른 열 폭을 쓰려면
+    // 헤더뿐 아니라 표 자체에도 지금 프리셋이 무엇인지 알려줘야 한다(CSS의 [data-preset=...] 선택자).
+    const table = document.getElementById('markerTable');
+    if(table) table.dataset.preset = activePresetName;
   }
 
+  let renderTableInProgress = false;
+  // 카드를 하나씩 지우다가(.remove()) 마침 그 안에 포커스된 입력칸이 있으면, 브라우저가 그 입력칸을
+  // DOM에서 떼어내는 순간 동기적으로 blur를 일으키고 'change' 리스너가 renderTable()을 다시 부를 수
+  // 있다(예: 기울기 입력칸을 연달아 빠르게 편집할 때). 그 재귀 호출이 카드를 통째로 새로 그려버리면
+  // 바깥쪽 forEach는 이미 사라진 옛 카드를 마저 지우려다 예외를 던진다. change 핸들러는 renderTable()을
+  // 부르기 전에 이미 m/d.markers를 최신 상태로 바꿔두므로, 재진입 시에는 그리기를 건너뛰고 바깥쪽
+  // (원래) 호출이 그 최신 상태를 마저 반영해 다시 그리게 한다.
   function renderTable(){
+    if(renderTableInProgress) return;
+    renderTableInProgress = true;
+    try{
     const d = getActiveDrawing();
     // 시트가 가리키던 마커가 실행취소·삭제·도면 전환 등으로 더 이상 없으면 조용히 닫는다.
     if(quickInputMarkerId && (!d || !d.markers.some(m=>m.id===quickInputMarkerId))) hideQuickInputSheet();
     renderMarkerListHead();
     renderLvSummary();
-    const list = document.getElementById('markerList');
+    const table = document.getElementById('markerTable');
     const countEl = document.getElementById('markerCount');
     const emptyNote = document.getElementById('emptyMarkerNote');
-    list.innerHTML = '';
+    // 헤더(.marker-list-head)가 이제 카드와 같은 .marker-table 안에 있으므로, 예전처럼
+    // innerHTML=''로 통째로 비우면 헤더까지 같이 지워진다 — 카드만 골라 지운다.
+    table.querySelectorAll('.marker-card').forEach(el=>el.remove());
     if(!d || d.markers.length===0){
       countEl.textContent = '0';
       emptyNote.style.display = 'block';
-      list.style.display = 'none';
       return;
     }
     emptyNote.style.display = 'none';
-    list.style.display = 'flex';
     countEl.textContent = String(d.markers.length);
     // 렌더링 직전에 항상 seq를 배열 순서와 맞춘다 — 방금 일어난 조작(번호 직접 입력·삭제 등)으로
     // 다른 마커들의 번호가 실제로 밀렸다면 여기서 재정렬 토스트가 뜬다.
@@ -3785,31 +3922,39 @@
       else if(isLv) card.innerHTML = buildLvCardHTML(m, idx);
       else if(isEq) card.innerHTML = buildEqCardHTML(m, idx);
       else {
-        const typeOptions = DEFECT_TYPES.map(t=>`<option value="${t.key}" ${t.key===m.typeKey?'selected':''}>${t.label}</option>`).join('');
+        const typeOptions = typeOptionsHTML(m.typeKey);
+        // 필드명(rptType/rptMember)과 화면 라벨(부재/자재)이 짝이 안 맞아 보일 수 있는데 의도된 것이다 —
+        // rptType엔 "벽체/천장/바닥" 같은 부재 값이, rptMember엔 "콘크리트/조적" 같은 자재 값이 들어간다
+        // (사용자 확인: 부재=벽체 등, 자재=콘크리트 등). CSV/XLSX 내보내기도 이 짝을 그대로 따른다.
         card.innerHTML = `
-          <div class="mc-row">
-            <input type="text" class="mc-num" data-role="pos" tabindex="-1" value="${m.seq||idx+1}" title="번호 — 값을 바꾸면 도면·목록의 순서(번호)가 그 위치로 바뀝니다"/>
+            <input type="text" class="mc-seq" data-role="pos" tabindex="-1" value="${m.seq||idx+1}" title="번호 — 값을 바꾸면 도면·목록의 순서(번호)가 그 위치로 바뀝니다"/>
             <select data-role="type" class="mc-marktype" tabindex="-1" title="마킹 색상·모양(도면에 표시되는 유형)">${typeOptions}</select>
-            ${buildReportSelectHTML('rptType', m.rptType, '자재')}
-            ${buildReportSelectHTML('rptMember', m.rptMember, '부재')}
-            ${buildReportSelectHTML('rptDefect', m.rptDefect, '결함')}
-            <span class="mc-suffix" data-label="폭"><input type="text" data-role="rptWidth" placeholder="폭" title="폭(mm)" value="${escapeAttr(m.rptWidth||'')}"/><span>mm</span></span>
-            <span class="mc-suffix" data-label="길이"><input type="text" data-role="rptLength" placeholder="길이" title="길이(mm)" value="${escapeAttr(m.rptLength||'')}"/><span>mm</span></span>
-            <span class="mc-suffix" data-label="개수"><input type="text" data-role="rptCount" placeholder="개수" title="개수" value="${escapeAttr(m.rptCount||'')}"/><span>개</span></span>
-            <span class="mc-suffix" data-label="사진번호"><span>#</span><input type="text" data-role="rptTag" placeholder="사진번호" title="사진번호" value="${escapeAttr(m.rptTag||'')}"/></span>
+            ${buildReportFieldHTML('rptType', m.rptType, '부재')}
+            ${buildReportFieldHTML('rptMember', m.rptMember, '자재')}
+            ${buildReportFieldHTML('rptDefect', m.rptDefect, '결함')}
+            <span class="mc-cell" data-label="폭(mm)"><input type="text" class="num" data-role="rptWidth" placeholder="폭" title="폭(mm)" value="${escapeAttr(m.rptWidth||'')}"/></span>
+            <span class="mc-cell" data-label="길이(mm)"><input type="text" class="num" data-role="rptLength" placeholder="길이" title="길이(mm)" value="${escapeAttr(m.rptLength||'')}"/></span>
+            <span class="mc-cell" data-label="개수"><input type="text" class="num" data-role="rptCount" placeholder="개수" title="개수" value="${escapeAttr(m.rptCount||'')}"/></span>
+            <span class="mc-cell" data-label="사진 #"><input type="text" data-role="rptTag" placeholder="사진번호" title="사진번호" value="${escapeAttr(m.rptTag||'')}"/></span>
             <button class="mc-photo" data-role="photo" tabindex="-1" title="사진 첨부"><svg class="icon"><use href="#i-camera"/></svg>${(m.photos&&m.photos.length)?`<span class="photo-count">${m.photos.length}</span>`:''}</button>
             <button class="row-del" data-role="del" tabindex="-1" title="삭제"><svg class="icon"><use href="#i-close"/></svg></button>
-          </div>
         `;
       }
       card.addEventListener('click', (e)=>{
         if(e.target.closest('select,input,button')) return;
         selectOnly(m.id);
       });
-      card.querySelector('[data-role="type"]').addEventListener('change', (e)=>{
-        pushUndo(); m.typeKey = e.target.value; renderCanvas(); renderLegendPreview(d);
-        updateCardSearchIndex(card, m);
-      });
+      // 기울기 카드는 유형 열 자체가 없다(계열이 사실상 1종뿐이라 요청으로 뺌) — 있을 때만 연결.
+      const typeSelEl = card.querySelector('[data-role="type"]');
+      if(typeSelEl){
+        typeSelEl.addEventListener('change', (e)=>{
+          pushUndo(); m.typeKey = e.target.value; renderCanvas(); renderLegendPreview(d);
+          updateCardSearchIndex(card, m);
+          // 장비조사·부동침하는 유형 칸 안에 자동 채번 배지(SH-01·P1 등)를 같이 보여준다 — 유형이
+          // 바뀌면 그 계열 안에서 번호도 다시 매겨질 수 있으므로(독립 채번) 표를 다시 그려 바로 반영한다.
+          if(isEq || isLv) renderTable();
+        });
+      }
       card.querySelector('[data-role="photo"]').addEventListener('click', ()=> openPhotoModal(m.id));
       card.querySelector('[data-role="del"]').addEventListener('click', ()=> deleteMarker(m.id));
       // 번호 칸: 값을 바꾸면 그 결함을 목록/도면 번호 순서상 해당 위치로 옮긴다(다른 결함들은 자동으로 밀림).
@@ -3832,9 +3977,9 @@
       } else if(isEq){
         wireEqCard(card, m);
       } else if(!isTiltDir){
-        wireReportSelect(card, 'rptType', m);
-        wireReportSelect(card, 'rptMember', m);
-        wireReportSelect(card, 'rptDefect', m);
+        wireReportField(card, 'rptType', m);
+        wireReportField(card, 'rptMember', m);
+        wireReportField(card, 'rptDefect', m);
         ['rptWidth','rptLength','rptCount','rptTag'].forEach(key=>{
           card.querySelector(`[data-role="${key}"]`).addEventListener('input', (e)=>{
             markDirty(); m[key] = e.target.value;
@@ -3842,9 +3987,12 @@
           });
         });
       }
-      list.appendChild(card);
+      table.appendChild(card);
     });
     applyMarkerSearchFilter();
+    } finally {
+      renderTableInProgress = false;
+    }
   }
   // 결함 목록 검색/필터 — 마커 데이터·내보내기 로직은 건드리지 않고, 렌더링된 카드를
   // display:none으로 숨기고 보여주는 순수 UI 필터다(검색해도 CSV/PDF 내보내기 내용은 그대로).
@@ -3852,7 +4000,7 @@
   function applyMarkerSearchFilter(){
     const noteEl = document.getElementById('emptyMarkerNote');
     if(emptyMarkerNoteDefaultText===null) emptyMarkerNoteDefaultText = noteEl.textContent;
-    const cards = document.querySelectorAll('#markerList .marker-card');
+    const cards = document.querySelectorAll('#markerTable .marker-card');
     if(cards.length===0) return; // 결함이 아예 없는 경우는 renderTable()의 빈 상태 처리에 맡긴다
     const q = (document.getElementById('markerSearchInput').value||'').trim().toLowerCase();
     let visibleCount = 0;
@@ -3903,12 +4051,12 @@
     } else if(moveMode){
       hint.innerHTML = '<b>이동 모드</b> (단축키 m) — 마커를 드래그해 이동만 합니다. 빈 곳을 클릭·드래그해도 아무 일도 일어나지 않습니다';
     } else if(getType(activeTypeKey).endStyle==='rect'){
-      hint.innerHTML = `현재 선택된 유형: <b id="activeTypeLabel">${getType(activeTypeKey).label}</b> — <b>클릭 3번</b>으로 생성: ① 사각형 첫 코너 → ② 반대쪽 코너 → ③ 번호가 표시될 위치${pendingRectCreate ? ` <b>(${pendingRectCreate.stage}/2단계 완료, 계속 클릭하세요 · Esc로 취소)</b>` : ''}`;
+      hint.innerHTML = `현재 선택된 유형: <b id="activeTypeLabel">${escapeHTML(getType(activeTypeKey).label)}</b> — <b>클릭 3번</b>으로 생성: ① 사각형 첫 코너 → ② 반대쪽 코너 → ③ 번호가 표시될 위치${pendingRectCreate ? ` <b>(${pendingRectCreate.stage}/2단계 완료, 계속 클릭하세요 · Esc로 취소)</b>` : ''}`;
     } else {
       // 계열 개수가 프리셋마다 달라지므로 단축키 안내도 "1~N"(N=min(계열수,9))으로 동적으로 맞춘다.
       const selectableCount = selectableDefectTypes().length;
       const shortcutRange = selectableCount>1 ? `1~${Math.min(selectableCount,9)}` : '1';
-      hint.innerHTML = `현재 선택된 유형: <b id="activeTypeLabel">${getType(activeTypeKey).label}</b> (단축키 ${shortcutRange}) — 클릭해 추가, 드래그로 방향·길이 지정 (Shift: 수직/수평 고정) · <b>s</b>: 선택 · <b>m</b>: 이동 · <b>d</b>: 지우개`;
+      hint.innerHTML = `현재 선택된 유형: <b id="activeTypeLabel">${escapeHTML(getType(activeTypeKey).label)}</b> (단축키 ${shortcutRange}) — 클릭해 추가, 드래그로 방향·길이 지정 (Shift: 수직/수평 고정) · <b>s</b>: 선택 · <b>m</b>: 이동 · <b>d</b>: 지우개`;
     }
   }
   function setMoveMode(v){
@@ -3970,7 +4118,7 @@
       btn.className = 'type-btn' + (type.key===activeTypeKey ? ' active':'');
       btn.style.setProperty('--type-color', type.color);
       const shortcut = shortcutForTypeIndex(i);
-      btn.innerHTML = `<span class="type-swatch">${typeSwatchSVG(type)}</span><span>${type.label}</span><span class="kbd-hint">${shortcut}</span>`;
+      btn.innerHTML = `<span class="type-swatch">${typeSwatchSVG(type)}</span><span>${escapeHTML(type.label)}</span><span class="kbd-hint">${shortcut}</span>`;
       btn.addEventListener('click', ()=>{
         setActiveType(type.key);
         // 태블릿에서는 유형을 고르면 곧바로 도면을 클릭할 것이므로 서랍을 자동으로 닫아준다.
@@ -4678,13 +4826,14 @@
     // 직전에 전체 도면을 조용히(토스트 없이) 재정렬해 seq를 맞춘다.
     renumberAllDrawings({silent:true});
     const header = ['도면명','번호','위치유형','X(%)','Y(%)','각도','인출선길이배율','범위X(%)','범위Y(%)','범위폭(%)','범위높이(%)',
-      '자재','부재','결함','폭','길이','개수','#','사진','비고','UID',
+      '부재','자재','결함','폭','길이','개수','#','사진','비고','UID',
       // 2·4장: 기울기·부동침하 전용 값 — 다른 프리셋의 마커는 빈 칸으로 남는다(기존 CSV/XLSX 소비 코드와
       // 자리를 맞추기 위해 항상 맨 끝에 추가). "번호" 열이 이미 "구분-N" 배지를 담으므로 따로 구분 열을
       // 두지 않는다. 측점·방향은 8장 사용자 피드백으로 표에서 뺐다(방향은 캔버스 화살표로만 표시).
-      '기울기_상부시준(도분초)','기울기_하부시준(도분초)','기울기_수평거리(mm)','기울기_수평각차(자동)',
-      // 부동침하(4장): LV그룹·경간은 자동계산(측정길이·Max-Min·기울기·등급)에 필요해 8장에서도 유지하기로 함.
-      'LV그룹','LV측정값(cm)','LV경간(mm)',
+      '기울기_상부시준(도분초)','기울기_하부시준(도분초)','기울기_수평거리(mm)','기울기_수평각차',
+      // 부동침하(4장): 그룹명·경간은 자동계산(측정길이·Max-Min·기울기·등급)에 필요해 8장에서도 유지하기로 함.
+      // 헤더 문구의 "LV"는 화면 카드 라벨과 맞춰 뺐다(데이터 필드명 m.lvGroup 자체는 그대로).
+      '그룹명','LV측정값(cm)','LV경간(mm)',
       // 3-2: 장비조사(SH/PH/DM) 공통 값. "번호" 열이 이미 SH-01/PH-01/DM-01 배지를 담는다.
       '장비_층수','장비_위치','장비_부재','장비_사진번호'];
     const rows = [];
@@ -4695,7 +4844,10 @@
         const isRect = type.endStyle==='rect';
         const upDms = (m.tiltUpD||m.tiltUpM||m.tiltUpS) ? `${m.tiltUpD||0}°${m.tiltUpM||0}′${m.tiltUpS||0}″` : '';
         const loDms = (m.tiltLoD||m.tiltLoM||m.tiltLoS) ? `${m.tiltLoD||0}°${m.tiltLoM||0}′${m.tiltLoS||0}″` : '';
-        const resDms = tiltHasAngleInput(m) ? (()=>{ const c=computeTiltDiff(m); return `${c.dms.d}°${c.dms.m}′${c.dms.s}″`; })() : '';
+        // tiltResultParts()는 수동으로 덮어쓴 수평각차 값이 있으면 그 값을 우선한다 — 표에 보이는
+        // 값과 내보내기 결과가 어긋나지 않도록 계산식을 여기서 따로 반복하지 않고 그대로 재사용한다.
+        const resParts = tiltResultParts(m);
+        const resDms = (resParts.d!=='' || resParts.m!=='' || resParts.s!=='') ? `${resParts.d}°${resParts.m}′${resParts.s}″` : '';
         rows.push({ typeKey: m.typeKey, cells: [d.name, formatMarkerLabel(m, idx, d), type.label, m.xPct.toFixed(1), m.yPct.toFixed(1), Math.round(m.angle||0), lenStr,
           isRect ? (m.rectXPct||0).toFixed(1) : '', isRect ? (m.rectYPct||0).toFixed(1) : '',
           isRect ? (m.rectWPct||0).toFixed(1) : '', isRect ? (m.rectHPct||0).toFixed(1) : '',
@@ -4822,7 +4974,7 @@
   // 각 시트는 { name, header, rows:[{typeKey,cells}], numericColIdx:Set } 모양. header의 빈 문자열('')은
   // 8장 사용자 설명대로 "칸은 있지만 제목은 비워둔다"는 뜻(마킹유형 배지·단위·# 같은 보조 칸).
   function buildOegwanSheet(items){
-    const header = ['NO','','자재','부재','결함','폭','','길이','','개수','','','사진번호'];
+    const header = ['NO','','부재','자재','결함','폭','','길이','','개수','','','사진번호'];
     const rows = items.map(({m,idx,d})=>{
       const type = getType(m.typeKey);
       return { typeKey: m.typeKey, cells: [
@@ -4844,20 +4996,22 @@
   function buildTiltSheet(items){
     const header = ['NO','구분','도','분','초','도','분','초','수평거리','도','분','초'];
     const rows = items.filter(x=>x.m.typeKey==='tilt_pos').map(({m,idx,d})=>{
-      const calc = tiltHasAngleInput(m) ? computeTiltDiff(m) : null;
+      // tiltResultParts()는 수동으로 덮어쓴 수평각차 값이 있으면 그 값을 우선한다 — 표에 보이는
+      // 값과 내보내기 결과가 어긋나지 않도록 계산식을 여기서 따로 반복하지 않고 그대로 재사용한다.
+      const res = tiltResultParts(m);
       return { typeKey: m.typeKey, cells: [
         formatMarkerLabel(m,idx,d), m.tiltBldg||'',
         m.tiltUpD||'', m.tiltUpM||'', m.tiltUpS||'',
         m.tiltLoD||'', m.tiltLoM||'', m.tiltLoS||'',
         m.tiltDist||'',
-        calc?calc.dms.d:'', calc?calc.dms.m:'', calc?calc.dms.s:'',
+        res.d, res.m, res.s,
       ]};
     });
     return { name:'기울기', header, rows, numericColIdx: new Set([2,3,4,5,6,7,8,9,10,11]) };
   }
   // 부동침하는 사용자 확인대로 LV그룹·경간을 유지한다(9단계) — 자동계산에 필요한 값이라 표에서 뺄 수 없음.
   function buildLvSheet(items){
-    const header = ['NO','LV그룹','측점','측정값(cm)','경간(mm)'];
+    const header = ['NO','그룹명','측점','측정값(cm)','경간(mm)'];
     const rows = items.map(({m,idx,d})=> ({ typeKey: m.typeKey, cells: [
       m.seq||idx+1, m.lvGroup||'', formatMarkerLabel(m,idx,d), m.lvValue||'', m.lvSpan||'',
     ]}));
@@ -4866,7 +5020,7 @@
   // 빌트인 4종이 아닌 프리셋(사용자가 계열 편집으로 새로 만든 커스텀 프리셋 등)은 전용 서식이 없으므로
   // 예전 통합 표와 같은 일반 컬럼 구성으로 시트를 만든다.
   function buildGenericPresetSheet(name, items){
-    const header = ['도면명','번호','위치유형','X(%)','Y(%)','각도','자재','부재','결함','폭','길이','개수','사진번호','비고','UID'];
+    const header = ['도면명','번호','위치유형','X(%)','Y(%)','각도','부재','자재','결함','폭','길이','개수','사진번호','비고','UID'];
     const rows = items.map(({m,idx,d})=>{
       const type = getType(m.typeKey);
       return { typeKey: m.typeKey, cells: [
@@ -5277,7 +5431,7 @@
   function buildInputRow(rowNum, markerId){
     const tr = document.createElement('tr');
     if(markerId) tr.dataset.markerId = markerId;
-    const typeOptions = DEFECT_TYPES.map(t=>`<option value="${t.key}">${t.label}</option>`).join('');
+    const typeOptions = typeOptionsHTML();
     tr.innerHTML = `
       <td style="color:var(--muted);text-align:center;">${rowNum}</td>
       <td><select data-col="type">${typeOptions}</select></td>
@@ -5737,6 +5891,7 @@
       rptDefect: linesToList(document.getElementById('optFieldDefect').value),
     };
     saveReportFieldOptions();
+    renderReportFieldDatalists();
     renderTable();
     closeFieldOptionsModal();
   }
@@ -5802,8 +5957,13 @@
       document.getElementById('photoModalFoot').textContent = photos.length ? `${photos.length}장` : '';
     }
   }
+  // 현장 사진은 이 앱에서 유일하게 다시 만들 수 없는 데이터다(도면·마커는 다시 찍으면 되지만
+  // 준공 후 현장 사진은 재촬영이 사실상 불가능). 그래서 다른 파괴적 동작과 동일하게 확인창을
+  // 두고, 실행취소로도 되돌아가도록 pushUndo()를 먼저 부른다.
   function removePhotoAt(i){
     const m = currentPhotoMarker(); if(!m || !m.photos) return;
+    if(!confirm(`사진 ${i+1}번을 삭제할까요?\n(실행취소 Ctrl+Z로 되돌릴 수 있습니다)`)) return;
+    pushUndo();
     m.photos.splice(i,1);
     markImagesDirty();
     if(photoPreviewIndex>=m.photos.length) photoPreviewIndex = m.photos.length-1;
@@ -6060,7 +6220,9 @@
     // 없는 예전 파일(2단계 이전)은 지금 활성 프리셋을 그대로 두며, 그 예전 파일들은 전부 외관조사
     // 4종 스키마였으므로 기본 프리셋과 자연히 맞아떨어진다.
     if(Array.isArray(data.seriesSnapshot) && data.seriesSnapshot.length>0){
-      DEFECT_TYPES = data.seriesSnapshot.map(t=> Object.assign({}, t, { numbering: Object.assign({mode:'global',digits:0,start:1}, t.numbering||{}) }));
+      // 프로젝트 파일은 협력업체가 보낸 것일 수 있는 외부 데이터라, 안에 든 계열 객체를 그대로
+      // 신뢰하지 않고 화이트리스트로 재구성한다(sanitizeSeriesSnapshot 정의부의 XSS 설명 참고).
+      DEFECT_TYPES = sanitizeSeriesSnapshot(data.seriesSnapshot) || DEFECT_TYPES;
       rebuildTypeMap();
       activePresetName = data.seriesPresetName || activePresetName;
       renderTypeGrid();
@@ -6159,6 +6321,13 @@
   // ---------- 유틸 ----------
   function escapeHTML(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
   function escapeAttr(s){ return escapeHTML(s); }
+  // 유형 <option> 목록 생성 — key/label은 프로젝트 파일의 seriesSnapshot에서 그대로 복원될 수 있는
+  // 값이라, 이스케이프 없이 innerHTML에 넣으면 협력업체가 보낸 프로젝트 파일이 곧 XSS 공격 벡터가
+  // 된다. 호출부가 6곳(기본 카드, 표로 입력 모달, 기울기 방향/LV/장비 카드)으로 흩어져 있어
+  // 하나만 고치고 넘어가기 쉬웠으므로 여기 한 곳으로 모은다.
+  function typeOptionsHTML(selectedKey, list){
+    return (list || DEFECT_TYPES).map(t=>`<option value="${escapeAttr(t.key)}" ${t.key===selectedKey?'selected':''}>${escapeHTML(t.label)}</option>`).join('');
+  }
 
   // ---------- 이벤트 바인딩 ----------
   document.getElementById('addDrawingInput').addEventListener('change', e=>{ addImagesFromFiles(e.target.files); e.target.value=''; });
@@ -6352,9 +6521,26 @@
     box.style.display = (box.style.display==='none') ? 'block' : 'none';
   });
 
+  // 결함 목록의 부재/자재/결함(등) 입력칸에서 내용을 지우다가(Backspace 연타) 그 마커가 하필 선택된
+  // 상태였으면, 아래 Delete/Backspace 단축키가 "선택된 마킹 삭제"로 오작동해 마킹 자체가 사라지는
+  // 오류가 가끔 보고됐다. 이 단축키는 `document.activeElement`가 입력칸이 "아닐 때"만 동작하도록
+  // 막아뒀는데, 입력칸에 포커스가 있는 동안은 이 조건이 항상 참이라 원인이 되진 않는다 — 다만 어떤
+  // 이유로든(예: 터치/태블릿 키보드가 입력칸을 순간적으로 blur시키는 경우 등) 포커스가 아주 잠깐
+  // 입력칸을 벗어나는 순간과 Backspace 입력이 겹치면 그 찰나에 isEditing이 false가 되어 삭제가
+  // 발동할 수 있다. 재현은 못 했지만, 입력칸에서 막 벗어난 직후 잠깐은 이 단축키를 쉬게 하는
+  // 것만으로 이 경로 자체를 안전하게 막을 수 있어 방어적으로 추가한다(정상적인 "카드 선택 후
+  // Delete로 삭제" 같은 다른 사용법에는 영향 없음 — 그 경우 activeElement가 애초에 입력칸이 아니라
+  // 이 유예 시간과 무관하게 항상 그대로 동작한다).
+  let lastEditableBlurAt = 0;
+  document.addEventListener('focusout', e=>{
+    if(e.target && /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) lastEditableBlurAt = Date.now();
+  }, true);
+  const EDITABLE_BLUR_GRACE_MS = 300;
+
   window.addEventListener('keydown', e=>{
     const tag = document.activeElement && document.activeElement.tagName;
     const isEditing = tag==='INPUT' || tag==='TEXTAREA' || tag==='SELECT';
+    const justLeftEditable = (Date.now() - lastEditableBlurAt) < EDITABLE_BLUR_GRACE_MS;
     if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='z' && e.shiftKey && !isEditing){ e.preventDefault(); redo(); return; }
     if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='y' && !isEditing){ e.preventDefault(); redo(); return; }
     if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='z' && !isEditing){ e.preventDefault(); undo(); return; }
@@ -6366,7 +6552,7 @@
       if(d){ selectedIds = new Set(d.markers.map(m=>m.id)); renderCanvas(); renderTable(); }
       return;
     }
-    if((e.key==='Delete' || e.key==='Backspace') && selectedIds.size>0 && !isEditing){ e.preventDefault(); deleteSelected(); return; }
+    if((e.key==='Delete' || e.key==='Backspace') && selectedIds.size>0 && !isEditing && !justLeftEditable){ e.preventDefault(); deleteSelected(); return; }
     if(e.key==='Enter' && cropMode && cropRect && !isEditing){ e.preventDefault(); performCropApply(); return; }
     if(e.key==='Escape'){
       if(isTableInputOpen()){ e.preventDefault(); closeTableInputModal(); return; }
@@ -7433,6 +7619,7 @@
   updateModeButtonsUI();
   updateModeHint();
   renderCanvas();
+  renderReportFieldDatalists();
   renderTable();
   isDirty = false; // 빈 프로젝트 = "저장됨" 기준선
   checkAutosaveRecovery();
