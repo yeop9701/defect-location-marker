@@ -375,7 +375,12 @@
     --cols: 34px minmax(64px,1fr) 118px 118px 88px 128px 30px 30px;
   }
   .marker-table[data-preset="부동침하"]{
-    --cols: 34px 62px minmax(80px,1.4fr) 84px 84px 30px 30px;
+    /* 그룹명 칸(3번째)만 요청대로 폭을 줄임. 원래는 `minmax(80px,1.4fr)`였는데, 이 줄에서 fr 트랙이
+       이거 하나뿐이라(나머지는 전부 고정 px) fr 계수를 아무리 낮춰도 "남는 공간을 전부 이 칸이
+       차지"하는 성질은 그대로라 실측 폭이 거의 안 줄었다(사이드바 기본폭 720px 기준 313px→307px,
+       0.98배). 그래서 fr을 버리고 고정 폭으로 바꿈 — 같은 조건에서 313px의 0.7배인 219px로 실측
+       확인함(옆 측정값·경간 칸도 이미 고정 px라 같은 방식). */
+    --cols: 34px 62px minmax(56px,219px) 84px 84px 30px 30px;
   }
   .marker-table[data-preset="장비조사"]{
     --cols: 34px 90px minmax(64px,1fr) minmax(64px,1fr) minmax(64px,1fr) 68px 30px 30px;
