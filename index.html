@@ -486,7 +486,7 @@
   input[type=file]{display:none;}
   .file-label{display:inline-block;}
   hr.sep{border:none;border-top:1px solid var(--gridline);margin:2px 0;}
-  .empty-marker-note{font-size:11.5px;color:var(--text-secondary);padding:6px 2px;}
+  .empty-marker-note{font-size:11.5px;color:var(--text-secondary);padding:6px 2px;text-align:center;}
   .footer-note{font-size:10.5px;color:var(--muted);line-height:1.6;padding-top:6px;border-top:1px solid var(--gridline);margin-top:auto;}
   /* 저장공간이 90% 넘게 차면 눈에 띄게 강조 — 자동저장이 조용히 실패하기 전에 알아채라는 신호. */
   #storageUsageLabel.storage-warn{color:var(--danger);font-weight:700;}
@@ -901,7 +901,6 @@
           <button id="btnExportCSV" class="primary" style="width:100%;"><svg class="icon"><use href="#i-upload"/></svg> CSV로 저장</button>
           <button id="btnExportXLSX" class="primary" style="width:100%;"><svg class="icon"><use href="#i-spreadsheet"/></svg> 엑셀로 저장</button>
         </div>
-        <div style="font-size:10.5px;color:var(--text-secondary);margin-top:5px;">모든 도면의 결함을 표로 저장합니다.</div>
         <button id="btnExportPhotosZip" style="width:100%;margin-top:10px;" title="모든 도면의 결함 사진을 zip으로 한 번에 저장합니다. 파일명은 번호·유형·부재명·결함명 순으로 자동 생성됩니다"><svg class="icon"><use href="#i-camera"/></svg> 사진 일괄저장</button>
         <button id="btnShowStats" style="width:100%;margin-top:10px;"><svg class="icon"><use href="#i-chart"/></svg> 통계 보기</button>
       </div>
