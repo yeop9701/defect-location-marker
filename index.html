@@ -426,10 +426,12 @@
   /* 기울기 전용 복합 셀 — 폭은 --cols가 정하므로 여기서는 내부 배치만 */
   .tilt-dms-group{display:flex;gap:2px;min-width:0;}
   .tilt-dms{flex:1 1 0;min-width:0;text-align:center;padding:0 2px !important;}
-  /* 장비조사 유형 칸 — 마킹 색상 선택(select)과 자동 채번 배지(SH-01 등)를 한 칸에 세로로 쌓는다.
-     "구분" 열을 없애면서 그 정보를 유형 칸 안으로 옮겼다(select는 계속 동작함). */
-  .eq-type-cell{display:flex;flex-direction:column;gap:2px;}
-  .eq-type-badge{color:var(--muted);font-variant-numeric:tabular-nums;}
+  /* 장비조사·부동침하 유형 칸 — 마킹 색상 선택(select)과 자동 채번 배지(SH-01·P1 등)를 한 칸에
+     가로로 나란히 놓는다("구분"/"측점" 같은 별도 열 없이 유형 칸 안에서 배지를 보여줌). 배지는
+     select 우측에 작게 표시(요청: "유형 아래"가 아니라 "유형 내용 우측에 작게"). */
+  .mc-type-badge-cell{display:flex;flex-direction:row;align-items:center;gap:4px;}
+  .mc-type-badge-cell select{flex:1 1 0;min-width:0;}
+  .mc-type-badge{flex:0 0 auto;font-size:8px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap;}
 
   /* 태블릿에서는 한 줄 표 대신 칸이 2열로 쌓이는 카드가 된다. 열을 맞추던 헤더는 의미가 없어
      숨기고, 각 칸 위에 data-label을 의사요소로 붙여 무슨 값인지 알려준다.
@@ -874,10 +876,12 @@
              모든 카드의 <input list="dl-..."> 가 id로 재참조한다(renderReportFieldDatalists()가 채움). -->
         <div id="reportFieldDatalists" hidden></div>
         <div class="legend-preview" id="legendPreview"></div>
-        <!-- 부동침하 프리셋에서만 보이는 LV 그룹 자동계산 표(4-2). 마커의 LV그룹·측정값·경간 입력을
-             그룹별로 묶어 상대값·측정길이·Max-Min·기울기·등급을 자동으로 계산해 보여준다. -->
+        <!-- 부동침하 프리셋에서만 보이는 그룹별 자동계산 표(4-2). 마커의 그룹명·측정값·경간 입력을
+             그룹별로 묶어 상대값·측정길이·Max-Min·기울기·등급을 자동으로 계산해 보여준다.
+             ("LV그룹"이라는 용어가 처음 보는 사람에게 낯설다는 피드백으로 화면 문구에서는 "LV"를 뺐다 —
+             데이터 필드명(m.lvGroup 등)은 그대로 둬서 저장 파일 하위호환에는 영향 없음.) -->
         <div id="lvSummaryPanel" style="display:none;margin-top:10px;">
-          <div class="panel-title">LV 그룹 자동계산</div>
+          <div class="panel-title">그룹별 자동계산</div>
           <div id="lvSummaryBody" style="font-size:11.5px;line-height:1.6;"></div>
         </div>
       </div>
@@ -1371,22 +1375,27 @@
       makeSeries({key:'flat_area', label:'바닥/천장(범위)', color:'#0047AB', endStyle:'rect'}),
     ]},
     { name:'장비조사', series:[
-      makeSeries({key:'sh', label:'반발경도(강도)', color:'#D93025', endStyle:'dot', badgeShape:'box', prefix:'SH', numbering:{mode:'independent', digits:2, start:1}}),
-      makeSeries({key:'ph', label:'중성화(탄산화)', color:'#1A73E8', endStyle:'dot', badgeShape:'box', prefix:'PH', numbering:{mode:'independent', digits:2, start:1}}),
+      // 빨강/파랑은 외관조사(wall/flat)와 완전히 같은 색상코드로 통일했다(#FF0000/#0047AB) — 예전엔
+      // 구글 머티리얼 색(#D93025/#1A73E8)이라 프리셋마다 마킹 색이 미묘하게 달라 보였다.
+      makeSeries({key:'sh', label:'반발경도(강도)', color:'#FF0000', endStyle:'dot', badgeShape:'box', prefix:'SH', numbering:{mode:'independent', digits:2, start:1}}),
+      makeSeries({key:'ph', label:'중성화(탄산화)', color:'#0047AB', endStyle:'dot', badgeShape:'box', prefix:'PH', numbering:{mode:'independent', digits:2, start:1}}),
       makeSeries({key:'dm', label:'철근탐사', color:'#188038', endStyle:'dot', badgeShape:'box', prefix:'DM', numbering:{mode:'independent', digits:2, start:1}}),
     ]},
     { name:'기울기', series:[
-      makeSeries({key:'tilt_pos', label:'측정위치', color:'#D93025', endStyle:'arrow', badgeShape:'circle', numbering:{mode:'independent', digits:0, start:1}}),
+      // 빨강/파랑은 외관조사와 동일한 색상코드로 통일(위 장비조사와 같은 이유).
+      makeSeries({key:'tilt_pos', label:'측정위치', color:'#FF0000', endStyle:'arrow', badgeShape:'circle', numbering:{mode:'independent', digits:0, start:1}}),
       // 측정방향은 항상 자동으로만 그려지는 보조 화살표라 번호 배지가 필요 없다(noBadge:true) — 선+화살촉만 표시.
-      makeSeries({key:'tilt_dir', label:'측정방향', color:'#1A73E8', endStyle:'arrow', badgeShape:'circle', noBadge:true, numbering:{mode:'independent', digits:0, start:1}}),
+      makeSeries({key:'tilt_dir', label:'측정방향', color:'#0047AB', endStyle:'arrow', badgeShape:'circle', noBadge:true, numbering:{mode:'independent', digits:0, start:1}}),
     ]},
     // 4-1: 부동침하 위치도 신규 프리셋(부록35 기준) — 횡방향(X)·종방향(Y) 두 계열, 배지는 "P1"처럼
-    // 접두+번호. 범례 표기는 seriesLegendLabel()이 "P-0 : 횡방향(X방향)" 형태로 자동 생성한다.
+    // 접두+번호. 범례 표기는 seriesLegendLabel()이 "P-0 : X(횡방향)" 형태로 자동 생성한다.
+    // label을 "횡방향(X방향)"에서 "X(횡방향)"으로 바꿔(처음 보는 사람도 X/Y축을 바로 알아보도록) 드롭다운·
+    // 좌측 유형 그리드·범례가 전부 typeOptionsHTML()/renderTypeGrid() 등 label 하나를 공유해 자동으로 같이 바뀐다.
     { name:'부동침하', series:[
       // endStyle:'badge' — 인출선(선)과 점 없이 클릭한 자리에 번호 배지만 찍는다. labelSep:''이라 배지 표기는
       // "P-1"이 아니라 "P1"처럼 접두+번호가 붙어서 나온다.
-      makeSeries({key:'lv_x', label:'횡방향(X방향)', color:'#FF0000', endStyle:'badge', badgeShape:'circle', prefix:'P', labelSep:'', numbering:{mode:'independent', digits:0, start:1}}),
-      makeSeries({key:'lv_y', label:'종방향(Y방향)', color:'#0047AB', endStyle:'badge', badgeShape:'circle', prefix:'P', labelSep:'', numbering:{mode:'independent', digits:0, start:1}}),
+      makeSeries({key:'lv_x', label:'X(횡방향)', color:'#FF0000', endStyle:'badge', badgeShape:'circle', prefix:'P', labelSep:'', numbering:{mode:'independent', digits:0, start:1}}),
+      makeSeries({key:'lv_y', label:'Y(종방향)', color:'#0047AB', endStyle:'badge', badgeShape:'circle', prefix:'P', labelSep:'', numbering:{mode:'independent', digits:0, start:1}}),
     ]},
   ];
   const SERIES_PRESET_STORE_KEY = 'defectMarkerSeriesPresets_v1'; // 사용자가 저장한 커스텀 프리셋 목록
@@ -3659,7 +3668,7 @@
     panel.style.display = isLvPreset ? '' : 'none';
     if(!isLvPreset || !d) return;
     const groups = computeLvGroups(d);
-    if(groups.length===0){ body.innerHTML = '<div style="color:var(--text-secondary);">LV그룹을 입력하면 여기에 자동계산됩니다.</div>'; return; }
+    if(groups.length===0){ body.innerHTML = '<div style="color:var(--text-secondary);">그룹명을 입력하면 여기에 자동계산됩니다.</div>'; return; }
     body.innerHTML = groups.map(g=>{
       if(g.maxV===undefined) return `<div style="margin-bottom:8px;"><b>${escapeHTML(g.key)}</b> — 측정값 입력 대기 중 (${g.count}점)</div>`;
       const ratioStr = isFinite(g.n) ? `1/${g.n}` : '-';
@@ -3672,8 +3681,11 @@
   function buildLvCardHTML(m, idx){
     return `
         <input type="text" class="mc-seq" data-role="pos" tabindex="-1" value="${m.seq||idx+1}" title="번호"/>
-        <select data-role="type" class="mc-marktype" tabindex="-1" title="마킹 색상·모양">${typeOptionsHTML(m.typeKey)}</select>
-        <span class="mc-cell" data-label="LV그룹"><input type="text" data-role="lvGroup" placeholder="예: LV-1 X방향" title="LV 그룹 — 같은 그룹끼리 자동 집계됩니다" value="${escapeAttr(m.lvGroup||'')}"/></span>
+        <span class="mc-cell mc-type-badge-cell" data-label="유형">
+          <select data-role="type" class="mc-marktype" tabindex="-1" title="마킹 색상·모양">${typeOptionsHTML(m.typeKey)}</select>
+          <span class="mc-type-badge" title="자동 채번(P1, P2…)">${escapeHTML(formatMarkerLabel(m, idx))}</span>
+        </span>
+        <span class="mc-cell" data-label="그룹명"><input type="text" data-role="lvGroup" placeholder="예: 1구간" title="그룹명 — 같은 이름을 입력한 위치끼리 자동으로 묶여 침하량이 계산됩니다" value="${escapeAttr(m.lvGroup||'')}"/></span>
         <span class="mc-cell" data-label="측정값(cm)"><input type="text" class="num" data-role="lvValue" placeholder="측정값" title="측정값(cm)" value="${escapeAttr(m.lvValue||'')}"/></span>
         <span class="mc-cell" data-label="경간(mm)"><input type="text" class="num" data-role="lvSpan" placeholder="경간" title="경간(mm)" value="${escapeAttr(m.lvSpan||'')}"/></span>
         <button class="mc-photo" data-role="photo" tabindex="-1" title="사진 첨부"><svg class="icon"><use href="#i-camera"/></svg>${(m.photos&&m.photos.length)?`<span class="photo-count">${m.photos.length}</span>`:''}</button>
@@ -3696,9 +3708,9 @@
   function buildEqCardHTML(m, idx){
     return `
         <input type="text" class="mc-seq" data-role="pos" tabindex="-1" value="${m.seq||idx+1}" title="번호"/>
-        <span class="mc-cell eq-type-cell" data-label="유형">
+        <span class="mc-cell mc-type-badge-cell" data-label="유형">
           <select data-role="type" class="mc-marktype" tabindex="-1" title="마킹 색상·모양">${typeOptionsHTML(m.typeKey)}</select>
-          <span class="eq-type-badge" title="자동 채번(SH-01, PH-01, DM-01…)">${escapeHTML(formatMarkerLabel(m, idx))}</span>
+          <span class="mc-type-badge" title="자동 채번(SH-01, PH-01, DM-01…)">${escapeHTML(formatMarkerLabel(m, idx))}</span>
         </span>
         <span class="mc-cell" data-label="층수"><input type="text" data-role="eqFloor" placeholder="층수" title="층수" value="${escapeAttr(m.eqFloor||'')}"/></span>
         <span class="mc-cell" data-label="위치"><input type="text" data-role="eqLoc" placeholder="위치" title="위치" value="${escapeAttr(m.eqLoc||'')}"/></span>
@@ -3827,7 +3839,7 @@
   const LV_MARKER_LIST_HEAD_HTML = `
     <span class="mc-seq">번호</span>
     <span>유형</span>
-    <span>LV그룹</span>
+    <span>그룹명</span>
     <span class="num">측정값(cm)</span>
     <span class="num">경간(mm)</span>
     <span></span>
@@ -3933,9 +3945,9 @@
         typeSelEl.addEventListener('change', (e)=>{
           pushUndo(); m.typeKey = e.target.value; renderCanvas(); renderLegendPreview(d);
           updateCardSearchIndex(card, m);
-          // 장비조사는 유형 칸 안에 자동 채번 배지(SH-01 등)를 같이 보여준다 — 유형이 바뀌면 그
-          // 계열 안에서 번호도 다시 매겨질 수 있으므로(독립 채번) 표를 다시 그려 바로 반영한다.
-          if(isEq) renderTable();
+          // 장비조사·부동침하는 유형 칸 안에 자동 채번 배지(SH-01·P1 등)를 같이 보여준다 — 유형이
+          // 바뀌면 그 계열 안에서 번호도 다시 매겨질 수 있으므로(독립 채번) 표를 다시 그려 바로 반영한다.
+          if(isEq || isLv) renderTable();
         });
       }
       card.querySelector('[data-role="photo"]').addEventListener('click', ()=> openPhotoModal(m.id));
@@ -4814,8 +4826,9 @@
       // 자리를 맞추기 위해 항상 맨 끝에 추가). "번호" 열이 이미 "구분-N" 배지를 담으므로 따로 구분 열을
       // 두지 않는다. 측점·방향은 8장 사용자 피드백으로 표에서 뺐다(방향은 캔버스 화살표로만 표시).
       '기울기_상부시준(도분초)','기울기_하부시준(도분초)','기울기_수평거리(mm)','기울기_수평각차',
-      // 부동침하(4장): LV그룹·경간은 자동계산(측정길이·Max-Min·기울기·등급)에 필요해 8장에서도 유지하기로 함.
-      'LV그룹','LV측정값(cm)','LV경간(mm)',
+      // 부동침하(4장): 그룹명·경간은 자동계산(측정길이·Max-Min·기울기·등급)에 필요해 8장에서도 유지하기로 함.
+      // 헤더 문구의 "LV"는 화면 카드 라벨과 맞춰 뺐다(데이터 필드명 m.lvGroup 자체는 그대로).
+      '그룹명','LV측정값(cm)','LV경간(mm)',
       // 3-2: 장비조사(SH/PH/DM) 공통 값. "번호" 열이 이미 SH-01/PH-01/DM-01 배지를 담는다.
       '장비_층수','장비_위치','장비_부재','장비_사진번호'];
     const rows = [];
@@ -4993,7 +5006,7 @@
   }
   // 부동침하는 사용자 확인대로 LV그룹·경간을 유지한다(9단계) — 자동계산에 필요한 값이라 표에서 뺄 수 없음.
   function buildLvSheet(items){
-    const header = ['NO','LV그룹','측점','측정값(cm)','경간(mm)'];
+    const header = ['NO','그룹명','측점','측정값(cm)','경간(mm)'];
     const rows = items.map(({m,idx,d})=> ({ typeKey: m.typeKey, cells: [
       m.seq||idx+1, m.lvGroup||'', formatMarkerLabel(m,idx,d), m.lvValue||'', m.lvSpan||'',
     ]}));
@@ -6503,9 +6516,26 @@
     box.style.display = (box.style.display==='none') ? 'block' : 'none';
   });
 
+  // 결함 목록의 부재/자재/결함(등) 입력칸에서 내용을 지우다가(Backspace 연타) 그 마커가 하필 선택된
+  // 상태였으면, 아래 Delete/Backspace 단축키가 "선택된 마킹 삭제"로 오작동해 마킹 자체가 사라지는
+  // 오류가 가끔 보고됐다. 이 단축키는 `document.activeElement`가 입력칸이 "아닐 때"만 동작하도록
+  // 막아뒀는데, 입력칸에 포커스가 있는 동안은 이 조건이 항상 참이라 원인이 되진 않는다 — 다만 어떤
+  // 이유로든(예: 터치/태블릿 키보드가 입력칸을 순간적으로 blur시키는 경우 등) 포커스가 아주 잠깐
+  // 입력칸을 벗어나는 순간과 Backspace 입력이 겹치면 그 찰나에 isEditing이 false가 되어 삭제가
+  // 발동할 수 있다. 재현은 못 했지만, 입력칸에서 막 벗어난 직후 잠깐은 이 단축키를 쉬게 하는
+  // 것만으로 이 경로 자체를 안전하게 막을 수 있어 방어적으로 추가한다(정상적인 "카드 선택 후
+  // Delete로 삭제" 같은 다른 사용법에는 영향 없음 — 그 경우 activeElement가 애초에 입력칸이 아니라
+  // 이 유예 시간과 무관하게 항상 그대로 동작한다).
+  let lastEditableBlurAt = 0;
+  document.addEventListener('focusout', e=>{
+    if(e.target && /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) lastEditableBlurAt = Date.now();
+  }, true);
+  const EDITABLE_BLUR_GRACE_MS = 300;
+
   window.addEventListener('keydown', e=>{
     const tag = document.activeElement && document.activeElement.tagName;
     const isEditing = tag==='INPUT' || tag==='TEXTAREA' || tag==='SELECT';
+    const justLeftEditable = (Date.now() - lastEditableBlurAt) < EDITABLE_BLUR_GRACE_MS;
     if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='z' && e.shiftKey && !isEditing){ e.preventDefault(); redo(); return; }
     if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='y' && !isEditing){ e.preventDefault(); redo(); return; }
     if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='z' && !isEditing){ e.preventDefault(); undo(); return; }
@@ -6517,7 +6547,7 @@
       if(d){ selectedIds = new Set(d.markers.map(m=>m.id)); renderCanvas(); renderTable(); }
       return;
     }
-    if((e.key==='Delete' || e.key==='Backspace') && selectedIds.size>0 && !isEditing){ e.preventDefault(); deleteSelected(); return; }
+    if((e.key==='Delete' || e.key==='Backspace') && selectedIds.size>0 && !isEditing && !justLeftEditable){ e.preventDefault(); deleteSelected(); return; }
     if(e.key==='Enter' && cropMode && cropRect && !isEditing){ e.preventDefault(); performCropApply(); return; }
     if(e.key==='Escape'){
       if(isTableInputOpen()){ e.preventDefault(); closeTableInputModal(); return; }
