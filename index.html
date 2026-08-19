@@ -372,7 +372,7 @@
     column-gap:6px;row-gap:5px;padding:0 8px 8px;min-width:640px;
   }
   .marker-table[data-preset="기울기"]{
-    --cols: 34px 62px minmax(64px,1fr) 118px 118px 88px 128px 30px 30px;
+    --cols: 34px minmax(64px,1fr) 118px 118px 88px 128px 30px 30px;
   }
   .marker-table[data-preset="부동침하"]{
     --cols: 34px 62px minmax(80px,1.4fr) 84px 84px 30px 30px;
@@ -3555,8 +3555,7 @@
     const res = tiltResultParts(m);
     return `
         <input type="text" class="mc-seq" data-role="pos" tabindex="-1" value="${m.seq||idx+1}" title="번호"/>
-        <select data-role="type" class="mc-marktype" tabindex="-1" title="마킹 색상·모양">${typeOptionsHTML(m.typeKey, selectableDefectTypes())}</select>
-        <span class="mc-cell" data-label="구분"><input type="text" data-role="tiltBldg" placeholder="구분(예: 205동)" title="구분(동 이름 등)" value="${escapeAttr(m.tiltBldg||'')}"/></span>
+        <span class="mc-cell" data-label="구분"><input type="text" data-role="tiltBldg" placeholder="예: 205동" title="예: 205동" value="${escapeAttr(m.tiltBldg||'')}"/></span>
         <span class="mc-cell tilt-dms-group" data-label="상부(도분초)" title="상부시준 도/분/초">
           <input type="text" class="tilt-dms" data-role="tiltUpD" placeholder="도" value="${escapeAttr(m.tiltUpD||'')}"/>°<input type="text" class="tilt-dms" data-role="tiltUpM" placeholder="분" value="${escapeAttr(m.tiltUpM||'')}"/>′<input type="text" class="tilt-dms" data-role="tiltUpS" placeholder="초" value="${escapeAttr(m.tiltUpS||'')}"/>″
         </span>
@@ -3571,15 +3570,15 @@
         <button class="row-del" data-role="del" tabindex="-1" title="삭제"><svg class="icon"><use href="#i-close"/></svg></button>`;
   }
   // 측정방향은 항상 측정위치의 종속 마커라 별도 입력칸이 없다 — 구분~수평각차의 5칸 자리를
-  // 하나의 안내문으로 가로질러 채운다(grid-column으로 3~7번째 트랙을 직접 지정).
+  // 하나의 안내문으로 가로질러 채운다(grid-column으로 2~6번째 트랙을 직접 지정. 유형 열을 뺀 뒤라
+  // 번호가 1번째, 구분이 2번째 트랙부터 시작한다).
   function buildTiltDirCardHTML(m, idx){
     const linkedNote = '측정위치 인출선 중앙에 직각으로 자동 표시됨 (클릭·드래그로 직접 옮길 수 없습니다)';
     return `
         <input type="text" class="mc-seq" data-role="pos" tabindex="-1" value="${m.seq||idx+1}" title="번호"/>
-        <select data-role="type" class="mc-marktype" tabindex="-1" title="마킹 색상·모양" disabled>${typeOptionsHTML(m.typeKey)}</select>
-        <span class="mc-cell" style="grid-column:3 / span 5;color:var(--text-secondary);">${linkedNote}</span>
-        <button class="mc-photo" data-role="photo" tabindex="-1" title="사진 첨부" style="grid-column:8;"><svg class="icon"><use href="#i-camera"/></svg>${(m.photos&&m.photos.length)?`<span class="photo-count">${m.photos.length}</span>`:''}</button>
-        <button class="row-del" data-role="del" tabindex="-1" title="삭제" style="grid-column:9;"><svg class="icon"><use href="#i-close"/></svg></button>`;
+        <span class="mc-cell" style="grid-column:2 / span 5;color:var(--text-secondary);">${linkedNote}</span>
+        <button class="mc-photo" data-role="photo" tabindex="-1" title="사진 첨부" style="grid-column:7;"><svg class="icon"><use href="#i-camera"/></svg>${(m.photos&&m.photos.length)?`<span class="photo-count">${m.photos.length}</span>`:''}</button>
+        <button class="row-del" data-role="del" tabindex="-1" title="삭제" style="grid-column:8;"><svg class="icon"><use href="#i-close"/></svg></button>`;
   }
   // 상부/하부 각도가 바뀌면 자동계산 값으로 수평각차 입력칸을 다시 채운다 — 직접 입력한 값이
   // 있었더라도 "자동" 컬럼이라는 전제대로 여기서 덮어써진다(그 전까지는 수동 값이 유지됨).
@@ -3812,7 +3811,6 @@
     <span></span>`;
   const TILT_MARKER_LIST_HEAD_HTML = `
     <span class="mc-seq">번호</span>
-    <span>유형</span>
     <span>구분</span>
     <span>상부(도분초)</span>
     <span>하부(도분초)</span>
@@ -3903,11 +3901,14 @@
       else if(isEq) card.innerHTML = buildEqCardHTML(m, idx);
       else {
         const typeOptions = typeOptionsHTML(m.typeKey);
+        // 필드명(rptType/rptMember)과 화면 라벨(부재/자재)이 짝이 안 맞아 보일 수 있는데 의도된 것이다 —
+        // rptType엔 "벽체/천장/바닥" 같은 부재 값이, rptMember엔 "콘크리트/조적" 같은 자재 값이 들어간다
+        // (사용자 확인: 부재=벽체 등, 자재=콘크리트 등). CSV/XLSX 내보내기도 이 짝을 그대로 따른다.
         card.innerHTML = `
             <input type="text" class="mc-seq" data-role="pos" tabindex="-1" value="${m.seq||idx+1}" title="번호 — 값을 바꾸면 도면·목록의 순서(번호)가 그 위치로 바뀝니다"/>
             <select data-role="type" class="mc-marktype" tabindex="-1" title="마킹 색상·모양(도면에 표시되는 유형)">${typeOptions}</select>
-            ${buildReportFieldHTML('rptMember', m.rptMember, '부재')}
-            ${buildReportFieldHTML('rptType', m.rptType, '자재')}
+            ${buildReportFieldHTML('rptType', m.rptType, '부재')}
+            ${buildReportFieldHTML('rptMember', m.rptMember, '자재')}
             ${buildReportFieldHTML('rptDefect', m.rptDefect, '결함')}
             <span class="mc-cell" data-label="폭(mm)"><input type="text" class="num" data-role="rptWidth" placeholder="폭" title="폭(mm)" value="${escapeAttr(m.rptWidth||'')}"/></span>
             <span class="mc-cell" data-label="길이(mm)"><input type="text" class="num" data-role="rptLength" placeholder="길이" title="길이(mm)" value="${escapeAttr(m.rptLength||'')}"/></span>
@@ -3921,10 +3922,14 @@
         if(e.target.closest('select,input,button')) return;
         selectOnly(m.id);
       });
-      card.querySelector('[data-role="type"]').addEventListener('change', (e)=>{
-        pushUndo(); m.typeKey = e.target.value; renderCanvas(); renderLegendPreview(d);
-        updateCardSearchIndex(card, m);
-      });
+      // 기울기 카드는 유형 열 자체가 없다(계열이 사실상 1종뿐이라 요청으로 뺌) — 있을 때만 연결.
+      const typeSelEl = card.querySelector('[data-role="type"]');
+      if(typeSelEl){
+        typeSelEl.addEventListener('change', (e)=>{
+          pushUndo(); m.typeKey = e.target.value; renderCanvas(); renderLegendPreview(d);
+          updateCardSearchIndex(card, m);
+        });
+      }
       card.querySelector('[data-role="photo"]').addEventListener('click', ()=> openPhotoModal(m.id));
       card.querySelector('[data-role="del"]').addEventListener('click', ()=> deleteMarker(m.id));
       // 번호 칸: 값을 바꾸면 그 결함을 목록/도면 번호 순서상 해당 위치로 옮긴다(다른 결함들은 자동으로 밀림).
@@ -4820,7 +4825,7 @@
         rows.push({ typeKey: m.typeKey, cells: [d.name, formatMarkerLabel(m, idx, d), type.label, m.xPct.toFixed(1), m.yPct.toFixed(1), Math.round(m.angle||0), lenStr,
           isRect ? (m.rectXPct||0).toFixed(1) : '', isRect ? (m.rectYPct||0).toFixed(1) : '',
           isRect ? (m.rectWPct||0).toFixed(1) : '', isRect ? (m.rectHPct||0).toFixed(1) : '',
-          m.rptMember||'', m.rptType||'', m.rptDefect||'', m.rptWidth||'', m.rptLength||'', m.rptCount||'', m.rptTag||'',
+          m.rptType||'', m.rptMember||'', m.rptDefect||'', m.rptWidth||'', m.rptLength||'', m.rptCount||'', m.rptTag||'',
           (m.photos&&m.photos.length) ? `${m.photos.length}장` : '',
           (m.note||'').replace(/\r?\n/g,' '), m.uid||m.id||'',
           upDms, loDms, m.tiltDist||'', resDms,
@@ -4947,7 +4952,7 @@
     const rows = items.map(({m,idx,d})=>{
       const type = getType(m.typeKey);
       return { typeKey: m.typeKey, cells: [
-        m.seq||idx+1, type.label, m.rptMember||'', m.rptType||'', m.rptDefect||'',
+        m.seq||idx+1, type.label, m.rptType||'', m.rptMember||'', m.rptDefect||'',
         m.rptWidth||'', 'mm', m.rptLength||'', 'mm', m.rptCount||'', '개', '#', m.rptTag||'',
       ]};
     });
@@ -4994,7 +4999,7 @@
       const type = getType(m.typeKey);
       return { typeKey: m.typeKey, cells: [
         d.name, formatMarkerLabel(m,idx,d), type.label, m.xPct.toFixed(1), m.yPct.toFixed(1), Math.round(m.angle||0),
-        m.rptMember||'', m.rptType||'', m.rptDefect||'', m.rptWidth||'', m.rptLength||'', m.rptCount||'', m.rptTag||'',
+        m.rptType||'', m.rptMember||'', m.rptDefect||'', m.rptWidth||'', m.rptLength||'', m.rptCount||'', m.rptTag||'',
         (m.note||'').replace(/\r?\n/g,' '), m.uid||m.id||'',
       ]};
     });
