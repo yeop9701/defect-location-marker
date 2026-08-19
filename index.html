@@ -1181,10 +1181,16 @@
   function setTabletModeOverride(v){
     try{ if(v) localStorage.setItem(TABLET_MODE_STORE_KEY, v); else localStorage.removeItem(TABLET_MODE_STORE_KEY); } catch(err){ /* 저장 실패해도 전환 자체는 동작 */ }
   }
+  // 폭만으로 판정하면 아이패드 가로(1133~1366px)가 전부 기준(1100px)을 넘어 데스크톱 레이아웃으로
+  // 떨어진다 — manifest가 landscape를 강제하므로 현장에서는 사실상 항상 가로다. 그래서 폭과 무관하게
+  // "정밀한 포인터가 없는 기기"(pointer:coarse = 손가락·펜슬)면 태블릿 레이아웃을 쓴다.
+  // 키보드+트랙패드를 붙인 아이패드처럼 데스크톱이 더 편한 경우는 상단 "태블릿 모드" 수동 전환이
+  // 계속 우선하므로(override) 이 판정에 갇히지 않는다.
   function isTabletModeActive(){
     const override = getTabletModeOverride();
     if(override) return override==='on';
-    return window.innerWidth <= TABLET_BREAKPOINT_PX;
+    const coarsePointer = !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
+    return coarsePointer || window.innerWidth <= TABLET_BREAKPOINT_PX;
   }
   function closeAllDrawers(){
     document.querySelectorAll('.sidebar.left, .sidebar.right').forEach(el=> el.classList.remove('open'));
@@ -1237,6 +1243,14 @@
     if(getTabletModeOverride()) return; // 수동으로 켜거나 껐으면 화면 폭이 바뀌어도 자동 재판정하지 않음
     applyTabletMode();
   });
+  // 아이패드에 키보드/트랙패드를 붙였다 떼면 pointer 종류가 바뀐다 — resize가 안 일어나므로
+  // 미디어쿼리 자체의 변화도 구독해야 레이아웃이 따라온다.
+  if(window.matchMedia){
+    const mq = window.matchMedia('(pointer: coarse)');
+    const onChange = ()=>{ if(!getTabletModeOverride()) applyTabletMode(); };
+    if(mq.addEventListener) mq.addEventListener('change', onChange);
+    else if(mq.addListener) mq.addListener(onChange); // 구형 사파리 폴백
+  }
 
   // ---------- 마커 계열(series) 정의 ----------
   // 예전에는 "위치 유형"이 벽체/바닥·천장 4종으로 코드에 고정돼 있었다. 지금은 그 4종도 "프리셋"
