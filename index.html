@@ -3067,8 +3067,16 @@
   // JSON으로 통째로 복제해 이력에 쌓이면(가장 큰 메모리 낭비 원인) 마커가 많아질수록 캔버스가
   // 버벅이므로, 사진만은 깊은 복사에서 제외한다. 마커가 삭제됐다 되돌려져도(undo) 사진은 같은
   // 배열 참조를 그대로 들고 있으므로 데이터가 사라지지 않는다.
+  // {...m}은 얕은 복사라 배열·객체 필드(photos)가 원본과 참조를 공유한다. 그 상태에서
+  // photos.splice() 같은 제자리 변경을 하면 실행취소 스택에 들어있는 "이전 상태"까지 같이
+  // 바뀌어 되돌릴 수 없다. 앞으로 배열/객체 필드가 늘어나도 같은 함정을 밟지 않도록,
+  // 값 타입이 아닌 필드는 여기서 명시적으로 한 겹 더 복사한다.
   function cloneMarkersForUndo(markers){
-    return markers.map(m=>({...m}));
+    return markers.map(m=>{
+      const c = {...m};
+      if(Array.isArray(m.photos)) c.photos = m.photos.slice();
+      return c;
+    });
   }
   // targetDrawing을 생략하면 현재 활성 도면을 기록한다. CSV로 여러 도면에 한 번에 결함을 배분할
   // 때처럼 활성 도면이 아닌 다른 도면을 고쳐야 할 때도 undo 기록이 빠지지 않도록 인자로 받을 수 있다.
@@ -3354,6 +3362,12 @@
   }
   function deleteMarker(id){
     const d = getActiveDrawing(); if(!d) return;
+    // 사진이 딸린 마커를 지우면 그 사진도 함께 사라진다 — 실행취소로 되돌아가긴 하지만
+    // 되돌릴 수 있다는 걸 모르면 그대로 잃은 것으로 오해할 수 있어 먼저 알린다.
+    const target = d.markers.find(x=>x.id===id);
+    if(target && target.photos && target.photos.length){
+      if(!confirm(`이 결함에 첨부된 사진 ${target.photos.length}장도 함께 삭제됩니다.\n계속할까요? (실행취소로 되돌릴 수 있습니다)`)) return;
+    }
     pushUndo();
     removeMarkersById(d, idsWithLinkedPairs(d, [id]));
     selectedIds.delete(id);
@@ -5847,8 +5861,13 @@
       document.getElementById('photoModalFoot').textContent = photos.length ? `${photos.length}장` : '';
     }
   }
+  // 현장 사진은 이 앱에서 유일하게 다시 만들 수 없는 데이터다(도면·마커는 다시 찍으면 되지만
+  // 준공 후 현장 사진은 재촬영이 사실상 불가능). 그래서 다른 파괴적 동작과 동일하게 확인창을
+  // 두고, 실행취소로도 되돌아가도록 pushUndo()를 먼저 부른다.
   function removePhotoAt(i){
     const m = currentPhotoMarker(); if(!m || !m.photos) return;
+    if(!confirm(`사진 ${i+1}번을 삭제할까요?\n(실행취소 Ctrl+Z로 되돌릴 수 있습니다)`)) return;
+    pushUndo();
     m.photos.splice(i,1);
     markImagesDirty();
     if(photoPreviewIndex>=m.photos.length) photoPreviewIndex = m.photos.length-1;
