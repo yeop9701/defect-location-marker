@@ -1276,6 +1276,46 @@
       noBadge: !!o.noBadge,
     };
   }
+  // 프로젝트 파일의 seriesSnapshot과 localStorage의 커스텀 프리셋은 둘 다 "외부에서 온 데이터"다 —
+  // 프로젝트 파일은 협력업체가 보낸 것일 수 있고, localStorage 값은 같은 오리진의 다른 경로(과거
+  // XSS, 수동 편집 등)로 손상됐을 수 있다. 그 객체를 그대로 믿지 않고 알려진 필드만, 알려진 타입으로
+  // 다시 만들어 쓴다. (문자열 필드에 태그가 들어와도 innerHTML 경로에서 이스케이프되지만, 애초에
+  // 모르는 필드가 계열 객체에 섞여 들어오지 않게 하는 편이 안전하다.)
+  function sanitizeSeriesSnapshot(list){
+    if(!Array.isArray(list)) return null;
+    const ENDSTYLE = ['arrow','dot','rect','badge'];
+    const BADGE = ['circle','text','box'];
+    const HATCH = ['none','diagonal','cross','dot'];
+    const str = (v, fallback)=> typeof v === 'string' ? v.slice(0, 200) : fallback;
+    const pick = (v, allowed, fallback)=> allowed.includes(v) ? v : fallback;
+    const num = (v, lo, hi, fallback)=>{
+      const n = Number(v);
+      return Number.isFinite(n) ? Math.min(hi, Math.max(lo, Math.round(n))) : fallback;
+    };
+    const hex = v => typeof v === 'string' && /^#[0-9a-fA-F]{3,8}$/.test(v);
+    // makeSeries()가 만드는 필드 전부(key, label, color, text, endStyle, badgeShape, hatch, prefix,
+    // labelSep, numbering, legendShow, noBadge)를 담는다. 여기 없는 필드가 makeSeries()에 늘어나면
+    // 프로젝트를 열었을 때 그 설정이 에러 없이 조용히 기본값으로 초기화되므로, 필드를 추가할 때는
+    // makeSeries()와 이 화이트리스트를 함께 고쳐야 한다.
+    return list.slice(0, 40).map(t=>({
+      key:        str(t && t.key, 'unknown'),
+      label:      str(t && t.label, '(이름 없음)'),
+      color:      hex(t && t.color) ? t.color : '#e23c3c',
+      text:       hex(t && t.text) ? t.text : '#ffffff',
+      endStyle:   pick(t && t.endStyle, ENDSTYLE, 'arrow'),
+      badgeShape: pick(t && t.badgeShape, BADGE, 'circle'),
+      hatch:      pick(t && t.hatch, HATCH, 'none'),
+      prefix:     str(t && t.prefix, ''),
+      labelSep:   str(t && t.labelSep, '-'),   // 부동침하는 ''(P1처럼 붙여쓰기) — 빠뜨리면 라벨이 P-1로 바뀜
+      legendShow: (t && t.legendShow) !== false,
+      noBadge:    !!(t && t.noBadge),
+      numbering: {
+        mode:   (t && t.numbering && t.numbering.mode === 'independent') ? 'independent' : 'global',
+        digits: num(t && t.numbering && t.numbering.digits, 0, 4, 0),
+        start:  num(t && t.numbering && t.numbering.start, 1, 9999, 1),
+      },
+    }));
+  }
   // 기본 프리셋 3개. "외관조사"는 기존 4종을 그대로 이관한 것이라 프리셋을 바꾸지 않는 한 지금까지와
   // 화면·번호 표기가 완전히 동일하다(접두 없음·전역채번·circle 배지). "장비조사"·"기울기"는 라벨/색만
   // 지시대로 채운 기본값이며, 실제 현장 용어는 다를 수 있으니 좌측 "계열 편집"에서 이름을 바로 고칠
@@ -1312,7 +1352,12 @@
     try{
       const raw = localStorage.getItem(SERIES_PRESET_STORE_KEY);
       const parsed = raw ? JSON.parse(raw) : [];
-      return Array.isArray(parsed) ? parsed : [];
+      if(!Array.isArray(parsed)) return [];
+      // 프로젝트 파일과 동일하게, localStorage에 저장된 계열도 화이트리스트로 재구성해서 쓴다.
+      return parsed.map(p=>({
+        name: typeof (p && p.name) === 'string' ? p.name.slice(0,100) : '(이름 없음)',
+        series: sanitizeSeriesSnapshot(p && p.series) || [],
+      }));
     } catch(err){ return []; }
   }
   function saveCustomPresets(list){
@@ -1798,7 +1843,7 @@
     const c = document.createElement('canvas'); c.width=32; c.height=32;
     const ctx = c.getContext('2d');
     drawLegendIcon(ctx, type, 16, 16, 11);
-    return `<img src="${c.toDataURL()}" alt="${type.label}"/>`;
+    return `<img src="${c.toDataURL()}" alt="${escapeAttr(type.label)}"/>`;
   }
 
   // ---------- 범례(NOTE 박스) 자유 배치 ----------
@@ -3458,7 +3503,7 @@
     return `
       <div class="mc-row">
         <input type="text" class="mc-num" data-role="pos" tabindex="-1" value="${m.seq||idx+1}" title="번호"/>
-        <select data-role="type" class="mc-marktype" tabindex="-1" title="마킹 색상·모양">${selectableDefectTypes().map(t=>`<option value="${t.key}" ${t.key===m.typeKey?'selected':''}>${t.label}</option>`).join('')}</select>
+        <select data-role="type" class="mc-marktype" tabindex="-1" title="마킹 색상·모양">${typeOptionsHTML(m.typeKey, selectableDefectTypes())}</select>
         <span class="mc-field" data-label="구분"><input type="text" data-role="tiltBldg" placeholder="구분(예: 205동)" title="구분(동 이름 등)" value="${escapeAttr(m.tiltBldg||'')}"/></span>
         <span class="mc-suffix tilt-dms-group" data-label="상부(도분초)" title="상부시준 도/분/초">
           <input type="text" class="tilt-dms" data-role="tiltUpD" placeholder="도" value="${escapeAttr(m.tiltUpD||'')}"/>°<input type="text" class="tilt-dms" data-role="tiltUpM" placeholder="분" value="${escapeAttr(m.tiltUpM||'')}"/>′<input type="text" class="tilt-dms" data-role="tiltUpS" placeholder="초" value="${escapeAttr(m.tiltUpS||'')}"/>″
@@ -3479,7 +3524,7 @@
     return `
       <div class="mc-row">
         <input type="text" class="mc-num" data-role="pos" tabindex="-1" value="${m.seq||idx+1}" title="번호"/>
-        <select data-role="type" class="mc-marktype" tabindex="-1" title="마킹 색상·모양" disabled>${DEFECT_TYPES.map(t=>`<option value="${t.key}" ${t.key===m.typeKey?'selected':''}>${t.label}</option>`).join('')}</select>
+        <select data-role="type" class="mc-marktype" tabindex="-1" title="마킹 색상·모양" disabled>${typeOptionsHTML(m.typeKey)}</select>
         <span class="mc-field" style="flex:1;color:var(--text-secondary);font-size:11.5px;">${linkedNote}</span>
         <button class="mc-photo" data-role="photo" tabindex="-1" title="사진 첨부"><svg class="icon"><use href="#i-camera"/></svg>${(m.photos&&m.photos.length)?`<span class="photo-count">${m.photos.length}</span>`:''}</button>
         <button class="row-del" data-role="del" tabindex="-1" title="삭제"><svg class="icon"><use href="#i-close"/></svg></button>
@@ -3566,7 +3611,7 @@
     return `
       <div class="mc-row">
         <input type="text" class="mc-num" data-role="pos" tabindex="-1" value="${m.seq||idx+1}" title="번호"/>
-        <select data-role="type" class="mc-marktype" tabindex="-1" title="마킹 색상·모양">${DEFECT_TYPES.map(t=>`<option value="${t.key}" ${t.key===m.typeKey?'selected':''}>${t.label}</option>`).join('')}</select>
+        <select data-role="type" class="mc-marktype" tabindex="-1" title="마킹 색상·모양">${typeOptionsHTML(m.typeKey)}</select>
         <span class="mc-field" data-label="LV그룹"><input type="text" data-role="lvGroup" placeholder="예: LV-1 X방향" title="LV 그룹 — 같은 그룹끼리 자동 집계됩니다" value="${escapeAttr(m.lvGroup||'')}"/></span>
         <span class="mc-suffix" data-label="측점">${escapeHTML(formatMarkerLabel(m, idx))}</span>
         <span class="mc-suffix" data-label="측정값"><input type="text" data-role="lvValue" placeholder="측정값" title="측정값(cm)" value="${escapeAttr(m.lvValue||'')}"/><span>cm</span></span>
@@ -3593,7 +3638,7 @@
     return `
       <div class="mc-row">
         <input type="text" class="mc-num" data-role="pos" tabindex="-1" value="${m.seq||idx+1}" title="번호"/>
-        <select data-role="type" class="mc-marktype" tabindex="-1" title="마킹 색상·모양">${DEFECT_TYPES.map(t=>`<option value="${t.key}" ${t.key===m.typeKey?'selected':''}>${t.label}</option>`).join('')}</select>
+        <select data-role="type" class="mc-marktype" tabindex="-1" title="마킹 색상·모양">${typeOptionsHTML(m.typeKey)}</select>
         <span class="mc-suffix" data-label="구분" title="자동 채번(SH-01, PH-01, DM-01…)">${escapeHTML(formatMarkerLabel(m, idx))}</span>
         <span class="mc-field" data-label="층수"><input type="text" data-role="eqFloor" placeholder="층수" title="층수" value="${escapeAttr(m.eqFloor||'')}"/></span>
         <span class="mc-field" data-label="위치"><input type="text" data-role="eqLoc" placeholder="위치" title="위치" value="${escapeAttr(m.eqLoc||'')}"/></span>
@@ -3785,7 +3830,7 @@
       else if(isLv) card.innerHTML = buildLvCardHTML(m, idx);
       else if(isEq) card.innerHTML = buildEqCardHTML(m, idx);
       else {
-        const typeOptions = DEFECT_TYPES.map(t=>`<option value="${t.key}" ${t.key===m.typeKey?'selected':''}>${t.label}</option>`).join('');
+        const typeOptions = typeOptionsHTML(m.typeKey);
         card.innerHTML = `
           <div class="mc-row">
             <input type="text" class="mc-num" data-role="pos" tabindex="-1" value="${m.seq||idx+1}" title="번호 — 값을 바꾸면 도면·목록의 순서(번호)가 그 위치로 바뀝니다"/>
@@ -3903,12 +3948,12 @@
     } else if(moveMode){
       hint.innerHTML = '<b>이동 모드</b> (단축키 m) — 마커를 드래그해 이동만 합니다. 빈 곳을 클릭·드래그해도 아무 일도 일어나지 않습니다';
     } else if(getType(activeTypeKey).endStyle==='rect'){
-      hint.innerHTML = `현재 선택된 유형: <b id="activeTypeLabel">${getType(activeTypeKey).label}</b> — <b>클릭 3번</b>으로 생성: ① 사각형 첫 코너 → ② 반대쪽 코너 → ③ 번호가 표시될 위치${pendingRectCreate ? ` <b>(${pendingRectCreate.stage}/2단계 완료, 계속 클릭하세요 · Esc로 취소)</b>` : ''}`;
+      hint.innerHTML = `현재 선택된 유형: <b id="activeTypeLabel">${escapeHTML(getType(activeTypeKey).label)}</b> — <b>클릭 3번</b>으로 생성: ① 사각형 첫 코너 → ② 반대쪽 코너 → ③ 번호가 표시될 위치${pendingRectCreate ? ` <b>(${pendingRectCreate.stage}/2단계 완료, 계속 클릭하세요 · Esc로 취소)</b>` : ''}`;
     } else {
       // 계열 개수가 프리셋마다 달라지므로 단축키 안내도 "1~N"(N=min(계열수,9))으로 동적으로 맞춘다.
       const selectableCount = selectableDefectTypes().length;
       const shortcutRange = selectableCount>1 ? `1~${Math.min(selectableCount,9)}` : '1';
-      hint.innerHTML = `현재 선택된 유형: <b id="activeTypeLabel">${getType(activeTypeKey).label}</b> (단축키 ${shortcutRange}) — 클릭해 추가, 드래그로 방향·길이 지정 (Shift: 수직/수평 고정) · <b>s</b>: 선택 · <b>m</b>: 이동 · <b>d</b>: 지우개`;
+      hint.innerHTML = `현재 선택된 유형: <b id="activeTypeLabel">${escapeHTML(getType(activeTypeKey).label)}</b> (단축키 ${shortcutRange}) — 클릭해 추가, 드래그로 방향·길이 지정 (Shift: 수직/수평 고정) · <b>s</b>: 선택 · <b>m</b>: 이동 · <b>d</b>: 지우개`;
     }
   }
   function setMoveMode(v){
@@ -3970,7 +4015,7 @@
       btn.className = 'type-btn' + (type.key===activeTypeKey ? ' active':'');
       btn.style.setProperty('--type-color', type.color);
       const shortcut = shortcutForTypeIndex(i);
-      btn.innerHTML = `<span class="type-swatch">${typeSwatchSVG(type)}</span><span>${type.label}</span><span class="kbd-hint">${shortcut}</span>`;
+      btn.innerHTML = `<span class="type-swatch">${typeSwatchSVG(type)}</span><span>${escapeHTML(type.label)}</span><span class="kbd-hint">${shortcut}</span>`;
       btn.addEventListener('click', ()=>{
         setActiveType(type.key);
         // 태블릿에서는 유형을 고르면 곧바로 도면을 클릭할 것이므로 서랍을 자동으로 닫아준다.
@@ -5277,7 +5322,7 @@
   function buildInputRow(rowNum, markerId){
     const tr = document.createElement('tr');
     if(markerId) tr.dataset.markerId = markerId;
-    const typeOptions = DEFECT_TYPES.map(t=>`<option value="${t.key}">${t.label}</option>`).join('');
+    const typeOptions = typeOptionsHTML();
     tr.innerHTML = `
       <td style="color:var(--muted);text-align:center;">${rowNum}</td>
       <td><select data-col="type">${typeOptions}</select></td>
@@ -6060,7 +6105,9 @@
     // 없는 예전 파일(2단계 이전)은 지금 활성 프리셋을 그대로 두며, 그 예전 파일들은 전부 외관조사
     // 4종 스키마였으므로 기본 프리셋과 자연히 맞아떨어진다.
     if(Array.isArray(data.seriesSnapshot) && data.seriesSnapshot.length>0){
-      DEFECT_TYPES = data.seriesSnapshot.map(t=> Object.assign({}, t, { numbering: Object.assign({mode:'global',digits:0,start:1}, t.numbering||{}) }));
+      // 프로젝트 파일은 협력업체가 보낸 것일 수 있는 외부 데이터라, 안에 든 계열 객체를 그대로
+      // 신뢰하지 않고 화이트리스트로 재구성한다(sanitizeSeriesSnapshot 정의부의 XSS 설명 참고).
+      DEFECT_TYPES = sanitizeSeriesSnapshot(data.seriesSnapshot) || DEFECT_TYPES;
       rebuildTypeMap();
       activePresetName = data.seriesPresetName || activePresetName;
       renderTypeGrid();
@@ -6159,6 +6206,13 @@
   // ---------- 유틸 ----------
   function escapeHTML(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
   function escapeAttr(s){ return escapeHTML(s); }
+  // 유형 <option> 목록 생성 — key/label은 프로젝트 파일의 seriesSnapshot에서 그대로 복원될 수 있는
+  // 값이라, 이스케이프 없이 innerHTML에 넣으면 협력업체가 보낸 프로젝트 파일이 곧 XSS 공격 벡터가
+  // 된다. 호출부가 6곳(기본 카드, 표로 입력 모달, 기울기 방향/LV/장비 카드)으로 흩어져 있어
+  // 하나만 고치고 넘어가기 쉬웠으므로 여기 한 곳으로 모은다.
+  function typeOptionsHTML(selectedKey, list){
+    return (list || DEFECT_TYPES).map(t=>`<option value="${escapeAttr(t.key)}" ${t.key===selectedKey?'selected':''}>${escapeHTML(t.label)}</option>`).join('');
+  }
 
   // ---------- 이벤트 바인딩 ----------
   document.getElementById('addDrawingInput').addEventListener('change', e=>{ addImagesFromFiles(e.target.files); e.target.value=''; });
