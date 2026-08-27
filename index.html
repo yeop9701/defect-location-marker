@@ -149,13 +149,22 @@
   .layout{display:flex;flex:1;min-height:0;gap:0;}
   .sidebar{width:210px;flex:0 0 210px;background:var(--surface-1);border-right:1px solid var(--gridline);
     display:flex;flex-direction:column;padding:14px;gap:16px;overflow-y:auto;}
-  .sidebar.right{border-right:none;border-left:1px solid var(--gridline);width:720px;flex:0 0 720px;min-width:320px;max-width:80vw;}
-  /* 창이 좁아지면(노트북 등) 결함 목록 칸이 넓은 채로 버티는 대신 720px→450px로 줄어든다. 카드가
-     한 줄이라 이 폭에선 목록 자체에 가로 스크롤이 생기지만(marker-list-wrap), 사이드바 리사이저로
-     사용자가 원하는 폭으로 다시 넓힐 수도 있다. */
-  @media (max-width: 1400px){
+  /* 기본 폭은 560px. 예전 기본값은 720px이었는데, 1600px 화면에서도 결함 목록이 도면(664px)보다
+     넓어져 정작 마킹할 도면이 목록보다 작아지는 문제가 있었다. 목록에 가로 스크롤이 조금 생기더라도
+     도면을 우선한다 — 목록 폭은 리사이저로 언제든 다시 넓힐 수 있고, 아래 "접기"로 통째로 숨길 수도 있다. */
+  .sidebar.right{border-right:none;border-left:1px solid var(--gridline);width:680px;flex:0 0 680px;min-width:320px;max-width:80vw;}
+  /* 좁은 화면에서 목록을 450px로 줄이는 기준을 1400px→1500px로 올렸다. 1440px 노트북에서 예전에는
+     목록이 720px을 가져가 도면이 목록보다 좁아졌는데, 이 폭대에서는 목록을 줄여 도면을 우선한다.
+     450px에서는 표가 한 줄로 다 들어가지 않으므로 칸을 줄바꿈해 담는 카드 배치(.narrow)로 바뀐다 —
+     가로 스크롤이 사라져 사진·삭제 버튼이 잘리지 않는다(updateMarkerListNarrowMode 참고).
+     그 사이 폭에서는 한 줄 표를 유지하되 사진·삭제 버튼만 오른쪽에 고정한다(position:sticky). */
+  @media (max-width: 1500px){
     .sidebar.right{width:450px;flex:0 0 450px;}
   }
+  /* 결함 목록 접기 — 마킹할 때는 접어서 도면을 최대한 넓게 쓰고, 내용을 채울 때만 편다.
+     헤더의 "결함 목록" 버튼이 body.right-collapsed를 켜고 끈다(선택은 localStorage에 저장). */
+  body.right-collapsed .sidebar.right,
+  body.right-collapsed .sidebar-resizer{display:none;}
   /* 우측 사이드바 폭 조절 손잡이 — 마우스로 눌러 드래그하면 #rightSidebarResizer의 JS가 sidebar.right의
      width/flex-basis를 실시간으로 바꾼다. */
   .sidebar-resizer{width:6px;flex:0 0 6px;cursor:col-resize;background:transparent;position:relative;}
@@ -188,7 +197,12 @@
 
   /* 서랍을 여닫는 탭 — 캔버스 좌우 가장자리에 붙어 항상 눌리는 손잡이. z-index가 서랍/배경보다
      높아 서랍이 열려 있어도 같은 자리를 다시 눌러 닫을 수 있다. */
-  .tablet-edge-tab{display:none;position:absolute;top:14%;transform:translateY(-50%);z-index:60;
+  /* top 값은 JS(updateTabletEdgeTabTop)가 캔버스 영역(#canvasWrap)의 실제 시작 위치를 재서 채운다.
+     예전에는 .layout 기준 top:14% 고정이었는데, .layout 안에는 툴바(.toolbar2)도 함께 들어 있어서
+     14% 지점이 아직 툴바 영역이었다 — 그 결과 테스트한 태블릿 해상도 전부에서 손잡이가 툴바 위에
+     겹쳐, 1024×768에서는 오른쪽 탭이 "아이콘 크기"의 +버튼과 값까지 가렸다. 변수가 아직 없을 때를
+     대비해 fallback(120px)을 둔다. */
+  .tablet-edge-tab{display:none;position:absolute;top:var(--edge-tab-top,120px);z-index:60;
     flex-direction:column;align-items:center;gap:2px;padding:14px 8px;min-height:64px;
     background:var(--accent);color:#fff;border:none;font-size:11.5px;font-weight:700;
     box-shadow:0 2px 10px rgba(0,0,0,.25);line-height:1.3;}
@@ -214,6 +228,11 @@
     align-items:center;gap:6px;padding:7px 9px;border-radius:14px;max-width:94vw;overflow-x:auto;
     background:var(--surface-1);border:1px solid var(--gridline);box-shadow:0 8px 24px rgba(0,0,0,.28);
   }
+  /* 서랍이 열려 있는 동안에는 플로팅 바를 숨긴다 — 예전에는 서랍 위로 계속 떠 있어서 우측
+     "결함 목록" 서랍 아래쪽의 표제란 입력칸을 가렸다. 서랍이 열려 있으면 어차피 그 안의 조작을
+     하는 중이라 플로팅 바가 필요 없다. */
+  body.layout-tablet.drawer-open .tablet-float-bar,
+  body.layout-tablet.drawer-open .quick-input-sheet{display:none;}
   .tablet-float-sep{width:1px;align-self:stretch;background:var(--gridline);flex:0 0 1px;}
   .tablet-float-btn{flex:0 0 auto;width:44px;height:44px;border-radius:9px;border:none;
     background:var(--surface-2);color:var(--text-secondary);display:flex;align-items:center;
@@ -256,6 +275,23 @@
   /* 단축키 안내는 태블릿에서 숨김 — 자주 쓰는 동작(유형 선택·선택/이동/지우개 모드·실행취소)은
      이미 큰 버튼으로 접근 가능하므로 텍스트 목록 대신 그 버튼들을 그대로 쓰면 된다. */
   body.layout-tablet #helpSecShortcuts{display:none;}
+  /* ---- 태블릿 헤더 다이어트 ----
+     터치 대상을 44px로 키운 탓에 헤더가 세로 태블릿에서 네 줄(239px)까지 늘어나, 툴바(151px)까지
+     합치면 화면의 36%가 도구로 채워졌다. 현장에서 거의 안 누르는 버튼은 "설정" 드롭다운 안으로
+     옮기고(moveTabletHeaderExtras), 플로팅 바·서랍에 이미 같은 기능이 있는 버튼은 여기서 숨긴다. */
+  body.layout-tablet #btnUndo,          /* 하단 플로팅 바에 있음 */
+  body.layout-tablet #btnToggleRightPanel{display:none;} /* 서랍(결함 목록 탭)이 같은 역할을 함 */
+  body.layout-tablet .autosave-status{display:none;}     /* 같은 값을 플로팅 바에서 보여줌 */
+  body.layout-tablet header.topbar{padding:8px 12px;gap:6px;}
+  body.layout-tablet .topbar-left{gap:8px;}
+  /* 안내 문구는 첫 마커를 찍고 나면 접는다 — 조작을 익힌 뒤에는 한 줄을 통째로 차지할 이유가 없다.
+     그 줄이 사라지면 남은 "아이콘 크기"만으로 한 줄을 더 쓰는 게 아까우므로, 두 줄을 한 줄로 합친다. */
+  body.layout-tablet.has-markers .mode-hint{display:none;}
+  body.layout-tablet.has-markers .toolbar2{flex-direction:row;flex-wrap:wrap;align-items:center;}
+  body.layout-tablet.has-markers .toolbar2 > .toolbar-row{flex:1 1 auto;}
+  /* 회전 버튼은 "설정" 메뉴로 옮겨져 이 자리에 빈 껍데기(테두리)만 남는다 — 구분선과 함께 숨긴다. */
+  body.layout-tablet .topbar-left .btn-group,
+  body.layout-tablet .topbar-left .toolbar-sep{display:none;}
 
   /* 태블릿에서는 getUserMedia 웹캠 미리보기 대신 카메라 앱을 직접 여는 capture=environment
      입력(photoCaptureInput)을 쓰므로, 데스크톱 전용 폴백인 "사진 촬영" 버튼은 숨긴다.
@@ -419,10 +455,18 @@
   .mc-cell .num,.marker-list-head .num{font-variant-numeric:tabular-nums;}
   .mc-seq{text-align:center;font-weight:700;font-variant-numeric:tabular-nums;font-size:9.6px;}
   .marker-list-head .mc-seq{text-align:center;}
+  /* 사진·삭제 버튼은 가로 스크롤이 생겨도 항상 오른쪽에 붙어 보이게 고정한다. 좁은 화면(≤1400px)에서는
+     표 내용(640px)이 사이드바보다 넓어 목록이 가로로 스크롤되는데, 예전에는 그때 이 두 버튼이 화면
+     밖으로 잘려 사진을 붙이거나 결함을 지우려면 매번 옆으로 스크롤해야 했다. 배경을 깔아줘야 아래로
+     지나가는 입력칸이 비쳐 보이지 않는다. */
   .marker-card .mc-photo,.marker-card .row-del{
-    width:100%;height:28px;display:grid;place-items:center;background:none;border:none;
-    color:var(--muted);cursor:pointer;border-radius:6px;position:relative;padding:0;
+    width:100%;height:28px;display:grid;place-items:center;border:none;
+    color:var(--muted);cursor:pointer;border-radius:6px;position:sticky;padding:0;
+    background:inherit;z-index:1;
   }
+  .marker-card .row-del{right:0;}
+  .marker-card .mc-photo{right:30px;}
+  .marker-list-head .mc-head-sticky{position:sticky;background:var(--surface-1);z-index:3;}
   .marker-card .mc-photo:hover{background:var(--surface-hover);color:var(--accent);}
   .marker-card .row-del:hover{background:var(--surface-hover);color:var(--danger);}
   .marker-card .mc-photo .photo-count{position:absolute;top:0;right:0;background:var(--accent);color:#fff;
@@ -441,21 +485,42 @@
   /* 태블릿에서는 한 줄 표 대신 칸이 2열로 쌓이는 카드가 된다. 열을 맞추던 헤더는 의미가 없어
      숨기고, 각 칸 위에 data-label을 의사요소로 붙여 무슨 값인지 알려준다.
      (그래서 셀은 반드시 .mc-cell 래퍼여야 한다 — <input>에는 ::before가 붙지 않는다.) */
-  body.layout-tablet .marker-list-head{display:none;}
-  body.layout-tablet .marker-list-wrap{overflow-x:hidden;max-height:none;}
-  body.layout-tablet .marker-table{
+  /* 같은 "줄바꿈 카드" 배치를 데스크톱의 좁은 사이드바에서도 쓴다(.marker-list-wrap.narrow —
+     JS가 사이드바 폭을 재서 붙인다). 예전에는 폭이 좁아지면 한 줄짜리 표가 그대로 가로 스크롤로
+     밀려서, 자주 쓰는 사진·삭제 버튼이 화면 밖으로 잘렸다. 줄을 바꿔 담으면 가로 스크롤 자체가
+     사라져 모든 칸이 항상 보인다. 아래 44px 터치 크기 규칙은 태블릿에만 적용한다. */
+  body.layout-tablet .marker-list-head,
+  .marker-list-wrap.narrow .marker-list-head{display:none;}
+  body.layout-tablet .marker-list-wrap,
+  .marker-list-wrap.narrow{overflow-x:hidden;max-height:none;}
+  body.layout-tablet .marker-table,
+  .marker-list-wrap.narrow .marker-table{
     display:flex;flex-direction:column;gap:8px;min-width:0;padding:8px;
   }
   body.layout-tablet .marker-card{
     display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
     gap:10px 8px;padding:10px;
   }
+  /* 데스크톱의 좁은 사이드바는 태블릿보다 여유가 있어 3열로 담는다. */
+  .marker-list-wrap.narrow .marker-card{
+    display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:9px 7px;padding:9px;
+  }
   body.layout-tablet .marker-card .mc-seq,
-  body.layout-tablet .marker-card select.mc-marktype{grid-column:span 1;}
-  body.layout-tablet .mc-cell{position:relative;padding-top:14px;}
-  body.layout-tablet .mc-cell::before{
+  body.layout-tablet .marker-card select.mc-marktype,
+  .marker-list-wrap.narrow .marker-card .mc-seq,
+  .marker-list-wrap.narrow .marker-card select.mc-marktype{grid-column:span 1;}
+  body.layout-tablet .mc-cell,
+  .marker-list-wrap.narrow .mc-cell{position:relative;padding-top:14px;}
+  body.layout-tablet .mc-cell::before,
+  .marker-list-wrap.narrow .mc-cell::before{
     content:attr(data-label);position:absolute;top:0;left:1px;font-size:9.5px;color:var(--muted);
   }
+  /* 줄바꿈 배치에서는 가로 스크롤이 없으므로 사진·삭제 버튼을 오른쪽에 고정할 이유가 없다. */
+  body.layout-tablet .marker-card .mc-photo,
+  body.layout-tablet .marker-card .row-del,
+  .marker-list-wrap.narrow .marker-card .mc-photo,
+  .marker-list-wrap.narrow .marker-card .row-del{position:relative;right:auto;}
   body.layout-tablet .marker-card input,
   body.layout-tablet .marker-card select{min-height:44px;font-size:13.5px;}
   body.layout-tablet .marker-card .mc-photo,
@@ -599,6 +664,7 @@
 <!-- 우회전(시계) 아이콘: 호가 왼쪽에서 시작해 위·오른쪽·아래를 지나 왼쪽 아래로 시계 방향으로 돌아온다 -->
 <symbol id="i-rotate-cw" viewBox="0 0 24 24"><path d="M3.5 12a8.5 8.5 0 1 1 2.8 6.3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M3 21v-6h6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
 <symbol id="i-crop" viewBox="0 0 24 24"><path d="M6 1.5V17a1.5 1.5 0 0 0 1.5 1.5H22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M18 22.5V7A1.5 1.5 0 0 0 16.5 5.5H2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+<symbol id="i-fit" viewBox="0 0 24 24"><path d="M3 9V4.5A1.5 1.5 0 0 1 4.5 3H9" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M15 3h4.5A1.5 1.5 0 0 1 21 4.5V9" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M21 15v4.5a1.5 1.5 0 0 1-1.5 1.5H15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M9 21H4.5A1.5 1.5 0 0 1 3 19.5V15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><rect x="7.5" y="7.5" width="9" height="9" rx="1" fill="none" stroke="currentColor" stroke-width="1.5"/></symbol>
 <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7.5" height="7.5" rx="1.2" fill="none" stroke="currentColor" stroke-width="1.8"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="1.2" fill="none" stroke="currentColor" stroke-width="1.8"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="1.2" fill="none" stroke="currentColor" stroke-width="1.8"/><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="1.2" fill="none" stroke="currentColor" stroke-width="1.8"/></symbol>
 <symbol id="i-guide" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 2.5v4M12 17.5v4M2.5 12h4M17.5 12h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
 <symbol id="i-archive" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="4" rx="1" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M5 8.5v9a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-9" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M10 13h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
@@ -646,6 +712,7 @@
       <div class="zoom-group">
         확대/축소
         <select id="zoomSelect">
+          <option value="fit">화면 맞춤</option>
           <option value="0.25">25%</option>
           <option value="0.5">50%</option>
           <option value="0.75">75%</option>
@@ -653,7 +720,7 @@
           <option value="1.5">150%</option>
           <option value="2">200%</option>
         </select>
-        <span class="val" id="zoomPctLabel" title="도면 위에서 마우스 휠로 캐드처럼 확대/축소, 휠 버튼을 누른 채 드래그하면 화면 이동">100%</span>
+        <button type="button" id="btnZoomFit" class="tool" title="도면 전체가 보이도록 배율을 맞추고 가운데로 되돌립니다 (단축키 F). 스크롤하다 도면을 놓쳤을 때도 이 버튼으로 돌아옵니다."><svg class="icon"><use href="#i-fit"/></svg> 화면 맞춤 (F)</button>
       </div>
       <div class="toolbar-sep"></div>
       <div class="btn-group">
@@ -670,6 +737,9 @@
       </label>
       <span class="autosave-status" id="autosaveStatusLabel" title="브라우저에 자동으로 저장된 시각(파일로 실제 저장한 것과는 별개)입니다. 30초마다, 그리고 화면을 벗어날 때마다 갱신됩니다."></span>
       <div class="toolbar-sep"></div>
+      <!-- 결함 목록을 통째로 접었다 편다. 마킹하는 동안에는 접어서 도면을 최대한 넓게 쓰고, 내용을
+           채울 때만 다시 펴는 것이 실제 작업 흐름이다(태블릿 모드에서는 서랍이 그 역할을 하므로 숨김). -->
+      <button type="button" id="btnToggleRightPanel" class="tool" title="우측 결함 목록을 접었다 폅니다. 접으면 도면을 그만큼 넓게 볼 수 있습니다."><svg class="icon"><use href="#i-table"/></svg> <span id="rightPanelToggleLabel">목록 접기</span></button>
       <button type="button" id="btnThemeToggle" class="tool" title="화이트/다크 모드 전환"><svg class="icon"><use href="#i-moon"/></svg> 다크 모드</button>
       <button type="button" id="btnTabletModeToggle" class="tool" title="누를 때마다 자동 → 켬 → 끔 순서로 순환합니다. 자동은 화면 폭 1100px 이하에서 태블릿 모드가 켜지고, 켬/끔은 화면 폭과 무관하게 고정됩니다(키보드를 붙인 아이패드 등에서 유용)."><svg class="icon"><use href="#i-tablet"/></svg> 태블릿 모드: <span id="tabletModeStateLabel">자동</span></button>
       <!-- 펜슬전용/퀵입력/화면유지는 자주 누르는 조작이 아니라 헤더에 개별 버튼으로 늘어놓으면
@@ -679,7 +749,7 @@
       <div class="settings-menu-wrap" id="settingsMenuWrap">
         <button type="button" id="btnSettingsMenuToggle" class="tool" title="펜슬 전용·퀵입력·화면유지 설정" aria-expanded="false"><svg class="icon"><use href="#i-settings"/></svg> 설정</button>
         <div class="settings-menu" id="settingsMenu" style="display:none;">
-          <button type="button" id="btnStylusOnlyToggle" class="tool settings-menu-item" title="켜두면 애플펜슬(스타일러스) 터치만 받고 손가락·손바닥 터치는 무시합니다. 태블릿에서 그림을 그리다 손바닥이 화면에 닿아 실수로 마커가 찍히는 것을 막을 때 사용하세요(사파리 전용 기능이라 다른 브라우저에서는 켜면 모든 터치가 막힙니다)."><svg class="icon"><use href="#i-pencil"/></svg> 펜슬 전용</button>
+          <button type="button" id="btnStylusOnlyToggle" class="tool settings-menu-item" title="켜두면 펜(애플펜슬·S펜·서피스펜 등) 터치만 받고 손가락·손바닥 터치는 무시합니다. 태블릿에서 그림을 그리다 손바닥이 화면에 닿아 실수로 마커가 찍히는 것을 막을 때 사용하세요. 아이패드(사파리)뿐 아니라 갤럭시탭·서피스 등 크롬/엣지 계열에서도 동작합니다."><svg class="icon"><use href="#i-pencil"/></svg> 펜슬 전용</button>
           <button type="button" id="btnQuickInputToggle" class="tool settings-menu-item" title="태블릿 모드에서 마커를 찍으면 하단에 유형·부재명·결함명만 빠르게 입력할 수 있는 시트를 띄웁니다. 켬/끔은 다음 방문에도 유지됩니다."><svg class="icon"><use href="#i-edit"/></svg> 퀵입력: <span id="quickInputStateLabel">켬</span></button>
           <button type="button" id="btnWakeLockToggle" class="tool settings-menu-item" title="켜두면 이 탭을 보는 동안 화면이 자동으로 꺼지지 않습니다. 현장에서 도면에 표시하는 도중 화면이 꺼져 다시 켜야 하는 불편을 막아줍니다."><svg class="icon"><use href="#i-eye"/></svg> 화면유지: <span id="wakeLockStateLabel">끔</span></button>
         </div>
@@ -748,6 +818,8 @@
               <li><span class="kbd-hint">M</span>이동 모드 — 마커 이동 전용, 빈 곳 클릭은 무시</li>
               <li><span class="kbd-hint">D</span>지우개 모드 — 클릭으로 마커 삭제, 드래그로 브러시 지우기</li>
               <li><span class="kbd-hint">C</span><span class="kbd-hint">G</span><span class="kbd-hint">Q</span>자르기 · 전체 보기 · 좌표 안내</li>
+              <li><span class="kbd-hint">F</span>화면 맞춤 — 도면 전체가 보이도록 배율을 맞추고 가운데로</li>
+              <li><span class="kbd-hint">Space</span>+드래그 · 우클릭 드래그 · 휠 버튼 드래그 — 화면 이동</li>
               <li><span class="kbd-hint">Delete</span><span class="kbd-hint">Esc</span>선택 삭제 · 선택/모드 해제</li>
               <li><span class="kbd-hint">Ctrl+Z</span><span class="kbd-hint">Ctrl+Shift+Z</span>실행취소 · 다시실행</li>
               <li><span class="kbd-hint">Ctrl+A</span><span class="kbd-hint">Ctrl+S</span><span class="kbd-hint">Ctrl+D</span>전체선택 · 프로젝트 저장 · 현재 도면 저장</li>
@@ -756,7 +828,8 @@
           <div class="help-sec">
             <h5>보기 · 탐색</h5>
             <ul>
-              <li>마우스 휠: 커서 위치 기준 확대/축소 · 휠(가운데) 버튼 드래그: 화면 이동</li>
+              <li>마우스 휠: 커서 위치 기준 확대/축소 · 화면 이동은 Space+드래그 / 우클릭 드래그 / 휠 버튼 드래그</li>
+              <li>도면을 추가하면 자동으로 화면에 맞춰집니다. 언제든 "화면 맞춤"(F)으로 되돌릴 수 있습니다</li>
               <li>좌회전/우회전으로 90°씩 회전, 자르기로 일부만 남기기 — 모두 실행취소 가능(이미지 작업은 최근 8회까지)</li>
               <li>태블릿: 손가락 1개로 그리기·이동·선택, 2개로 핀치 확대/축소</li>
               <li>화면이 좁으면 좌우 목록이 자동으로 서랍(edge tab)으로 바뀝니다. 상단 "태블릿 모드" 버튼으로 수동 전환 가능</li>
@@ -793,14 +866,17 @@
             <button id="btnMoveMode" class="tool" title="이동 모드 — 마커 이동 전용, 빈 곳 클릭으로는 아무 것도 생기지 않음 (단축키 m)"><svg class="icon"><use href="#i-move"/></svg> 이동 (M)</button>
             <button id="btnEraseMode" class="tool" title="지우개 모드 — 마커는 클릭으로 삭제, 도면은 드래그하면 브러시로 지워짐 (단축키 d)"><svg class="icon"><use href="#i-eraser"/></svg> 지우개 (D)</button>
           </div>
+          <div class="toolbar-sep"></div>
+          <button id="btnCoordGuide" class="tool" title="10% 간격 점선 그리드와 커서 위치의 정확한 % 좌표를 보여줍니다. CSV에 좌표를 직접 입력할 때 참고하세요 (단축키 q)"><svg class="icon"><use href="#i-guide"/></svg> 좌표안내 (Q)</button>
+          <!-- 브러시 굵기는 줄의 맨 끝에 둔다. 예전에는 지우개/좌표안내 사이에 있어서, 지우개를 켤 때마다
+               이 칸이 중간에 끼어들며 "좌표안내" 버튼이 다른 줄로 밀려났다 — 껐다 켤 때마다 같은 버튼이
+               다른 자리에 있게 되는 흔들림을 없애기 위해 뒤로 옮겼다. -->
           <div class="tool-slider" id="eraseBrushGroup" style="display:none;">브러시 굵기
             <button type="button" class="stepper-btn" id="btnBrushMinus" title="브러시 굵기 줄이기">−</button>
             <input type="range" id="eraseBrushSlider" min="0.4" max="4" step="0.1" value="1" />
             <button type="button" class="stepper-btn" id="btnBrushPlus" title="브러시 굵기 늘리기">+</button>
             <span class="val" id="eraseBrushVal">100%</span>
           </div>
-          <div class="toolbar-sep"></div>
-          <button id="btnCoordGuide" class="tool" title="10% 간격 점선 그리드와 커서 위치의 정확한 % 좌표를 보여줍니다. CSV에 좌표를 직접 입력할 때 참고하세요 (단축키 q)"><svg class="icon"><use href="#i-guide"/></svg> 좌표안내 (Q)</button>
         </div>
         <div class="toolbar-row">
           <div class="mode-hint" id="modeHint">현재 선택된 유형: <b id="activeTypeLabel">벽체</b> (단축키 1/2) — 클릭해 추가, 드래그로 방향 지정 (Shift: 수직/수평 고정)</div>
@@ -826,6 +902,10 @@
            기존 헤더/툴바 버튼을 그대로 쓰므로 CSS로 숨긴다. -->
       <div class="tablet-float-bar" id="tabletFloatBar">
         <button type="button" class="tablet-float-btn" id="btnFloatUndo" title="실행취소 (Ctrl+Z)"><svg class="icon"><use href="#i-undo"/></svg></button>
+        <!-- 태블릿 헤더에서 "다시실행"을 설정 메뉴로 옮긴 대신, 실행취소 바로 옆에서 되돌릴 수 있게 여기에 둔다. -->
+        <button type="button" class="tablet-float-btn" id="btnFloatRedo" title="다시실행 (Ctrl+Shift+Z)"><svg class="icon"><use href="#i-redo"/></svg></button>
+        <div class="tablet-float-sep"></div>
+        <button type="button" class="tablet-float-btn" id="btnFloatZoomFit" title="화면 맞춤 — 도면 전체가 보이도록 맞춥니다 (F)"><svg class="icon"><use href="#i-fit"/></svg></button>
         <div class="tablet-float-sep"></div>
         <div class="tablet-float-types" id="tabletFloatTypeGrid"></div>
         <div class="tablet-float-sep"></div>
@@ -914,7 +994,7 @@
 
       <div>
         <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;">
-          <label class="check-row">
+          <label class="check-row" title="켜면 PNG/PDF로 저장할 때 A4 도곽과 상단 표제란이 함께 들어갑니다. 작업 화면은 바뀌지 않으므로, 켜는 순간 실제 저장 모습을 미리보기로 보여줍니다.">
             <input type="checkbox" id="titleBlockToggle" />
             도면틀
           </label>
@@ -923,6 +1003,10 @@
         <label class="check-row" style="margin-top:6px;" title="PNG/PDF 저장·인쇄 미리보기에 NOTE 범례 박스를 포함할지 정합니다. 작업 화면에는 표시되지 않습니다 — 크기 조절은 미리보기 창에서 할 수 있습니다.">
           <input type="checkbox" id="legendToggle" checked />
           범례
+        </label>
+        <label class="check-row" style="margin-top:6px;margin-left:18px;" title="켜면 이 도면에 실제로 찍은 유형만 NOTE 범례에 넣습니다. 끄면 위치도 종류의 전체 계열이 모두 표시됩니다(관행상 전 계열을 적는 경우가 많아 기본값은 끔).">
+          <input type="checkbox" id="legendUsedOnlyToggle" />
+          사용된 유형만
         </label>
         <div class="panel-title" style="margin-top:10px;">표제란 입력</div>
         <div class="tb-template-row">
@@ -953,7 +1037,7 @@
       </div>
 
       <div class="footer-note">
-        Ver 2.0 (<span id="buildDateLabel"></span>) · 건축시설물 정밀안전진단/점검용 결함 마킹 도구
+        Ver 2.1 (<span id="buildDateLabel"></span>) · 건축시설물 정밀안전진단/점검용 결함 마킹 도구
         <span id="storageUsageLabel"></span>
       </div>
     </aside>
@@ -1019,6 +1103,11 @@
                 <th style="width:90px;" id="thColY">Y(%)</th>
                 <th style="width:64px;">각도</th>
                 <th style="width:74px;">인출선배율</th>
+                <!-- 부재·자재·결함도 여기서 함께 채울 수 있다. 예전에는 이 표와 CSV 불러오기 둘 다
+                     좌표만 다뤄서, 조사 내용을 한 번에 넣을 방법이 아예 없었다. -->
+                <th style="width:92px;">부재</th>
+                <th style="width:92px;">자재</th>
+                <th style="width:104px;">결함</th>
                 <th>비고</th>
                 <th style="width:30px;"></th>
               </tr>
@@ -1241,6 +1330,8 @@
     // 서랍이 닫히면 양쪽 탭 모두 원래 가장자리 위치로 돌아온다.
     const tabL = document.getElementById('btnDrawerLeft'); if(tabL){ tabL.classList.remove('tab-shifted'); tabL.setAttribute('aria-expanded', 'false'); }
     const tabR = document.getElementById('btnDrawerRight'); if(tabR){ tabR.classList.remove('tab-shifted'); tabR.setAttribute('aria-expanded', 'false'); }
+    // 서랍이 닫혔으니 플로팅 바를 다시 보여준다(CSS: body.layout-tablet.drawer-open).
+    document.body.classList.remove('drawer-open');
   }
   function openDrawer(side){
     const el = document.querySelector('.sidebar.'+side);
@@ -1252,6 +1343,8 @@
     // 눌러야 했다) 서랍 폭만큼 밀어 계속 보이게 한다 — 같은 자리를 한 번 더 누르면 바로 닫힌다.
     const tab = document.getElementById(side==='left' ? 'btnDrawerLeft' : 'btnDrawerRight');
     if(tab){ tab.classList.add('tab-shifted'); tab.setAttribute('aria-expanded', 'true'); }
+    // 서랍이 열려 있는 동안에는 플로팅 바·퀵입력 시트를 숨겨 서랍 내용을 가리지 않게 한다.
+    document.body.classList.add('drawer-open');
   }
   function toggleDrawer(side){
     const el = document.querySelector('.sidebar.'+side);
@@ -1279,7 +1372,49 @@
     }
     // "촬영"(capture=environment) / "앨범에서 선택" 버튼의 표시 여부는 CSS(body.layout-tablet
     // #btnPhotoCaptureLabel 등)로만 처리한다 — 두 입력이 이미 분리돼 있어 JS에서 속성을 붙였다 뗐다 할 필요가 없다.
+    moveTabletHeaderExtras(on);
+    updateTabletEdgeTabTop();
   }
+  // 태블릿에서만 헤더의 저빈도 버튼들을 "설정" 드롭다운 안으로 옮긴다. 버튼 자체를 그대로 이동시키므로
+  // id로 걸어둔 클릭 핸들러·상태 갱신 로직은 전혀 손댈 필요가 없고, 데스크톱으로 돌아오면 원래 자리
+  // (기억해 둔 부모와 다음 형제)로 정확히 되돌린다.
+  const TABLET_HEADER_EXTRA_IDS = ['btnExportAll','btnRotateCCW','btnRotateCW','btnRedo','btnThemeToggle'];
+  const tabletHeaderHome = new Map(); // id -> {parent, next}
+  function moveTabletHeaderExtras(on){
+    const menu = document.getElementById('settingsMenu');
+    if(!menu) return;
+    TABLET_HEADER_EXTRA_IDS.forEach(id=>{
+      const el = document.getElementById(id);
+      if(!el) return;
+      if(on){
+        if(menu.contains(el)) return;
+        if(!tabletHeaderHome.has(id)) tabletHeaderHome.set(id, { parent: el.parentNode, next: el.nextSibling });
+        el.classList.add('settings-menu-item');
+        menu.appendChild(el);
+      } else {
+        const home = tabletHeaderHome.get(id);
+        if(!home || !home.parent || !menu.contains(el)) return;
+        el.classList.remove('settings-menu-item');
+        home.parent.insertBefore(el, home.next);
+      }
+    });
+  }
+  // 서랍 손잡이(.tablet-edge-tab)가 툴바를 덮지 않도록, 캔버스 영역이 실제로 시작하는 높이를 재서
+  // CSS 변수(--edge-tab-top)로 넘긴다. 툴바는 화면 폭·지우개 모드 등에 따라 줄 수가 달라져 높이가
+  // 고정이 아니므로, 고정 %가 아니라 매번 실측해야 한다.
+  function updateTabletEdgeTabTop(){
+    const layout = document.querySelector('.layout');
+    const wrap = document.getElementById('canvasWrap');
+    if(!layout || !wrap) return;
+    const top = wrap.getBoundingClientRect().top - layout.getBoundingClientRect().top;
+    layout.style.setProperty('--edge-tab-top', Math.max(0, Math.round(top + 16)) + 'px');
+  }
+  // 툴바 줄 수가 바뀌면(모드 전환·화면 회전 등) 손잡이 위치도 따라와야 한다.
+  if(window.ResizeObserver){
+    const toolbarEl = document.querySelector('.toolbar2');
+    if(toolbarEl) new ResizeObserver(()=> updateTabletEdgeTabTop()).observe(toolbarEl);
+  }
+  window.addEventListener('resize', updateTabletEdgeTabTop);
   applyTabletMode();
   window.addEventListener('resize', ()=>{
     if(getTabletModeOverride()) return; // 수동으로 켜거나 껐으면 화면 폭이 바뀌어도 자동 재판정하지 않음
@@ -1591,8 +1726,8 @@
   // 파일) applyProjectData()가 경고 후 계속할지 확인한다.
   const PROJECT_FILE_VERSION = 2;
   // 빌드 도구 없이 파일 하나로 배포하는 프로젝트라 커밋 해시를 자동으로 넣을 수 없으므로,
-  // 배포용으로 이 파일을 고칠 때 날짜를 함께 갱신한다. 하단 "Ver 2.0" 표기 옆에 표시된다.
-  const APP_BUILD_DATE = '2026-08-15';
+  // 배포용으로 이 파일을 고칠 때 날짜를 함께 갱신한다. 하단 "Ver 2.1" 표기 옆에 표시된다.
+  const APP_BUILD_DATE = '2026-08-27';
   // "미저장 변경사항이 있는가"를 매번 전체 스냅샷을 JSON.stringify해서 비교하면(특히 사진·도면
   // 이미지가 많을 때) beforeunload/자동저장 틱마다 무거운 직렬화가 반복된다. 대신 마커·도면·프로젝트
   // 정보를 실제로 바꾸는 지점에서 markDirty()/markImagesDirty()를 호출해 플래그만 세우고, 파일
@@ -1926,8 +2061,19 @@
   // 마커 유무와 무관하게 "지금 활성 프리셋의 계열 전체"를 범례 대상으로 삼는다(legendShow:false만 제외).
   // 예전에는 usedTypes(d)로 "이 도면에 1개 이상 찍힌 계열"만 걸러냈는데, 그 결과 마커를 찍기 전에는
   // 범례가 아예 안 그려지는 문제가 있었다(1장 수정지시서 1-1) — 항상 표시하도록 바꿈.
+  // "사용된 유형만" 체크박스 — 켜두면 그 도면에 실제로 찍힌 유형만 NOTE 범례에 넣는다.
+  // 관행상 전 계열을 다 적는 경우도 많아 기본값은 끔(전체 표시)이다. 그 도면에 마커가 하나도 없으면
+  // 범례가 통째로 비어버리므로, 그때는 걸러내지 않고 전체를 보여준다.
+  function isLegendUsedOnly(){
+    const el = document.getElementById('legendUsedOnlyToggle');
+    return !!(el && el.checked);
+  }
   function overlayLegendItems(d){
-    return DEFECT_TYPES.filter(type=> type.legendShow!==false).map(type=>({type}));
+    const all = DEFECT_TYPES.filter(type=> type.legendShow!==false);
+    if(!isLegendUsedOnly() || !d || !d.markers || d.markers.length===0) return all.map(type=>({type}));
+    const used = new Set(d.markers.map(m=>m.typeKey));
+    const filtered = all.filter(type=> used.has(type.key));
+    return (filtered.length>0 ? filtered : all).map(type=>({type}));
   }
   const DEFAULT_LEGEND_SCALE = 1.5; // 도면별 슬라이더(1~12) 미지정 시 기본 배율.
   function legendScaleFor(d){
@@ -2277,6 +2423,13 @@
     renderCanvas();
     renderTable();
     syncSurveyLocationField();
+    // 그 도면을 처음 여는 순간에만 자동으로 화면에 맞춘다. 예전에는 배율이 늘 100%로 고정돼 있어서
+    // 큰 도면을 추가하면 왼쪽 위 귀퉁이만 보였다. 한 번 본 도면으로 다시 돌아올 때는 사용자가 맞춰둔
+    // 배율을 그대로 유지한다 — 같은 평면도를 동만 바꿔가며 오가는 작업에서 배율이 튀지 않게 하려는 것.
+    if(d && !d.__fitted){
+      d.__fitted = true;
+      zoomToFit();
+    }
   }
 
   // 표제란의 "조사위치"는 도면 탭 이름(d.name, 보통 업로드한 파일명에서 옴)과는 별개인, 도면마다
@@ -2587,8 +2740,12 @@
       const extraTop = Math.max(0, (wrap.clientHeight - cssH)/2);
       shell.style.marginLeft = extraLeft+'px';
       shell.style.marginTop = extraTop+'px';
-      shell.style.marginRight = wrap.clientWidth+'px';
-      shell.style.marginBottom = wrap.clientHeight+'px';
+      // 여유 공간은 뷰포트의 "절반"까지만 둔다. 예전에는 뷰포트 전체 크기만큼 여백을 잡아서, 끝까지
+      // 스크롤하면 도면이 화면 밖으로 완전히 벗어나 빈 회색 화면만 남았다(돌아올 방법이 없었다).
+      // 절반이면 커서 고정 보정에 필요한 스크롤 여유는 그대로 확보하면서, 어떤 방향으로 끝까지
+      // 밀어도 도면의 일부는 항상 화면에 남는다.
+      shell.style.marginRight = Math.round(wrap.clientWidth/2)+'px';
+      shell.style.marginBottom = Math.round(wrap.clientHeight/2)+'px';
     }
     const ctx = canvas.getContext('2d');
     ctx.clearRect(0,0,w,h);
@@ -3333,7 +3490,7 @@
 
   // ---------- 범위(사각형) 마커 3클릭 생성: ①첫 코너 → ②반대쪽 코너 → ③번호 배지 위치 ----------
   function cancelRectCreate(){
-    if(pendingRectCreate){ pendingRectCreate = null; renderCanvas(); }
+    if(pendingRectCreate){ pendingRectCreate = null; updateModeHint(); renderCanvas(); }
   }
   // 중심점(cx,cy) 기준으로 (x,y)를 Shift가 눌렸을 때 수직/수평(0/90/180/270°) 방향으로만 고정 —
   // 다른 마커 유형의 "Shift: 수직/수평 고정"과 동일한 동작을 범위 마커의 인출선(중심→번호)에도 적용.
@@ -3349,8 +3506,10 @@
     const d = getActiveDrawing(); if(!d) return;
     if(!pendingRectCreate){
       pendingRectCreate = { stage:1, x1:x, y1:y };
+      updateModeHint();
     } else if(pendingRectCreate.stage===1){
       pendingRectCreate = { stage:2, x1:pendingRectCreate.x1, y1:pendingRectCreate.y1, x2:x, y2:y };
+      updateModeHint();
     } else if(pendingRectCreate.stage===2){
       const canvas = document.getElementById('mainCanvas');
       const w = canvas.width, h = canvas.height;
@@ -3358,7 +3517,7 @@
       const ry = Math.min(pendingRectCreate.y1, pendingRectCreate.y2);
       const rw = Math.abs(pendingRectCreate.x2 - pendingRectCreate.x1);
       const rh = Math.abs(pendingRectCreate.y2 - pendingRectCreate.y1);
-      if(rw < 6 || rh < 6){ pendingRectCreate = null; renderCanvas(); return; } // 너무 작으면 취소
+      if(rw < 6 || rh < 6){ pendingRectCreate = null; updateModeHint(); showToast('사각형이 너무 작아 취소했습니다. 첫 코너부터 다시 클릭해주세요.'); renderCanvas(); return; } // 너무 작으면 취소
       const snapped = snapAroundCenter(rx+rw/2, ry+rh/2, x, y, shift);
       pushUndo();
       const marker = { ...newMarkerIdPair(), typeKey: activeTypeKey,
@@ -3367,6 +3526,7 @@
         angle: 0, lenMult: 1, numRot: 0, note:'' };
       d.markers.push(marker);
       pendingRectCreate = null;
+      updateModeHint();
       selectOnly(marker.id);
       maybeOpenQuickInputSheet(marker);
       return;
@@ -3834,8 +3994,8 @@
     <span class="num">길이 (mm)</span>
     <span class="num">개수</span>
     <span>사진 #</span>
-    <span></span>
-    <span></span>`;
+    <span class="mc-head-sticky" style="right:30px;"></span>
+    <span class="mc-head-sticky" style="right:0;"></span>`;
   const TILT_MARKER_LIST_HEAD_HTML = `
     <span class="mc-seq">번호</span>
     <span>구분</span>
@@ -3843,16 +4003,16 @@
     <span>하부(도분초)</span>
     <span class="num">수평거리(mm)</span>
     <span>수평각차</span>
-    <span></span>
-    <span></span>`;
+    <span class="mc-head-sticky" style="right:30px;"></span>
+    <span class="mc-head-sticky" style="right:0;"></span>`;
   const LV_MARKER_LIST_HEAD_HTML = `
     <span class="mc-seq">번호</span>
     <span>유형</span>
     <span>그룹명</span>
     <span class="num">측정값(cm)</span>
     <span class="num">경간(mm)</span>
-    <span></span>
-    <span></span>`;
+    <span class="mc-head-sticky" style="right:30px;"></span>
+    <span class="mc-head-sticky" style="right:0;"></span>`;
   // SH/PH/DM이 이제 전부 같은 칸을 쓰므로(buildEqCardHTML 참고) 실제 컬럼명을 그대로 헤더로 쓸 수 있다.
   const EQ_MARKER_LIST_HEAD_HTML = `
     <span class="mc-seq">번호</span>
@@ -3861,8 +4021,8 @@
     <span>위치</span>
     <span>부재</span>
     <span>사진 #</span>
-    <span></span>
-    <span></span>`;
+    <span class="mc-head-sticky" style="right:30px;"></span>
+    <span class="mc-head-sticky" style="right:0;"></span>`;
   function renderMarkerListHead(){
     const row = document.querySelector('.marker-list-head');
     if(!row) return;
@@ -3899,6 +4059,9 @@
     // 헤더(.marker-list-head)가 이제 카드와 같은 .marker-table 안에 있으므로, 예전처럼
     // innerHTML=''로 통째로 비우면 헤더까지 같이 지워진다 — 카드만 골라 지운다.
     table.querySelectorAll('.marker-card').forEach(el=>el.remove());
+    // 태블릿에서 툴바의 긴 안내 문구를 접을지 판단하는 표식 — 마커를 한 번이라도 찍었다면 조작법을
+    // 이미 익힌 것으로 보고 그 줄을 숨겨 도면 높이를 돌려준다(CSS: body.layout-tablet.has-markers).
+    document.body.classList.toggle('has-markers', !!(d && d.markers.length>0));
     if(!d || d.markers.length===0){
       countEl.textContent = '0';
       emptyNote.style.display = 'block';
@@ -4055,7 +4218,18 @@
     } else if(moveMode){
       hint.innerHTML = '<b>이동 모드</b> (단축키 m) — 마커를 드래그해 이동만 합니다. 빈 곳을 클릭·드래그해도 아무 일도 일어나지 않습니다';
     } else if(getType(activeTypeKey).endStyle==='rect'){
-      hint.innerHTML = `현재 선택된 유형: <b id="activeTypeLabel">${escapeHTML(getType(activeTypeKey).label)}</b> — <b>클릭 3번</b>으로 생성: ① 사각형 첫 코너 → ② 반대쪽 코너 → ③ 번호가 표시될 위치${pendingRectCreate ? ` <b>(${pendingRectCreate.stage}/2단계 완료, 계속 클릭하세요 · Esc로 취소)</b>` : ''}`;
+      // 3클릭 생성은 "지금 무엇을 클릭할 차례인지"를 단계마다 다르게 알려준다. 예전에는 세 단계
+      // 내내 "① … ② … ③ …"이라는 같은 문구가 떠 있어서, 중간에 다른 일을 하다 돌아오면 어디까지
+      // 찍었는지 알 수 없었다.
+      const label = `현재 선택된 유형: <b id="activeTypeLabel">${escapeHTML(getType(activeTypeKey).label)}</b>`;
+      const stage = pendingRectCreate ? pendingRectCreate.stage : 0;
+      if(stage===1){
+        hint.innerHTML = `${label} — <b>2/3단계:</b> 사각형의 <b>반대쪽 코너</b>를 클릭하세요 <span style="color:var(--muted);">(Esc: 취소)</span>`;
+      } else if(stage===2){
+        hint.innerHTML = `${label} — <b>3/3단계:</b> <b>번호가 표시될 위치</b>를 클릭하세요 <span style="color:var(--muted);">(Shift: 수직/수평 고정 · Esc: 취소)</span>`;
+      } else {
+        hint.innerHTML = `${label} — <b>1/3단계:</b> 사각형의 <b>첫 코너</b>를 클릭하세요 <span style="color:var(--muted);">(클릭 3번으로 생성: 첫 코너 → 반대 코너 → 번호 위치)</span>`;
+      }
     } else {
       // 계열 개수가 프리셋마다 달라지므로 단축키 안내도 "1~N"(N=min(계열수,9))으로 동적으로 맞춘다.
       const selectableCount = selectableDefectTypes().length;
@@ -4871,7 +5045,14 @@
   function exportCSV(){
     if(!hasAnyMarkers()){ showToast('내보낼 결함 데이터가 없습니다.'); return; }
     const { header, rows } = buildDefectExportData();
-    const csv = '﻿' + [header].concat(rows.map(r=>r.cells)).map(r=>r.map(csvEscape).join(',')).join('\r\n');
+    // 프리셋 전용 열(기울기_·그룹명·LV·장비_)은 값이 하나도 없으면 빼고 내보낸다. 외관조사만 하는
+    // 보통의 작업에서도 이 열들이 20개 넘게 빈 칸으로 따라붙어, 엑셀에서 열자마자 가로로 한참
+    // 스크롤해야 했다. 앞쪽 공통 열(도면명~UID)은 값이 비어 있어도 항상 남긴다 — 엑셀에서 부재·결함
+    // 등을 채워 넣고 다시 불러오는 왕복 경로가 그 열들에 의존하기 때문이다.
+    const FIXED_COL_COUNT = header.indexOf('UID') >= 0 ? header.indexOf('UID')+1 : header.length;
+    const keep = header.map((h, i)=> i < FIXED_COL_COUNT || rows.some(r=> String(r.cells[i] ?? '') !== ''));
+    const pick = arr => arr.filter((_, i)=> keep[i]);
+    const csv = '﻿' + [pick(header)].concat(rows.map(r=>pick(r.cells))).map(r=>r.map(csvEscape).join(',')).join('\r\n');
     downloadBlob(csv, filenameBase() + '_결함목록.csv', 'text/csv;charset=utf-8');
   }
 
@@ -5289,7 +5470,37 @@
       rectW: header.findIndex(h=>/범위폭|범위너비|rectw/i.test(h)),
       rectH: header.findIndex(h=>/범위높이|recth/i.test(h)),
       note: header.findIndex(h=>/비고|설명|메모|note/i.test(h)),
+      // 결함 목록 카드에 그대로 들어가는 조사 내용 열들. 예전에는 이 열들이 매핑에 아예 없어서
+      // "CSV로 저장 → 엑셀에서 수정 → CSV 불러오기"를 하면 좌표와 각도만 살아남고 부재·자재·결함·
+      // 폭·길이·개수·사진번호가 전부 빈 칸으로 돌아왔다(그래서 결함명으로 검색해도 안 잡혔다).
+      // 정규식은 ^로 고정한다 — 그러지 않으면 "부재"가 "장비_부재"에, "폭"이 "범위폭(%)"에,
+      // "길이"가 "인출선길이배율"에 먼저 걸려 엉뚱한 열을 읽는다.
+      rptType:   header.findIndex(h=>/^부재/.test(h)),
+      rptMember: header.findIndex(h=>/^자재/.test(h)),
+      rptDefect: header.findIndex(h=>/^결함/.test(h)),
+      rptWidth:  header.findIndex(h=>/^폭/.test(h)),
+      rptLength: header.findIndex(h=>/^길이/.test(h)),
+      rptCount:  header.findIndex(h=>/^개수/.test(h)),
+      rptTag:    header.findIndex(h=>/^(#|사진번호)$/.test(h)),
+      // 기울기(2장) · 부동침하(4장) · 장비조사(3-2) 전용 열도 같은 이유로 함께 되살린다.
+      tiltUp:    header.findIndex(h=>/^기울기_상부/.test(h)),
+      tiltLo:    header.findIndex(h=>/^기울기_하부/.test(h)),
+      tiltDist:  header.findIndex(h=>/^기울기_수평거리/.test(h)),
+      lvGroup:   header.findIndex(h=>/^그룹명/.test(h)),
+      lvValue:   header.findIndex(h=>/^LV측정값/i.test(h)),
+      lvSpan:    header.findIndex(h=>/^LV경간/i.test(h)),
+      eqFloor:   header.findIndex(h=>/^장비_층수/.test(h)),
+      eqLoc:     header.findIndex(h=>/^장비_위치/.test(h)),
+      eqMember:  header.findIndex(h=>/^장비_부재/.test(h)),
+      eqTag:     header.findIndex(h=>/^장비_사진번호/.test(h)),
     };
+    // 내보낼 때 "12°34′56″" 한 칸으로 합쳐 쓰는 도/분/초를 다시 세 값으로 되돌린다.
+    // 도°분′초″ 외에 "12 34 56", "12-34-56"처럼 적어 넣은 것도 받아준다.
+    function parseDms(raw){
+      const nums = String(raw||'').match(/-?\d+/g);
+      if(!nums || nums.length===0) return null;
+      return { d: nums[0]||'', m: nums[1]||'', s: nums[2]||'' };
+    }
     if(idx.x<0 || idx.y<0){ showToast('CSV 헤더에서 X, Y 좌표 열을 찾지 못했습니다. "위치유형,X(%),Y(%),각도,비고" 형식을 확인해주세요.'); return; }
 
     function buildMarkerFromRow(r){
@@ -5313,6 +5524,22 @@
         marker.rectYPct = !isNaN(ry) ? ry : clamp(yVal-3,0,100);
         marker.rectWPct = !isNaN(rw) && rw>0 ? rw : 8;
         marker.rectHPct = !isNaN(rh) && rh>0 ? rh : 6;
+      }
+      // 조사 내용 열들을 마커에 그대로 채운다 — 값이 비어 있으면 아예 넣지 않아, 열이 없는 옛 CSV를
+      // 불러왔을 때 빈 문자열이 새로 생기지 않게 한다.
+      ['rptType','rptMember','rptDefect','rptWidth','rptLength','rptCount','rptTag',
+       'lvGroup','lvValue','lvSpan','eqFloor','eqLoc','eqMember','eqTag','tiltDist'].forEach(key=>{
+        if(idx[key] < 0) return;
+        const v = String(r[idx[key]] ?? '').trim();
+        if(v) marker[key] = v;
+      });
+      if(idx.tiltUp >= 0){
+        const up = parseDms(r[idx.tiltUp]);
+        if(up){ marker.tiltUpD = up.d; marker.tiltUpM = up.m; marker.tiltUpS = up.s; }
+      }
+      if(idx.tiltLo >= 0){
+        const lo = parseDms(r[idx.tiltLo]);
+        if(lo){ marker.tiltLoD = lo.d; marker.tiltLoM = lo.m; marker.tiltLoS = lo.s; }
       }
       return marker;
     }
@@ -5364,7 +5591,9 @@
   // X(%)/Y(%) 칸은 한 칸으로 통일하되 그 행의 "유형"이 무엇이냐에 따라 의미가 바뀐다 —
   // 화살표/원 유형이면 화살표 끝(실제 결함 위치), "범위" 유형이면 사각형의 시작 좌표로 쓰인다.
   // 범위의 크기는 별도 칸 없이 X/Y에 "10~20"처럼 물결(~)로 시작~끝을 함께 적어 지정한다(생략 시 기본 크기).
-  const INPUT_TABLE_COLS = ['type','x','y','angle','len','note'];
+  // 엑셀에서 붙여넣기 할 때 칸이 이 순서대로 채워지므로, 아래 <tr> 구성 및 thead의 열 순서와
+  // 반드시 같아야 한다.
+  const INPUT_TABLE_COLS = ['type','x','y','angle','len','rptType','rptMember','rptDefect','note'];
   // null = "추가" 모드(모두 새 마커로 추가). Set = "편집" 모드(현재 도면의 마커를 불러와 표에서 고친 뒤
   // 적용 — 표에 남아있는 기존 마커는 값이 갱신되고, 표에서 지워버린(행 삭제) 기존 마커는 실제로도 삭제된다.
   let tableInputLoadedIds = null;
@@ -5443,6 +5672,9 @@
       <td><input type="text" data-col="y" placeholder="화살표 끝 Y"/></td>
       <td><input type="text" data-col="angle" placeholder="0"/></td>
       <td><input type="text" data-col="len" placeholder="1.0"/></td>
+      <td><input type="text" data-col="rptType" placeholder="부재" list="dl-rptType" autocomplete="off"/></td>
+      <td><input type="text" data-col="rptMember" placeholder="자재" list="dl-rptMember" autocomplete="off"/></td>
+      <td><input type="text" data-col="rptDefect" placeholder="결함" list="dl-rptDefect" autocomplete="off"/></td>
       <td><input type="text" data-col="note" placeholder="비고"/></td>
       <td><button type="button" class="row-del" title="행 삭제"><svg class="icon"><use href="#i-close"/></svg></button></td>
     `;
@@ -5624,6 +5856,9 @@
       }
       tr.querySelector('[data-col="angle"]').value = Math.round(m.angle||0);
       tr.querySelector('[data-col="len"]').value = (typeof m.lenMult==='number' && isFinite(m.lenMult)) ? m.lenMult.toFixed(2) : '';
+      tr.querySelector('[data-col="rptType"]').value = m.rptType||'';
+      tr.querySelector('[data-col="rptMember"]').value = m.rptMember||'';
+      tr.querySelector('[data-col="rptDefect"]').value = m.rptDefect||'';
       tr.querySelector('[data-col="note"]').value = m.note||'';
       updateRowXYMode(tr);
       tbody.appendChild(tr);
@@ -5740,7 +5975,8 @@
       const lenFinal = (!isNaN(lenVal) && lenVal>0) ? lenVal : 1;
       const rowEndStyle = getType(typeKey).endStyle;
       const isRect = rowEndStyle==='rect';
-      const fields = { typeKey, angle: angleFinal, note: note||'' };
+      const fields = { typeKey, angle: angleFinal, note: note||'',
+        rptType: get('rptType')||'', rptMember: get('rptMember')||'', rptDefect: get('rptDefect')||'' };
       if(!isNaN(lenVal) && lenVal>0) fields.lenMult = lenVal;
       if(isRect){
         // "범위" 유형: X/Y칸이 범위 시작 좌표로 쓰인다 — "10~20"처럼 시작~끝을 함께 입력했으면 그 범위를,
@@ -6337,14 +6573,73 @@
   document.getElementById('addDrawingInput').addEventListener('change', e=>{ addImagesFromFiles(e.target.files); e.target.value=''; });
   document.getElementById('btnAddDrawing').addEventListener('click', ()=> document.getElementById('addDrawingInput').click());
 
+  // 배율 표시 갱신 — 라벨(#zoomPctLabel)뿐 아니라 드롭다운(#zoomSelect)의 선택값까지 함께 맞춘다.
+  // 예전에는 라벨만 갱신해서, 휠로 246%까지 확대해도 드롭다운은 "100%"로 남아 있었다. 브라우저는
+  // 이미 선택된 항목을 다시 골라도 change 이벤트를 발생시키지 않으므로, 그 상태에서 목록을 열어
+  // "100%"를 눌러도 아무 일도 일어나지 않는 막다른 길이 됐다. 목록에 없는 배율일 때는 "사용자 지정"
+  // 항목을 임시로 만들어 그 값을 보여준다 — 그래야 다음에 "100%"를 고르면 값이 실제로 바뀐다.
   function updateZoomIndicator(){
     const label = document.getElementById('zoomPctLabel');
-    if(label) label.textContent = Math.round(zoom*100)+'%';
+    const pct = Math.round(zoom*100);
+    if(label) label.textContent = pct+'%';
+    const sel = document.getElementById('zoomSelect');
+    if(!sel) return;
+    const exact = [...sel.options].find(o=> o.value!=='fit' && Math.abs(parseFloat(o.value)*100 - pct) < 0.5);
+    let custom = sel.querySelector('option[data-custom]');
+    if(exact){
+      if(custom) custom.remove();
+      sel.value = exact.value;
+    } else {
+      if(!custom){
+        custom = document.createElement('option');
+        custom.dataset.custom = '1';
+        sel.appendChild(custom);
+      }
+      custom.value = String(zoom);
+      custom.textContent = pct+'%';
+      sel.value = custom.value;
+    }
+  }
+
+  // ---------- 화면 맞춤 ----------
+  // 도면 전체가 작업 영역 안에 들어오는 배율을 계산한다. 예전에는 도면을 추가해도 배율이 늘 100%라,
+  // 1200×850 도면을 넣으면 좁은 캔버스 칸에 왼쪽 위 귀퉁이만 보였다(태블릿에서는 더 심했다).
+  function computeFitZoom(){
+    const d = getActiveDrawing(); if(!d) return null;
+    const wrap = document.getElementById('canvasWrap');
+    if(!wrap) return null;
+    // .canvas-wrap의 padding(24px) 양쪽 + 약간의 여유를 뺀 실제로 그릴 수 있는 크기 기준
+    const availW = wrap.clientWidth - 56, availH = wrap.clientHeight - 56;
+    if(!(d.baseW>0 && d.baseH>0) || availW<=0 || availH<=0) return null;
+    return clamp(Math.min(availW/d.baseW, availH/d.baseH), 0.1, 4);
+  }
+  // 화면 맞춤 + 가운데로 되돌리기. 스크롤로 도면을 화면 밖까지 밀어버렸을 때의 탈출구이기도 하다.
+  function zoomToFit(){
+    const z = computeFitZoom();
+    if(z===null) return;
+    zoom = z;
+    renderCanvas();
+    updateZoomIndicator();
+    recenterCanvas();
+  }
+  // 캔버스가 작업 영역보다 크면 가운데가 보이도록, 작으면 스크롤을 0으로 되돌린다.
+  function recenterCanvas(){
+    const wrap = document.getElementById('canvasWrap');
+    const shell = document.getElementById('canvasShell');
+    if(!wrap || !shell) return;
+    const marginL = parseFloat(shell.style.marginLeft) || 0;
+    const marginT = parseFloat(shell.style.marginTop) || 0;
+    const canvas = document.getElementById('mainCanvas');
+    const cssW = parseFloat(canvas.style.width) || 0, cssH = parseFloat(canvas.style.height) || 0;
+    wrap.scrollLeft = Math.max(0, marginL + (cssW - wrap.clientWidth)/2);
+    wrap.scrollTop  = Math.max(0, marginT + (cssH - wrap.clientHeight)/2);
   }
   document.getElementById('zoomSelect').addEventListener('change', e=>{
+    if(e.target.value === 'fit'){ zoomToFit(); return; }
     zoom = parseFloat(e.target.value); renderCanvas(); updateZoomIndicator();
-    const wrap = document.getElementById('canvasWrap'); wrap.scrollLeft = 0; wrap.scrollTop = 0;
+    recenterCanvas();
   });
+  document.getElementById('btnZoomFit').addEventListener('click', zoomToFit);
 
   // 캐드처럼 도면 위에서 마우스 휠로 확대/축소(휠 위치를 기준으로 확대되도록 스크롤 위치도 함께 보정).
   // canvas-wrap이 flex로 캔버스를 가운데 정렬하기 때문에(확대 전 캔버스가 뷰포트보다 작으면 스크롤이
@@ -6477,7 +6772,13 @@
     document.getElementById('btnReopenTbPreview').style.display = anyOn ? 'inline-block' : 'none';
     if(!anyOn) closeTbPreview();
   }
-  document.getElementById('titleBlockToggle').addEventListener('change', updateTbPreviewButtonVisibility);
+  document.getElementById('titleBlockToggle').addEventListener('change', e=>{
+    updateTbPreviewButtonVisibility();
+    // 도면틀은 저장 결과에만 적용되고 작업 화면은 그대로라, 예전에는 체크해도 아무 변화가 없어
+    // 켜진 게 맞는지 확인할 길이 없었다("미리보기" 링크를 따로 찾아 눌러야 했다). 켠 그 순간
+    // 미리보기를 한 번 띄워 실제 저장 모습을 바로 보여준다(끌 때는 조용히 닫힌다).
+    if(e.target.checked && getActiveDrawing()) openTbPreview();
+  });
   document.getElementById('btnReopenTbPreview').addEventListener('click', openTbPreview);
   document.getElementById('btnTbPreviewClose').addEventListener('click', closeTbPreview);
   document.getElementById('btnTbPreviewCloseFooter').addEventListener('click', closeTbPreview);
@@ -6503,6 +6804,11 @@
     updateTbPreviewButtonVisibility();
     refreshTbPreviewIfOpen();
   });
+  document.getElementById('legendUsedOnlyToggle').addEventListener('change', ()=>{
+    markDirty();
+    refreshTbPreviewIfOpen(); // 미리보기가 열려 있으면 범례 항목 수가 바뀐 모습을 바로 보여준다
+    renderLegendPreview(getActiveDrawing());
+  });
   updateTbPreviewButtonVisibility(); // 초기 상태 반영(기본값: 도면틀 꺼짐·범례 켜짐 → 버튼 보임)
   document.getElementById('btnApplyTemplate').addEventListener('click', applyTbTemplate);
   document.getElementById('btnSaveTemplate').addEventListener('click', saveTbTemplate);
@@ -6520,6 +6826,8 @@
   document.getElementById('btnUndo').addEventListener('click', undo);
   document.getElementById('btnRedo').addEventListener('click', redo);
   document.getElementById('btnFloatUndo').addEventListener('click', undo);
+  document.getElementById('btnFloatRedo').addEventListener('click', redo);
+  document.getElementById('btnFloatZoomFit').addEventListener('click', zoomToFit);
   document.getElementById('helpToggle').addEventListener('click', ()=>{
     const box = document.getElementById('helpBox');
     box.style.display = (box.style.display==='none') ? 'block' : 'none';
@@ -6567,31 +6875,44 @@
       return;
     }
     if(isEditing) return;
-    if(e.key==='s' || e.key==='S'){
+    // 단축키는 e.key(입력된 "글자")가 아니라 e.code(눌린 "키의 물리적 위치")로 판정한다.
+    // e.key로 보면 한글 입력기가 켜져 있을 때 s가 'ㄴ'으로 들어와 단축키가 조용히 무시됐다
+    // (표제란을 입력하다 캔버스로 돌아온 직후가 딱 그 상황이었다). e.code는 입력기·자판 배열과
+    // 무관하게 항상 'KeyS'/'Digit1'로 들어오므로 한/영 상태를 신경 쓸 필요가 없어진다.
+    // Ctrl/Alt/Meta가 함께 눌린 조합은 위에서 이미 처리했으므로 여기서는 제외한다.
+    if(e.ctrlKey || e.metaKey || e.altKey) return;
+    const code = e.code;
+    if(code==='KeyS'){
       if(!cropMode){ e.preventDefault(); toggleSelectMode(); }
       return;
     }
-    if(e.key==='m' || e.key==='M'){
+    if(code==='KeyM'){
       if(!cropMode){ e.preventDefault(); toggleMoveMode(); }
       return;
     }
-    if(e.key==='d' || e.key==='D'){
+    if(code==='KeyD'){
       if(!cropMode){ e.preventDefault(); toggleEraseMode(); }
       return;
     }
-    if(e.key==='c' || e.key==='C'){
+    if(code==='KeyC'){
       e.preventDefault();
       if(cropMode) exitCropMode(); else enterCropMode();
       return;
     }
-    if(e.key==='g' || e.key==='G'){
+    if(code==='KeyG'){
       if(!cropMode){ e.preventDefault(); toggleGridView(); }
       return;
     }
-    if(e.key==='q' || e.key==='Q'){
+    if(code==='KeyQ'){
       e.preventDefault(); toggleCoordGuide(); return;
     }
-    const typeByShortcut = typeByShortcutKey(e.key);
+    if(code==='KeyF'){
+      if(!cropMode){ e.preventDefault(); zoomToFit(); }
+      return;
+    }
+    // 숫자 키는 본체 줄(Digit1~9)과 숫자패드(Numpad1~9) 모두 받는다.
+    const digitMatch = /^(?:Digit|Numpad)([1-9])$/.exec(code||'');
+    const typeByShortcut = digitMatch ? typeByShortcutKey(digitMatch[1]) : null;
     if(typeByShortcut){ e.preventDefault(); setActiveType(typeByShortcut.key); return; }
     // 범례(NOTE 박스)가 선택된 상태에서의 방향키 미세 이동 — 1px(Shift: 10px). 실제 화면 픽셀 기준으로
     // 옮긴 뒤 그 결과를 다시 %로 저장하므로, 확대 배율이 달라도 "화면에서 보이는 이동량"은 항상 같다.
@@ -6628,13 +6949,57 @@
 
   const canvas = document.getElementById('mainCanvas');
 
+  // ---------- Space를 누른 채 드래그 = 화면 이동 ----------
+  // 트랙패드처럼 가운데(휠) 버튼이 없는 환경을 위한 패닝 경로. Space가 눌려 있는 동안에는 커서를
+  // 손바닥 모양으로 바꿔서 지금 누르면 그리기가 아니라 이동이 된다는 걸 미리 알려준다.
+  let spaceKeyDown = false;
+  function setSpacePanCursor(){
+    canvas.style.cursor = spaceKeyDown ? 'grab' : 'crosshair';
+  }
+  // 마우스가 작업 영역 안에 있을 때만 Space가 "화면 이동"으로 동작한다. 이 조건이 없으면 어딘가에
+  // 포커스가 남은 버튼을 Space로 누르려던 것까지 가로채게 되고, 반대로 "버튼에 포커스가 있으면
+  // 무시"로만 막으면 방금 "화면 맞춤"을 누른 직후처럼 흔한 상황에서 Space 패닝이 조용히 안 먹는다.
+  let pointerOverCanvasArea = false;
+  (function trackPointerOverCanvasArea(){
+    const wrap = document.getElementById('canvasWrap');
+    if(!wrap) return;
+    wrap.addEventListener('pointerenter', ()=>{ pointerOverCanvasArea = true; });
+    wrap.addEventListener('pointerleave', ()=>{
+      pointerOverCanvasArea = false;
+      if(spaceKeyDown){ spaceKeyDown = false; setSpacePanCursor(); }
+    });
+  })();
+  window.addEventListener('keydown', e=>{
+    if(e.code !== 'Space' || spaceKeyDown) return;
+    const tag = document.activeElement && document.activeElement.tagName;
+    if(tag==='INPUT' || tag==='TEXTAREA' || tag==='SELECT') return; // 글자 입력 중에는 그대로 공백
+    if(!pointerOverCanvasArea) return;
+    spaceKeyDown = true;
+    // 방금 누른 툴바 버튼에 포커스가 남아 있으면 Space가 그 버튼을 다시 눌러버린다 — 포커스를 떼고
+    // 기본 동작(버튼 활성화·페이지 스크롤)도 함께 막는다.
+    if(tag==='BUTTON' && document.activeElement.blur) document.activeElement.blur();
+    e.preventDefault();
+    setSpacePanCursor();
+  });
+  window.addEventListener('keyup', e=>{
+    if(e.code !== 'Space') return;
+    spaceKeyDown = false;
+    setSpacePanCursor();
+  });
+  // 탭을 벗어났다 돌아오면 keyup을 못 받아 Space가 눌린 상태로 남을 수 있다.
+  window.addEventListener('blur', ()=>{ if(spaceKeyDown){ spaceKeyDown = false; setSpacePanCursor(); } });
+  // 우클릭 드래그 패닝 중에 브라우저 메뉴가 뜨지 않도록 캔버스 위에서는 컨텍스트 메뉴를 막는다.
+  canvas.addEventListener('contextmenu', e=> e.preventDefault());
+
   canvas.addEventListener('mouseleave', ()=>{
     if(eraseCursorPt){ eraseCursorPt = null; renderMarkerLayer(); }
   });
 
   function onPointerDown(e){
-    if(e.button === 1){
-      // 휠(가운데) 버튼을 누른 채 드래그 = 어떤 모드에서든 도면 화면 이동(패닝) — 캐드 프로그램과 동일한 조작
+    // 화면 이동(패닝)으로 들어가는 길은 세 가지 — 휠(가운데) 버튼 드래그(캐드와 동일), 우클릭 드래그,
+    // 그리고 Space를 누른 채 드래그(그림 도구 관례). 예전에는 가운데 버튼 하나뿐이라, 그 버튼이 없는
+    // 노트북 트랙패드에서는 확대한 도면을 옮길 방법이 사실상 없었다(휠은 전부 확대/축소로 먹힌다).
+    if(e.button === 1 || e.button === 2 || spaceKeyDown){
       e.preventDefault();
       const wrap = document.getElementById('canvasWrap');
       pendingAction = { mode:'pan', startClientX:e.clientX, startClientY:e.clientY,
@@ -6755,6 +7120,9 @@
       return;
     }
     if(!pendingAction){
+      // Space를 누르고 있는 동안은 "지금 누르면 화면 이동"이라는 뜻이므로, 아래의 마커/손잡이 위치별
+      // 커서 판정을 건너뛰고 손바닥 커서를 유지한다.
+      if(spaceKeyDown){ canvas.style.cursor = 'grab'; return; }
       if(cropMode){ canvas.style.cursor = 'crosshair'; return; }
       const d0 = getActiveDrawing(); if(!d0) return;
       const p0 = canvasPointFromEvent(e);
@@ -6968,14 +7336,36 @@
     const btn = document.getElementById('btnStylusOnlyToggle');
     if(btn) btn.classList.toggle('active', isStylusOnlyActive());
   }
-  // 스타일러스 전용 모드가 꺼져 있으면 항상 통과. 켜져 있으면 첫 번째 터치의 touchType이
-  // 'stylus'일 때만 통과시킨다 — touchType을 지원하지 않는 브라우저(사파리 이외)에서는 이 값이
-  // 항상 undefined라 사실상 모든 터치가 막히는데, 애플펜슬 자체가 아이패드(사파리) 전용이라
-  // 실사용에는 문제가 없다.
+  // 지금 화면에 닿아 있는 것이 펜인지 손가락인지 — 포인터 이벤트가 알려주는 값을 기억해 둔다.
+  // 브라우저는 터치 입력에 대해 pointerdown을 touchstart보다 먼저 보내므로, 아래 필터가 판정할
+  // 시점에는 이 값이 이미 갱신돼 있다. capture 단계로 듣는 이유는 다른 리스너가 전파를 멈춰도
+  // 값만은 놓치지 않기 위해서다.
+  let lastPointerType = '';
+  ['pointerdown','pointermove'].forEach(evt=>{
+    document.addEventListener(evt, e=>{ if(e.pointerType) lastPointerType = e.pointerType; }, true);
+  });
+  const stylusDetectionSupported = ('PointerEvent' in window) ||
+    (typeof Touch !== 'undefined' && 'touchType' in Touch.prototype);
+  let stylusBlockedToastAt = 0;
+  // 스타일러스 전용 모드가 꺼져 있으면 항상 통과. 켜져 있으면 펜으로 닿았을 때만 통과시킨다.
+  // 예전에는 사파리 전용 값인 touch.touchType === 'stylus'만 봤다 — 갤럭시탭(Chrome)이나
+  // 서피스(Edge)에서는 이 값이 늘 undefined라, 켜는 순간 손가락은 물론 펜까지 전부 막혀 화면이
+  // 완전히 먹통이 됐다. 표준 포인터 이벤트의 pointerType==='pen'을 함께 보면 그 브라우저들에서도
+  // 의도대로(펜만 통과) 동작한다.
   function touchAllowedByStylusFilter(e){
     if(!isStylusOnlyActive()) return true;
     const t = e.touches && e.touches[0];
-    return !!(t && t.touchType === 'stylus');
+    const isPen = (t && t.touchType === 'stylus') || lastPointerType === 'pen';
+    if(!isPen){
+      // 손가락으로 아무리 눌러도 반응이 없으면 "앱이 멈췄나?"로 오해하기 쉽다. 왜 막혔는지 알려주되,
+      // 터치할 때마다 뜨면 성가시므로 3초에 한 번만 띄운다.
+      const now = Date.now();
+      if(now - stylusBlockedToastAt > 3000){
+        stylusBlockedToastAt = now;
+        showToast('"펜슬 전용"이 켜져 있어 손가락 터치는 무시됩니다. 설정에서 끌 수 있습니다.');
+      }
+    }
+    return !!isPen;
   }
 
   // ---------- "설정" 드롭다운 (펜슬전용/퀵입력/화면유지를 묶어둔 곳) ----------
@@ -7010,7 +7400,14 @@
 
   applyStylusOnlyUI();
   document.getElementById('btnStylusOnlyToggle').addEventListener('click', ()=>{
-    setStylusOnlyActive(!isStylusOnlyActive());
+    const next = !isStylusOnlyActive();
+    // 펜을 구분할 방법이 전혀 없는 아주 오래된 브라우저에서 켜면 모든 터치가 막혀버린다.
+    // 켜지 않고 이유를 알려준다 — 켠 뒤에야 먹통이 된 걸 알게 되는 것보다 낫다.
+    if(next && !stylusDetectionSupported){
+      showToast('이 브라우저는 펜과 손가락을 구분하지 못해 "펜슬 전용"을 켤 수 없습니다.');
+      return;
+    }
+    setStylusOnlyActive(next);
     applyStylusOnlyUI();
   });
 
@@ -7543,6 +7940,50 @@
     });
   }
 
+  // ---------- 우측 결함 목록 접기/펴기 ----------
+  // 마킹 작업 중에는 목록이 필요 없고 도면이 넓을수록 좋다. 접힌 상태는 다음 방문에도 유지한다.
+  const RIGHT_PANEL_COLLAPSED_KEY = 'defectMarkerRightPanelCollapsed_v1';
+  function applyRightPanelCollapsed(collapsed){
+    document.body.classList.toggle('right-collapsed', collapsed);
+    const label = document.getElementById('rightPanelToggleLabel');
+    if(label) label.textContent = collapsed ? '목록 펴기' : '목록 접기';
+    const btn = document.getElementById('btnToggleRightPanel');
+    if(btn) btn.classList.toggle('active', collapsed);
+    // 작업 영역 폭이 바뀌었으므로 캔버스 여백(가운데 정렬용)을 다시 계산한다.
+    if(getActiveDrawing()) renderCanvas();
+  }
+  (function initRightPanelCollapse(){
+    let collapsed = false;
+    try{ collapsed = localStorage.getItem(RIGHT_PANEL_COLLAPSED_KEY)==='1'; } catch(err){ /* 못 읽어도 펼친 상태로 시작 */ }
+    applyRightPanelCollapsed(collapsed);
+    const btn = document.getElementById('btnToggleRightPanel');
+    if(!btn) return;
+    btn.addEventListener('click', ()=>{
+      const next = !document.body.classList.contains('right-collapsed');
+      applyRightPanelCollapsed(next);
+      try{ localStorage.setItem(RIGHT_PANEL_COLLAPSED_KEY, next ? '1' : '0'); } catch(err){ /* 저장 실패해도 이번 세션 동작에는 지장 없음 */ }
+    });
+  })();
+
+  // 결함 목록이 한 줄짜리 표로 다 들어가지 못할 만큼 사이드바가 좁아지면, 칸을 줄바꿈해 담는
+  // 카드 배치(.narrow)로 바꾼다 — 가로 스크롤이 없어져 사진·삭제 버튼을 포함한 모든 칸이 항상 보인다.
+  // 기준을 표의 min-width(640px)가 아니라 그보다 낮은 600px로 잡은 이유: 조금 모자란 정도라면
+  // 한 줄 표가 훨씬 조밀하고 Tab으로 옆 칸으로 넘어가며 입력하기 좋다(잘리는 사진·삭제 버튼은
+  // position:sticky로 이미 붙잡아 두었다). 정말 좁아졌을 때만 줄바꿈 카드로 바꾼다.
+  const MARKER_LIST_NARROW_WIDTH = 600;
+  function updateMarkerListNarrowMode(){
+    const wrap = document.querySelector('.marker-list-wrap');
+    if(!wrap) return;
+    wrap.classList.toggle('narrow', wrap.clientWidth > 0 && wrap.clientWidth < MARKER_LIST_NARROW_WIDTH);
+  }
+  (function initMarkerListNarrowWatch(){
+    const sidebar = document.querySelector('.sidebar.right');
+    if(!sidebar) return;
+    if(window.ResizeObserver) new ResizeObserver(()=> updateMarkerListNarrowMode()).observe(sidebar);
+    window.addEventListener('resize', updateMarkerListNarrowMode);
+    updateMarkerListNarrowMode();
+  })();
+
   // ---------- 우측 사이드바 폭 조절(드래그) ----------
   const RIGHT_SIDEBAR_WIDTH_KEY = 'defectMarkerRightSidebarWidth_v1';
   function applyRightSidebarWidth(px){
@@ -7559,26 +8000,43 @@
       const saved = parseInt(localStorage.getItem(RIGHT_SIDEBAR_WIDTH_KEY), 10);
       if(!isNaN(saved) && saved>0) applyRightSidebarWidth(saved);
     } catch(err){ /* 저장된 값이 없거나 읽기 실패해도 기본 CSS 폭으로 동작 */ }
-    let dragging = false, startX = 0, startW = 0;
-    handle.addEventListener('mousedown', e=>{
+    // 마우스 전용(mousedown/mousemove)이던 것을 포인터 이벤트로 바꿨다 — 터치스크린 노트북이나
+    // 펜에서도 같은 손잡이를 그대로 끌 수 있다. setPointerCapture 덕분에 드래그 중 커서가 손잡이를
+    // 벗어나거나 다른 요소 위로 지나가도 이벤트를 놓치지 않는다.
+    let dragging = false, startX = 0, startW = 0, dragPointerId = null;
+    function saveWidth(){
+      try{ localStorage.setItem(RIGHT_SIDEBAR_WIDTH_KEY, String(Math.round(sidebar.getBoundingClientRect().width))); } catch(err){ /* 저장 실패해도 화면상 조절 자체는 유지됨 */ }
+    }
+    handle.addEventListener('pointerdown', e=>{
       dragging = true; startX = e.clientX; startW = sidebar.getBoundingClientRect().width;
+      dragPointerId = e.pointerId;
       handle.classList.add('dragging');
       document.body.style.userSelect = 'none';
+      try{ handle.setPointerCapture(e.pointerId); } catch(err){ /* 캡처가 안 돼도 아래 window 리스너로 동작 */ }
       e.preventDefault();
     });
-    window.addEventListener('mousemove', e=>{
-      if(!dragging) return;
+    window.addEventListener('pointermove', e=>{
+      if(!dragging || (dragPointerId!==null && e.pointerId!==dragPointerId)) return;
       // 손잡이가 사이드바 왼쪽에 붙어 있으므로, 왼쪽으로 끌면(dx<0) 사이드바가 넓어진다.
       const dx = e.clientX - startX;
       const w = clamp(startW - dx, 320, Math.round(window.innerWidth*0.8));
       applyRightSidebarWidth(w);
     });
-    window.addEventListener('mouseup', ()=>{
+    function endDrag(){
       if(!dragging) return;
-      dragging = false;
+      dragging = false; dragPointerId = null;
       handle.classList.remove('dragging');
       document.body.style.userSelect = '';
-      try{ localStorage.setItem(RIGHT_SIDEBAR_WIDTH_KEY, String(Math.round(sidebar.getBoundingClientRect().width))); } catch(err){ /* 저장 실패해도 화면상 조절 자체는 유지됨 */ }
+      saveWidth();
+      if(getActiveDrawing()) renderCanvas(); // 작업 영역 폭이 바뀌었으니 캔버스 여백을 다시 계산
+    }
+    window.addEventListener('pointerup', endDrag);
+    window.addEventListener('pointercancel', endDrag);
+    // 손잡이를 더블클릭하면 기본 폭으로 되돌린다 — 실수로 너무 좁히거나 넓혔을 때의 탈출구.
+    handle.addEventListener('dblclick', ()=>{
+      sidebar.style.width = ''; sidebar.style.flexBasis = '';
+      saveWidth();
+      if(getActiveDrawing()) renderCanvas();
     });
   })();
 
