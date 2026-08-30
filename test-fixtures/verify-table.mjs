@@ -2,7 +2,11 @@
 // 12단계에서 손으로 맞췄던 정렬이 이번 구조 변경 후에도 유지되는지를 기계가 대신 본다.
 import { chromium } from 'playwright';
 const b = await chromium.launch();
-const p = await (await b.newContext({viewport:{width:1440,height:900}})).newPage();
+// 1920px에서 본다. 이 검사가 보는 것은 "헤더와 행이 같은 열 트랙을 쓰는가"인데, 우측 패널이 좁아
+// 줄바꿈 카드 배치(.marker-list-wrap.narrow)로 떨어지면 헤더 자체가 숨겨져(.marker-list-head
+// display:none) 비교할 대상이 사라진다. 예전의 1440px은 이미 그 폭 아래라 무엇을 재는지 알 수 없는
+// 값이 나왔다 — 한 줄 표가 실제로 쓰이는 폭에서 재야 의미가 있다.
+const p = await (await b.newContext({viewport:{width:1920,height:1000}})).newPage();
 const errors = [];
 p.on('pageerror', e => errors.push('PAGEERROR: ' + e.message));
 p.on('console', m => { if(m.type()==='error') errors.push('CONSOLE: ' + m.text()); });

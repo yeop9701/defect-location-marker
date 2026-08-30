@@ -14,25 +14,35 @@
 <link rel="icon" href="icon-192.png" />
 <link rel="apple-touch-icon" href="icon-192.png" />
 <style>
+  /* ── 색 토큰 ────────────────────────────────────────────────────────────────
+     도면(흰 종이 위의 빨강·파랑 마커)이 이 화면의 주인공이다. 그래서 UI 자체는 한 걸음 물러선
+     차가운 회색으로 깔고, 강조색은 마커의 빨강·파랑과 헷갈리지 않는 잉크 남색(--accent) 하나로 모은다.
+     "지금 해야 할 일"만 황토색(--signal)으로 칠해, 화면에서 시선을 끄는 곳이 늘 한 군데뿐이게 한다.
+     처음 쓰는 사람이 어디를 봐야 할지 헤매지 않게 하는 것이 이 배색의 목적이다. */
   :root{
-    --surface-1:#fcfcfb;
-    --surface-page:#f2f1ee;
-    --surface-2:#f5f4f1;      /* 옅게 들어간 배경 (버튼그룹, 유형팔레트, 칩) */
-    --surface-3:#f8f7f5;      /* 마커 카드 배경 */
-    --surface-hover:#f0efec;
-    --text-primary:#0b0b0b;
-    --text-secondary:#3f3e3b; /* 안내문·라벨용 — 흐린 --muted보다 대비가 충분함 */
-    --muted:#78766f;          /* 카운트·placeholder 등 부차적인 값에만 사용 */
-    --gridline:#e1e0d9;
-    --border:rgba(11,11,11,0.10);
-    --accent:#2a78d6;
-    --accent-hover:#256abf;
-    --accent-soft:#eef4fc;    /* 선택/활성 상태의 옅은 배경 */
+    --surface-page:#e9edf1;   /* 작업 바탕(캔버스 뒤) */
+    --surface-1:#ffffff;      /* 패널·카드 — 예전 #fcfcfb보다 대비를 올려 경계가 또렷하다 */
+    --surface-2:#e7ebf0;      /* 버튼그룹·유형 팔레트처럼 옅게 들어간 배경 */
+    --surface-3:#f5f7f9;      /* 결함 목록 카드 */
+    --surface-hover:#dfe5eb;
+    --text-primary:#0f151c;
+    --text-secondary:#3a4653; /* 안내문·라벨 — 본문과 충분히 구분되면서 대비는 유지 */
+    --muted:#68757f;          /* 카운트·placeholder 등 부차적인 값에만 */
+    --gridline:#cfd7df;
+    --border:rgba(15,21,28,0.12);
+    --accent:#1a4f8a;         /* 주 동작(저장 등). 마커의 순파랑(#00f)과 확실히 구분되는 잉크 남색 */
+    --accent-hover:#123c6d;
+    --accent-soft:#e3ecf7;    /* 선택/활성 상태의 옅은 배경 */
+    --signal:#a8560c;         /* "지금 이걸 하세요" 한 곳에만 — 현재 유형·다음 단계 안내 */
+    --signal-soft:#fbeedd;
     --danger:#a72e2e;
-    --mode-select:#7a3fc9;    /* 배타적 모드 3개 중 "선택" */
+    --mode-select:#6b3fbf;    /* 배타적 모드 3개 중 "선택" */
     --mode-move:#0d7a4f;      /* 배타적 모드 3개 중 "이동" */
     --mode-erase:#a72e2e;     /* 배타적 모드 3개 중 "지우개" */
-    --shadow-modal:0 12px 40px rgba(11,11,11,0.35);
+    --shadow-1:0 1px 2px rgba(15,21,28,.06), 0 2px 8px rgba(15,21,28,.07);
+    --shadow-2:0 4px 16px rgba(15,21,28,.13);
+    --shadow-modal:0 16px 48px rgba(15,21,28,.32);
+    --r-sm:6px; --r-md:9px; --r-lg:13px;
     color-scheme:light;
   }
   /* 다크 모드: 기본은 OS/브라우저 설정(prefers-color-scheme)을 따르되, 우측 상단 "라이트/다크" 버튼으로
@@ -41,59 +51,74 @@
      외에는 하드코딩된 색을 쓰지 않는다. */
   @media (prefers-color-scheme: dark){
     :root:not([data-theme="light"]){
-      --surface-1:#232322;
-      --surface-page:#181817;
-      --surface-2:#2c2c2a;
-      --surface-3:#282827;
-      --surface-hover:#333331;
-      --text-primary:#f2f1ee;
-      --text-secondary:#c7c5bf;
-      --muted:#8f8d86;
-      --gridline:#3a3a37;
-      --border:rgba(255,255,255,0.12);
-      --accent:#5b9ce8;
-      --accent-hover:#7db0ee;
-      --accent-soft:#1c2c3d;
+      --surface-page:#12161a;
+      --surface-1:#1c2229;
+      --surface-2:#252c34;
+      --surface-3:#212831;
+      --surface-hover:#2d353e;
+      --text-primary:#eef2f6;
+      --text-secondary:#bcc7d2;
+      --muted:#8695a3;
+      --gridline:#333c46;
+      --border:rgba(255,255,255,0.13);
+      --accent:#68a6e8;
+      --accent-hover:#8bbcef;
+      --accent-soft:#1a2a3d;
+      --signal:#e0a566;
+      --signal-soft:#33251a;
       --danger:#e6716a;
       --mode-select:#b48af0;
       --mode-move:#3fbf88;
       --mode-erase:#e6716a;
-      --shadow-modal:0 12px 40px rgba(0,0,0,0.55);
+      --shadow-1:0 1px 2px rgba(0,0,0,.30), 0 2px 8px rgba(0,0,0,.30);
+      --shadow-2:0 4px 16px rgba(0,0,0,.45);
+      --shadow-modal:0 16px 48px rgba(0,0,0,.60);
+      --r-sm:6px; --r-md:9px; --r-lg:13px;
       color-scheme:dark;
     }
   }
   /* 시스템 설정과 무관하게 사용자가 "다크"를 직접 선택한 경우 — 위 미디어쿼리 블록과 값을 그대로 맞춘다. */
   :root[data-theme="dark"]{
-    --surface-1:#232322;
-    --surface-page:#181817;
-    --surface-2:#2c2c2a;
-    --surface-3:#282827;
-    --surface-hover:#333331;
-    --text-primary:#f2f1ee;
-    --text-secondary:#c7c5bf;
-    --muted:#8f8d86;
-    --gridline:#3a3a37;
-    --border:rgba(255,255,255,0.12);
-    --accent:#5b9ce8;
-    --accent-hover:#7db0ee;
-    --accent-soft:#1c2c3d;
+    --surface-page:#12161a;
+    --surface-1:#1c2229;
+    --surface-2:#252c34;
+    --surface-3:#212831;
+    --surface-hover:#2d353e;
+    --text-primary:#eef2f6;
+    --text-secondary:#bcc7d2;
+    --muted:#8695a3;
+    --gridline:#333c46;
+    --border:rgba(255,255,255,0.13);
+    --accent:#68a6e8;
+    --accent-hover:#8bbcef;
+    --accent-soft:#1a2a3d;
+    --signal:#e0a566;
+    --signal-soft:#33251a;
     --danger:#e6716a;
     --mode-select:#b48af0;
     --mode-move:#3fbf88;
     --mode-erase:#e6716a;
-    --shadow-modal:0 12px 40px rgba(0,0,0,0.55);
+    --shadow-1:0 1px 2px rgba(0,0,0,.30), 0 2px 8px rgba(0,0,0,.30);
+    --shadow-2:0 4px 16px rgba(0,0,0,.45);
+    --shadow-modal:0 16px 48px rgba(0,0,0,.60);
+    --r-sm:6px; --r-md:9px; --r-lg:13px;
     color-scheme:dark;
   }
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;height:100%;}
+  /* 한글 UI라 시스템 한글 글꼴을 명시해 둔다(iPad=Apple SD Gothic Neo, Windows=맑은 고딕).
+     오프라인에서도 쓰는 단일 파일 앱이므로 웹폰트는 일부러 쓰지 않는다 — 네트워크 의존이 생기면
+     파일만 열어 쓰는 사용법이 깨진다. 기준 글자 크기를 12.5px대에서 14px로 올렸다. */
   body{
-    font-family:system-ui,-apple-system,"Segoe UI",sans-serif;
+    font-family:system-ui,-apple-system,"Segoe UI","Apple SD Gothic Neo","Malgun Gothic","맑은 고딕",sans-serif;
+    font-size:14px;
+    line-height:1.45;
     background:var(--surface-page);
     color:var(--text-primary);
     -webkit-font-smoothing:antialiased;
   }
-  .icon{width:15px;height:15px;flex:0 0 auto;display:inline-block;vertical-align:-3px;}
-  .icon-lg{width:17px;height:17px;}
+  .icon{width:16px;height:16px;flex:0 0 auto;display:inline-block;vertical-align:-3px;}
+  .icon-lg{width:18px;height:18px;}
   /* 100dvh를 우선 지원하되, 구형 브라우저는 뒤의 선언을 모르는 값으로 무시하고 앞줄 100vh를 그대로 쓴다.
      iOS Safari는 100vh가 하단 주소창을 무시하고 계산돼 화면 아래가 잘리므로 100dvh(동적 뷰포트)로 보정. */
   .app{display:flex;flex-direction:column;height:100vh;height:100dvh;overflow:hidden;}
@@ -111,16 +136,25 @@
   }
   .proj-actions{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
   .topbar-left{display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+  /* 버튼은 최소 높이 36px — 마우스로도 태블릿 펜으로도 편하게 눌리는 크기다. */
   button{
-    font-family:inherit;font-size:12.5px;padding:7px 11px;border-radius:7px;
+    font-family:inherit;font-size:13.5px;font-weight:500;padding:8px 13px;border-radius:var(--r-md);
     border:1px solid var(--gridline);background:var(--surface-1);color:var(--text-primary);
-    cursor:pointer;line-height:1.3;display:inline-flex;align-items:center;gap:6px;
-    white-space:nowrap;flex:0 0 auto;
+    cursor:pointer;line-height:1.25;display:inline-flex;align-items:center;gap:7px;
+    white-space:nowrap;flex:0 0 auto;min-height:36px;
+    transition:background .12s ease, border-color .12s ease, box-shadow .12s ease;
   }
-  button:hover{background:var(--surface-hover);}
+  button:hover{background:var(--surface-hover);border-color:var(--border);}
+  /* 키보드로 이동할 때 지금 어디에 있는지 항상 보이게 한다. */
+  button:focus-visible,.type-btn:focus-visible,.drawing-tab:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
   /* 저장 계열(프로젝트/CSV/엑셀/전체 저장/PNG·PDF 저장)이 툴바에서 가장 눈에 띄도록 강조 스타일 하나로 통일 */
-  button.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600;}
+  button.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600;box-shadow:var(--shadow-1);}
   button.primary:hover{background:var(--accent-hover);}
+  /* .strong — "중요하지만 그 화면의 주 동작은 아닌" 버튼(내보내기 계열). 진한 파랑을 화면당 하나로
+     제한하기 위한 중간 단계다. 색을 채우지 않고 테두리와 글자색만 강조색으로 쓴다. */
+  button.strong{background:var(--accent-soft);border-color:color-mix(in srgb, var(--accent) 40%, transparent);
+    color:var(--accent);font-weight:600;}
+  button.strong:hover{background:color-mix(in srgb, var(--accent) 16%, var(--surface-1));border-color:var(--accent);}
   button.danger{color:var(--danger);}
   button:disabled{opacity:.45;cursor:not-allowed;}
   /* 편집 도구(실행취소·다시실행·회전·자르기 등)는 저장 버튼보다 한 단계 옅게 — 테두리 없이 은은하게 */
@@ -149,10 +183,12 @@
   .layout{display:flex;flex:1;min-height:0;gap:0;}
   .sidebar{width:210px;flex:0 0 210px;background:var(--surface-1);border-right:1px solid var(--gridline);
     display:flex;flex-direction:column;padding:14px;gap:16px;overflow-y:auto;}
-  /* 기본 폭은 560px. 예전 기본값은 720px이었는데, 1600px 화면에서도 결함 목록이 도면(664px)보다
-     넓어져 정작 마킹할 도면이 목록보다 작아지는 문제가 있었다. 목록에 가로 스크롤이 조금 생기더라도
-     도면을 우선한다 — 목록 폭은 리사이저로 언제든 다시 넓힐 수 있고, 아래 "접기"로 통째로 숨길 수도 있다. */
-  .sidebar.right{border-right:none;border-left:1px solid var(--gridline);width:680px;flex:0 0 680px;min-width:320px;max-width:80vw;}
+  /* 기본 폭 620px — 결함 목록 표가 한 줄로 들어가는 실질 최소치(표 min-width 620 + 좌우 여백)다.
+     예전 680px에서 60px을 줄였다: 그 폭은 패널 안에 내보내기 버튼 8개와 저장 모양 설정까지 있을 때
+     필요했던 것이고, 그것들을 「내보내기」 창으로 옮긴 지금 이 패널이 하는 일은 결함 목록 하나뿐이다.
+     여기서 더 줄이면 부재·자재·결함 드롭다운이 글자를 못 보여줄 만큼 좁아지므로 이 아래로는 내리지
+     않는다 — 도면을 더 넓게 쓰고 싶으면 "목록 접기"로 통째로 접는 쪽이 낫다. */
+  .sidebar.right{border-right:none;border-left:1px solid var(--gridline);width:620px;flex:0 0 620px;min-width:320px;max-width:80vw;}
   /* 좁은 화면에서 목록을 450px로 줄이는 기준을 1400px→1500px로 올렸다. 1440px 노트북에서 예전에는
      목록이 720px을 가져가 도면이 목록보다 좁아졌는데, 이 폭대에서는 목록을 줄여 도면을 우선한다.
      450px에서는 표가 한 줄로 다 들어가지 않으므로 칸을 줄바꿈해 담는 카드 배치(.narrow)로 바뀐다 —
@@ -252,15 +288,23 @@
   .quick-input-sheet{
     position:fixed;left:50%;transform:translateX(-50%);z-index:59;
     bottom:calc(74px + env(safe-area-inset-bottom));
-    flex-direction:column;gap:8px;width:min(560px,94vw);padding:10px 12px;border-radius:14px;
+    flex-direction:column;gap:8px;width:min(820px,96vw);padding:10px 12px;border-radius:14px;
     background:var(--surface-1);border:1px solid var(--gridline);box-shadow:0 8px 28px rgba(0,0,0,.28);
   }
   .quick-input-sheet.pinned-top{bottom:auto;top:calc(14px + env(safe-area-inset-top));}
   .qis-row{display:flex;align-items:center;gap:8px;}
   .qis-title{flex:1;font-size:12.5px;font-weight:700;color:var(--text-primary);}
   .qis-fields{display:flex;gap:8px;flex-wrap:wrap;}
-  .qis-field{flex:1 1 140px;display:flex;flex-direction:column;gap:3px;font-size:11px;color:var(--text-secondary);}
-  .qis-field select{padding:9px 8px;border-radius:8px;border:1px solid var(--gridline);background:var(--surface-2);color:var(--text-primary);font-size:13px;}
+  /* 마지막 줄에 칸이 한두 개만 남았을 때 그 칸들이 줄 전체로 늘어나 보기 흉해지지 않도록 상한을 둔다. */
+  .qis-field{flex:1 1 150px;max-width:230px;display:flex;flex-direction:column;gap:3px;font-size:11.5px;color:var(--text-secondary);}
+  .qis-field select,.qis-field input{padding:9px 8px;border-radius:8px;border:1px solid var(--gridline);
+    background:var(--surface-2);color:var(--text-primary);font-size:13px;font-family:inherit;width:100%;}
+  .qis-field input:focus,.qis-field select:focus{outline:2px solid var(--accent);outline-offset:-1px;}
+  /* 도·분·초는 한 칸처럼 붙여 보여준다(결함 목록 카드와 같은 모양). */
+  .qis-dms{display:flex;align-items:center;gap:2px;font-size:12px;color:var(--muted);}
+  .qis-dms input{text-align:center;padding:9px 2px;}
+  /* 종속 마커(기울기 측정방향)처럼 채울 칸이 없는 경우의 안내문 */
+  .qis-none{font-size:12.5px;color:var(--text-secondary);padding:4px 2px;}
 
   /* 터치 대상 확대 — 버튼/입력/선택칸을 손가락으로 누르기 편한 최소 44px로 키운다(마우스 조작은 무관). */
   body.layout-tablet button,
@@ -284,14 +328,14 @@
   body.layout-tablet .autosave-status{display:none;}     /* 같은 값을 플로팅 바에서 보여줌 */
   body.layout-tablet header.topbar{padding:8px 12px;gap:6px;}
   body.layout-tablet .topbar-left{gap:8px;}
-  /* 안내 문구는 첫 마커를 찍고 나면 접는다 — 조작을 익힌 뒤에는 한 줄을 통째로 차지할 이유가 없다.
-     그 줄이 사라지면 남은 "아이콘 크기"만으로 한 줄을 더 쓰는 게 아까우므로, 두 줄을 한 줄로 합친다. */
+  /* 안내 문구는 첫 마커를 찍고 나면 접는다 — 조작을 익힌 뒤에는 한 줄을 차지할 이유가 없다.
+     줄 자체가 아니라 문구만 숨기는 이유: 같은 줄에 지우개 브러시 굵기가 함께 들어 있어서, 줄을
+     통째로 감추면 태블릿에서 브러시 굵기를 조절할 방법이 사라진다. 브러시까지 숨어 있는 평소에는
+     남는 자식이 없어 줄 높이가 0이 되므로, 결과는 "한 줄만 남는다"로 같다. */
   body.layout-tablet.has-markers .mode-hint{display:none;}
-  body.layout-tablet.has-markers .toolbar2{flex-direction:row;flex-wrap:wrap;align-items:center;}
-  body.layout-tablet.has-markers .toolbar2 > .toolbar-row{flex:1 1 auto;}
-  /* 회전 버튼은 "설정" 메뉴로 옮겨져 이 자리에 빈 껍데기(테두리)만 남는다 — 구분선과 함께 숨긴다. */
-  body.layout-tablet .topbar-left .btn-group,
-  body.layout-tablet .topbar-left .toolbar-sep{display:none;}
+  body.layout-tablet .toolbar-row-hint{gap:8px;}
+  body.layout-tablet .toolbar-row-main{gap:8px;}
+  body.layout-tablet .toolbar-row-main .toolbar-sep{display:none;}
 
   /* 태블릿에서는 getUserMedia 웹캠 미리보기 대신 카메라 앱을 직접 여는 capture=environment
      입력(photoCaptureInput)을 쓰므로, 데스크톱 전용 폴백인 "사진 촬영" 버튼은 숨긴다.
@@ -307,7 +351,17 @@
   .stepper-btn{display:none;min-width:36px;min-height:36px;padding:0;justify-content:center;font-size:16px;font-weight:700;}
   body.layout-tablet .stepper-btn{display:inline-flex;}
 
-  .panel-title{font-size:12px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.03em;margin:0 0 8px;}
+  /* 패널 제목: 한글에는 uppercase/letter-spacing이 자간만 벌릴 뿐 효과가 없어 쓰지 않는다.
+     대신 크기와 무게로 위계를 준다. */
+  .panel-title{font-size:12.5px;font-weight:700;color:var(--muted);margin:0 0 9px;
+    display:flex;align-items:center;gap:7px;}
+  /* 작업 순서 번호. 도면을 넣고(1) 유형을 고르고(2) 도면을 클릭해 찍은 뒤(3) 목록에서 내용을 채운다(4).
+     인수인계 없이 처음 여는 사람이 이 번호만 따라가면 한 바퀴가 돌도록 붙인 것이다. */
+  .panel-title .zone{
+    flex:0 0 auto;width:19px;height:19px;border-radius:50%;
+    background:var(--accent);color:#fff;font-size:11px;font-weight:700;
+    display:inline-flex;align-items:center;justify-content:center;
+  }
   .drawing-tabs{display:flex;flex-direction:column;gap:6px;}
   .drawing-tab{
     display:flex;align-items:center;gap:6px;padding:7px 8px 7px 10px;border-radius:7px;
@@ -340,7 +394,17 @@
   .help-box{font-size:11.5px;color:var(--text-secondary);line-height:1.5;background:var(--surface-2);border:none;
     border-radius:8px;padding:10px 11px;}
   .help-box b{color:var(--text-primary);}
-  .help-toggle{font-size:11.5px;color:var(--accent);cursor:pointer;background:none;border:none;padding:0;text-decoration:underline;}
+  /* 사용법·계열 편집·표제란처럼 접었다 펴는 보조 영역의 손잡이. 예전엔 밑줄 친 작은 링크라
+     "눌러서 펼치는 것"인지 알기 어려웠다. 버튼 모양과 방향 화살표로 상태가 드러나게 한다. */
+  .help-toggle{
+    font-size:12.5px;color:var(--text-primary);cursor:pointer;background:var(--surface-2);
+    border:1px solid var(--gridline);border-radius:var(--r-md);padding:8px 11px;width:100%;
+    text-align:left;text-decoration:none;font-weight:600;
+    display:flex;align-items:center;gap:7px;min-height:36px;
+  }
+  .help-toggle:hover{background:var(--surface-hover);}
+  .help-toggle::before{content:'▸';font-size:11px;color:var(--muted);transition:transform .15s ease;}
+  .help-toggle.open::before{transform:rotate(90deg);}
   /* 사용법을 주제별 섹션으로 나눠 한눈에 훑어볼 수 있게 정리 */
   .help-sec{margin-bottom:10px;}
   .help-sec:last-of-type{margin-bottom:0;}
@@ -354,13 +418,111 @@
   .toolbar2{display:flex;flex-direction:column;gap:6px;padding:10px 16px;background:var(--surface-1);
     border-bottom:1px solid var(--gridline);}
   .toolbar-row{display:flex;align-items:center;gap:14px;flex-wrap:wrap;}
+  /* 도구줄 첫 줄은 한 줄에 다 들어가야 두 줄 구성이 유지된다. 도면 칸이 좁아지는 배치(좌 210 +
+     결함 목록 620)에서도 넘치지 않도록 간격과 버튼 여백을 한 단계 조인다. */
+  .toolbar-row-main{gap:8px;}
+  .toolbar-row-main > button,
+  .toolbar-row-main .btn-group button{padding:7px 10px;}
   .zoom-group{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--text-secondary);}
   .zoom-group select{font-size:12.5px;padding:5px 6px;border-radius:6px;border:1px solid var(--gridline);}
   .tool-slider{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-secondary);}
   .tool-slider input[type=range]{width:88px;accent-color:var(--accent);}
   .tool-slider .val{font-size:11px;color:var(--muted);min-width:34px;}
-  .mode-hint{font-size:12px;color:var(--text-secondary);}
+  /* 캔버스 바로 위에 늘 떠 있는 한 줄 안내. 지금 무엇이 선택돼 있고 다음에 무엇을 하면 되는지를
+     화면이 직접 말해준다 — 처음 쓰는 사람이 단축키 설명을 따로 찾지 않아도 되게 하는 장치다.
+     화면에서 --signal(황토색)을 쓰는 곳은 여기 하나뿐이라, 시선이 갈 곳이 항상 한 군데다. */
+  .mode-hint{
+    font-size:13px;color:var(--text-secondary);line-height:1.5;
+    background:var(--signal-soft);
+    border:1px solid color-mix(in srgb, var(--signal) 30%, transparent);
+    border-radius:var(--r-md);padding:8px 12px;
+    flex:1 1 340px;min-width:0;
+  }
+  .mode-hint b{color:var(--signal);font-weight:700;}
   #cropActions{display:none;align-items:center;gap:6px;}
+
+  /* ────────────────────────────────────────────────────────────────────────────
+     도면이 아직 없을 때 — 화면이 한 가지만 말하게 한다.
+     예전에는 도면을 넣기 전에도 버튼 39개가 전부 보통 상태로 떠 있었고, 그중 35개는 눌러 봐야
+     "먼저 도면 이미지를 추가해주세요" 토스트만 떴다. 처음 여는 사람에게는 어느 것이 지금 눌리는
+     버튼인지 알 방법이 없었다. 도면이 없는 동안에는 도면을 전제로 하는 조작을 전부 흐리게 만들고
+     클릭 자체를 막는다 — 살아 있는 것은 "도면 이미지 추가"와 "프로젝트 불러오기"뿐이다.
+     .keep-live 를 붙인 요소는 이 규칙에서 빠진다(설정·테마처럼 도면과 무관한 조작). */
+  body.no-drawing .toolbar2 .toolbar-row > *:not(.keep-live),
+  body.no-drawing #btnSaveProject,
+  body.no-drawing #btnUndo,
+  body.no-drawing #btnRedo,
+  body.no-drawing #btnToggleRightPanel,
+  body.no-drawing #btnDuplicateOpen,
+  body.no-drawing .needs-drawing,
+  body.no-drawing .tablet-float-bar{
+    opacity:.38;pointer-events:none;filter:saturate(.4);
+  }
+  /* 안내 줄("현재 선택된 유형은 …")은 도면이 있어야 뜻이 통하는 문장이라 이 동안에는 아예 감춘다 —
+     지금 할 일은 캔버스 한가운데의 시작 화면이 이미 말하고 있다. */
+  body.no-drawing .toolbar-row-hint{display:none;}
+
+  /* 시작 화면. 도면이 없을 때 캔버스 자리에 뜨는 유일한 할 일이다. */
+  .empty-state{color:var(--text-secondary);font-size:14px;text-align:center;padding:48px 30px;max-width:420px;margin:auto;}
+  .empty-state .es-title{font-size:17px;font-weight:700;color:var(--text-primary);margin-bottom:8px;}
+  .empty-state .es-sub{line-height:1.7;}
+  .empty-state .es-or{font-size:12px;color:var(--muted);margin-top:12px;}
+  .empty-state button{margin-top:14px;}
+  /* 창 안으로 이미지를 끌고 들어온 동안 표시되는 안내막. 파일 대화상자를 거치지 않고
+     도면을 넣는 길이 있다는 것을 그 순간에 알려준다. */
+  .drop-overlay{
+    position:fixed;inset:0;z-index:900;display:none;align-items:center;justify-content:center;
+    background:color-mix(in srgb, var(--accent) 14%, transparent);
+    border:3px dashed var(--accent);
+  }
+  body.dragging-file .drop-overlay{display:flex;}
+  .drop-overlay .dz-box{
+    background:var(--surface-1);border-radius:var(--r-lg);box-shadow:var(--shadow-2);
+    padding:22px 30px;font-size:16px;font-weight:700;color:var(--accent);text-align:center;
+  }
+  .drop-overlay .dz-box small{display:block;margin-top:6px;font-size:12px;font-weight:400;color:var(--text-secondary);}
+
+  /* ────────────────────────────────────────────────────────────────────────────
+     지금 무슨 모드인지 도면 자체가 말하게 한다.
+     선택·이동·지우개는 배타 모드인데 예전에는 툴바 버튼 하나의 배경색만 바뀌었다. 시선은 도면에
+     가 있으므로, 지우개인 줄 모르고 도면을 클릭해 마커를 지우는 사고가 나기 쉬웠다. 모드가 켜지면
+     도면 테두리를 그 모드 색으로 두르고 좌상단에 이름표를 띄운다(updateModeButtonsUI가 body에
+     .mode-* 클래스를 붙인다). 색은 툴바 버튼에 쓰는 --mode-* 와 같은 값이라 눈으로 이어진다. */
+  .mode-badge{
+    display:none;position:absolute;top:8px;left:8px;z-index:5;pointer-events:none;
+    padding:4px 10px;border-radius:20px;font-size:12px;font-weight:700;color:#fff;
+    box-shadow:var(--shadow-1);
+  }
+  body.mode-select .canvas-shell{outline:3px solid var(--mode-select);outline-offset:0;}
+  body.mode-move   .canvas-shell{outline:3px solid var(--mode-move);outline-offset:0;}
+  body.mode-erase  .canvas-shell{outline:3px solid var(--mode-erase);outline-offset:0;}
+  body.mode-select .mode-badge,
+  body.mode-move   .mode-badge,
+  body.mode-erase  .mode-badge{display:block;}
+  body.mode-select .mode-badge{background:var(--mode-select);}
+  body.mode-move   .mode-badge{background:var(--mode-move);}
+  body.mode-erase  .mode-badge{background:var(--mode-erase);}
+
+  /* ────────────────────────────────────────────────────────────────────────────
+     결함 목록 머리줄 — 값 이어받기 토글과 여러 건 일괄 채우기 줄. */
+  .list-tools{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:2px 0 6px;}
+  .list-tools .grow{flex:1;min-width:80px;}
+  button.carry-toggle.on{background:var(--signal-soft);border-color:color-mix(in srgb, var(--signal) 45%, transparent);color:var(--signal);font-weight:600;}
+  /* 2건 이상 골랐을 때만 나타난다 — 평소에는 자리를 차지하지 않는다. */
+  .bulkfill-bar{
+    display:none;align-items:center;gap:6px;flex-wrap:wrap;margin:0 0 8px;padding:8px 10px;
+    border-radius:var(--r-md);background:var(--accent-soft);
+    border:1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+  }
+  .bulkfill-bar.show{display:flex;}
+  .bulkfill-bar .bf-label{font-size:12.5px;font-weight:700;color:var(--accent);}
+  .bulkfill-bar select{font-size:12.5px;padding:5px 6px;border-radius:6px;border:1px solid var(--gridline);
+    background:var(--surface-1);color:var(--text-primary);max-width:120px;}
+
+  /* 퀵 입력 시트의 "더 입력" 접이줄 — 자주 쓰는 앞 칸만 펼쳐두고 나머지는 접는다. */
+  .qis-more{display:none;flex-wrap:wrap;gap:8px;width:100%;}
+  .qis-more.open{display:flex;}
+  .qis-more-toggle{align-self:flex-start;}
   .canvas-wrap{flex:1;min-height:0;overflow:auto;display:flex;align-items:flex-start;justify-content:flex-start;padding:24px;}
   .canvas-shell{background:var(--surface-1);box-shadow:0 1px 8px rgba(11,11,11,0.10);border:none;
     border-radius:6px;position:relative;}
@@ -372,8 +534,8 @@
      #mainCanvas가 받도록 pointer-events:none — 드래그 중 매 프레임 무거운 도면 리사이즈(drawImage)를
      반복하지 않고 이 레이어만 다시 그리면 되므로 마커가 많아도 버벅이지 않는다. */
   #markerCanvas{display:block;position:absolute;top:0;left:0;pointer-events:none;border-radius:3px;}
-  .empty-state{color:var(--text-secondary);font-size:14px;text-align:center;padding:60px 30px;max-width:360px;margin:auto;}
-  .empty-state button{margin-top:14px;}
+  /* .empty-state 규칙은 위 "도면이 아직 없을 때" 묶음으로 옮겼다 — 시작 화면 관련 스타일을
+     한곳에서 보게 하기 위함. */
   .thumb-grid{display:none;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:16px;width:100%;
     align-content:start;align-self:flex-start;}
   .thumb-card{background:var(--surface-1);border:1px solid var(--gridline);border-radius:8px;overflow:hidden;
@@ -397,15 +559,21 @@
      그중 하나만 어긋나도 표 제목과 내용의 열이 틀어졌다(12단계에서 실제로 발생).
      이제 열 정의는 --cols 한 곳에만 있고, 프리셋이 바뀌면 그 한 줄만 갈아끼운다. */
   .marker-list-wrap{
-    max-height:min(62vh, 720px);   /* 46vh는 1440×900에서 9행뿐이었다 */
+    /* 62vh였던 것을 80vh로 올렸다 — 내보내기·저장 모양이 아래에 붙어 있을 때는 그 자리를 남겨둬야
+       했지만, 그것들이 「내보내기」 창으로 빠진 지금 우측 패널의 세로는 전부 목록 차지다.
+       1440×900에서 보이는 행이 약 9행 → 약 14행으로 늘어난다. */
+    max-height:min(80vh, 1100px);
     overflow:auto;margin-top:6px;
     border:1px solid var(--gridline);border-radius:10px;background:var(--surface-1);
   }
   .marker-table{
-    --cols: 34px 62px minmax(64px,1.1fr) minmax(64px,1.1fr) minmax(64px,1.1fr)
-            62px 62px 52px 68px 30px 30px;
+    /* 숫자 칸(폭·길이·개수·사진번호·번호)은 두세 글자면 충분한데 예전에는 글자 칸과 비슷한 폭을
+       가져가고 있었다. 그 칸들만 조금씩 줄여 표 최소폭을 620→580px로 낮췄고, 그만큼 우측 패널을
+       좁혀 도면을 넓게 쓴다. 부재·자재·결함은 값이 길어 읽혀야 하므로 최소폭을 건드리지 않았다. */
+    --cols: 30px 62px minmax(64px,1.1fr) minmax(64px,1.1fr) minmax(64px,1.1fr)
+            48px 48px 38px 46px 28px 28px;
     display:grid;grid-template-columns:var(--cols);
-    column-gap:6px;row-gap:5px;padding:0 8px 8px;min-width:640px;
+    column-gap:6px;row-gap:6px;padding:0 8px 8px;min-width:580px;
   }
   .marker-table[data-preset="기울기"]{
     --cols: 34px minmax(64px,1fr) 118px 118px 88px 128px 30px 30px;
@@ -428,7 +596,7 @@
   .marker-list-head{
     position:sticky;top:0;z-index:2;background:var(--surface-1);
     padding:9px 0 7px;border-bottom:1px solid var(--gridline);
-    font-size:8.8px;font-weight:700;color:var(--text-secondary);
+    font-size:11px;font-weight:700;color:var(--text-secondary);
     /* text-transform:uppercase / letter-spacing은 한글에 아무 효과가 없고 자간만 벌어져서 제거 */
   }
   /* 표제목·표내용 전부 가운데 정렬(사용자 요청) — 폭·개수 같은 숫자 칸도 자릿수 비교보다
@@ -442,9 +610,9 @@
   }
   .marker-card.selected{background:var(--accent-soft);box-shadow:0 0 0 1px rgba(42,120,214,.45);}
   .marker-card:hover{background:var(--surface-hover);}
-  .mc-cell{min-width:0;font-size:9.6px;text-align:center;}
+  .mc-cell{min-width:0;font-size:12px;text-align:center;}
   .marker-card input,.marker-card select{
-    width:100%;height:28px;font-size:9.6px;padding:0 6px;border-radius:6px;
+    width:100%;height:34px;font-size:12px;padding:0 7px;border-radius:var(--r-sm);
     border:1px solid var(--gridline);background:var(--surface-1);color:var(--text-primary);
     font-family:inherit;text-align:center;
   }
@@ -453,14 +621,14 @@
     outline:2px solid var(--accent);outline-offset:-1px;border-color:var(--accent);
   }
   .mc-cell .num,.marker-list-head .num{font-variant-numeric:tabular-nums;}
-  .mc-seq{text-align:center;font-weight:700;font-variant-numeric:tabular-nums;font-size:9.6px;}
+  .mc-seq{text-align:center;font-weight:700;font-variant-numeric:tabular-nums;font-size:12px;}
   .marker-list-head .mc-seq{text-align:center;}
   /* 사진·삭제 버튼은 가로 스크롤이 생겨도 항상 오른쪽에 붙어 보이게 고정한다. 좁은 화면(≤1400px)에서는
      표 내용(640px)이 사이드바보다 넓어 목록이 가로로 스크롤되는데, 예전에는 그때 이 두 버튼이 화면
      밖으로 잘려 사진을 붙이거나 결함을 지우려면 매번 옆으로 스크롤해야 했다. 배경을 깔아줘야 아래로
      지나가는 입력칸이 비쳐 보이지 않는다. */
   .marker-card .mc-photo,.marker-card .row-del{
-    width:100%;height:28px;display:grid;place-items:center;border:none;
+    width:100%;height:34px;display:grid;place-items:center;border:none;
     color:var(--muted);cursor:pointer;border-radius:6px;position:sticky;padding:0;
     background:inherit;z-index:1;
   }
@@ -690,44 +858,8 @@
 <div class="app">
 
   <header class="topbar">
-    <!-- 실행취소가 있는 줄(헤더) 좌측: 전체도면저장 → 현재도면저장 → 형식 → 확대/축소 → 좌회전 → 우회전 순 -->
-    <div class="topbar-left">
-      <button id="btnExportAll" class="primary" title="현재 형식(PNG/PDF)으로 모든 도면을 한 번에 저장합니다. PDF는 도면 수만큼 페이지가 있는 파일 1개로, PNG는 도면별로 순서대로 저장됩니다."><svg class="icon"><use href="#i-archive"/></svg> 전체 도면 저장</button>
-      <button class="primary" id="btnExportPNG" title="현재 도면을 이미지로 저장 (단축키 Ctrl+D)"><svg class="icon"><use href="#i-image"/></svg> 현재 도면 저장</button>
-      <div class="toolbar-sep"></div>
-      <div class="tool-slider">형식
-        <select id="exportFormatSelect">
-          <option value="png" selected>PNG</option>
-          <option value="pdf">PDF</option>
-        </select>
-      </div>
-      <select id="pdfPageSizeSelect" style="display:none;font-size:12.5px;padding:5px 6px;border-radius:6px;border:1px solid var(--gridline);">
-        <option value="original" selected>원본 비율</option>
-        <option value="a4l">A4 가로</option>
-        <option value="a4p">A4 세로</option>
-        <option value="a3l">A3 가로</option>
-        <option value="a3p">A3 세로</option>
-      </select>
-      <div class="toolbar-sep"></div>
-      <div class="zoom-group">
-        확대/축소
-        <select id="zoomSelect">
-          <option value="fit">화면 맞춤</option>
-          <option value="0.25">25%</option>
-          <option value="0.5">50%</option>
-          <option value="0.75">75%</option>
-          <option value="1" selected>100%</option>
-          <option value="1.5">150%</option>
-          <option value="2">200%</option>
-        </select>
-        <button type="button" id="btnZoomFit" class="tool" title="도면 전체가 보이도록 배율을 맞추고 가운데로 되돌립니다 (단축키 F). 스크롤하다 도면을 놓쳤을 때도 이 버튼으로 돌아옵니다."><svg class="icon"><use href="#i-fit"/></svg> 화면 맞춤 (F)</button>
-      </div>
-      <div class="toolbar-sep"></div>
-      <div class="btn-group">
-        <button id="btnRotateCCW" class="tool" title="도면 이미지를 왼쪽으로 90° 회전"><svg class="icon"><use href="#i-rotate-ccw"/></svg> 좌회전</button>
-        <button id="btnRotateCW" class="tool" title="도면 이미지를 오른쪽으로 90° 회전"><svg class="icon"><use href="#i-rotate-cw"/></svg> 우회전</button>
-      </div>
-    </div>
+    <!-- 헤더에는 프로젝트 파일(저장/불러오기)과 실행취소만 남긴다. 도면을 보고 내보내는 조작은
+         도면 바로 위 캔버스 툴바로 내려, 헤더를 훑는 것만으로 "이 앱은 무엇을 저장하는가"가 보이게 한다. -->
     <div class="proj-actions">
       <button id="btnUndo" class="tool" title="마지막 작업을 취소합니다. 마커 추가/이동/삭제뿐 아니라 자르기·회전·지우개처럼 도면 이미지 자체를 바꾼 작업도 함께 되돌립니다 (Ctrl+Z)"><svg class="icon"><use href="#i-undo"/></svg> 실행취소</button>
       <button id="btnRedo" class="tool" title="되돌린 작업을 다시 실행 (Ctrl+Shift+Z / Ctrl+Y)"><svg class="icon"><use href="#i-redo"/></svg> 다시실행</button>
@@ -767,23 +899,22 @@
     <!-- LEFT SIDEBAR -->
     <aside class="sidebar left">
       <div>
-        <div class="panel-title">도면 목록</div>
+        <div class="panel-title"><span class="zone">1</span>도면 목록</div>
         <div class="drawing-tabs" id="drawingTabs"></div>
         <label class="file-label" style="display:block;margin-top:8px;">
           <button type="button" class="add-drawing-btn" id="btnAddDrawing">+ 도면 이미지 추가</button>
           <input type="file" id="addDrawingInput" accept="image/*" multiple />
         </label>
+        <!-- "모든 도면을 한 번에 훑어보기"는 도면 목록에 대한 조작이므로 도구줄이 아니라 여기 둔다.
+             (도구줄은 지금 보고 있는 도면 하나를 다루는 자리다. 단축키 g는 그대로 동작한다.) -->
+        <button id="btnGridView" class="tool needs-drawing" style="width:100%;margin-top:6px;" title="모든 도면을 축소판으로 한 번에 훑어봅니다 (단축키 g)"><svg class="icon"><use href="#i-grid"/></svg> 전체 보기 (G)</button>
         <button type="button" id="btnDuplicateOpen" style="width:100%;margin-top:6px;" title="현재 도면의 마킹을 다른 도면들에 그대로 복제합니다(같은 평면도가 동만 바뀌어 반복될 때 유용)"><svg class="icon"><use href="#i-archive"/></svg> 마킹 전체 복사</button>
       </div>
 
-      <div>
-        <div class="type-grid" id="typeGrid"></div>
-      </div>
-
-      <div>
-        <div class="panel-title">위치도 종류</div>
+      <div class="needs-drawing">
+        <div class="panel-title"><span class="zone">2</span>위치도 종류</div>
         <div class="tb-template-row">
-          <select id="seriesPresetSelect" title="외관조사/장비조사/기울기처럼 위치도 종류에 맞는 계열 구성을 통째로 바꿉니다"></select>
+          <select id="seriesPresetSelect" title="외관조사/장비조사/기울기처럼 위치도 종류에 맞는 계열 구성을 통째로 바꿉니다. 이걸 바꾸면 아래 결함 유형과 결함 목록의 입력칸이 함께 바뀝니다"></select>
           <button type="button" class="tool" id="btnSaveSeriesPreset" title="지금 계열 구성을 새 이름의 프리셋으로 저장"><svg class="icon"><use href="#i-save"/></svg></button>
           <button type="button" class="tool" id="btnDeleteSeriesPreset" title="선택한(사용자 저장) 프리셋 삭제"><svg class="icon"><use href="#i-trash"/></svg></button>
         </div>
@@ -791,13 +922,20 @@
         <div id="seriesEditorPanel" style="margin-top:8px;display:none;"></div>
       </div>
 
+      <div class="needs-drawing">
+        <div class="panel-title"><span class="zone">3</span>결함 유형 고르기</div>
+        <div class="type-grid" id="typeGrid"></div>
+      </div>
+
+
       <div>
         <button class="help-toggle" id="helpToggle">사용법/단축키</button>
         <div class="help-box" id="helpBox" style="margin-top:8px;display:none;">
           <div class="help-sec">
             <h5>시작하기</h5>
             <ul>
-              <li>도면 이미지 추가 → 위치 유형 선택(1~4) → 도면 클릭으로 마커 생성</li>
+              <li>왼쪽 ①②③ 순서대로: 도면 이미지 추가 → 위치도 종류 고르기 → 결함 유형 고르기 → 도면 클릭</li>
+              <li>도면은 <b>이미지 파일을 창으로 끌어다 놓거나</b> 복사한 이미지를 <b>Ctrl+V</b>로 붙여넣어도 추가됩니다</li>
               <li>클릭한 채로 드래그하면 방향·인출선 길이까지 함께 지정(Shift: 수직/수평 고정)</li>
               <li>"범위" 유형(3·4)은 클릭 3번: ① 첫 코너 → ② 반대 코너 → ③ 번호 배지 위치</li>
             </ul>
@@ -808,6 +946,15 @@
               <li>화살표·원·사각형 어디를 클릭해도 그 마커가 선택/이동됨</li>
               <li>여러 개 선택 후 드래그로 함께 이동, Delete로 일괄 삭제, ←/→로 일괄 회전</li>
               <li>범위 마커는 선택 시 모서리·변 손잡이로 크기 조절 가능</li>
+              <li>목록에서 결함을 클릭하면 도면에서도 그 마커로 화면이 따라갑니다</li>
+            </ul>
+          </div>
+          <div class="help-sec">
+            <h5>같은 값을 다시 고르지 않기</h5>
+            <ul>
+              <li><b>값 이어받기</b>(결함 목록 위 버튼): 새로 찍는 결함이 직전에 채운 부재·자재·결함을 그대로 물려받습니다. 폭·길이·개수 같은 실측값은 물려받지 않습니다</li>
+              <li><b>여러 건 한 번에</b>: 목록에서 Shift(또는 Ctrl)를 누른 채 여러 줄을 고르면 목록 위에 "선택한 N건에 채우기" 줄이 나타납니다</li>
+              <li><b>키보드로 이동</b>: 표 안에서 Enter는 같은 칸의 다음 줄, ↑/↓는 위아래 줄, 칸의 맨 앞/뒤에서 ←/→는 옆 칸</li>
             </ul>
           </div>
           <div class="help-sec" id="helpSecShortcuts">
@@ -830,7 +977,7 @@
             <ul>
               <li>마우스 휠: 커서 위치 기준 확대/축소 · 화면 이동은 Space+드래그 / 우클릭 드래그 / 휠 버튼 드래그</li>
               <li>도면을 추가하면 자동으로 화면에 맞춰집니다. 언제든 "화면 맞춤"(F)으로 되돌릴 수 있습니다</li>
-              <li>좌회전/우회전으로 90°씩 회전, 자르기로 일부만 남기기 — 모두 실행취소 가능(이미지 작업은 최근 8회까지)</li>
+              <li>배율 고르기·자르기·좌우회전·좌표안내·아이콘 크기는 도구줄의 <b>「보기·편집 ▾」</b> 안에 있습니다 — 회전과 자르기도 실행취소됩니다(이미지 작업은 최근 8회까지)</li>
               <li>태블릿: 손가락 1개로 그리기·이동·선택, 2개로 핀치 확대/축소</li>
               <li>화면이 좁으면 좌우 목록이 자동으로 서랍(edge tab)으로 바뀝니다. 상단 "태블릿 모드" 버튼으로 수동 전환 가능</li>
             </ul>
@@ -838,9 +985,9 @@
           <div class="help-sec">
             <h5>저장 · 내보내기</h5>
             <ul>
-              <li>전체 도면 저장 / 현재 도면 저장 — 형식은 PNG 또는 PDF</li>
-              <li>표제란(도곽) 표시를 켜면 A4 틀 + 상단 표제란과 함께 인쇄</li>
-              <li>CSV로 좌표 일괄 입력/내보내기, 프로젝트 저장(Ctrl+S)으로 전체 작업을 파일로 보관</li>
+              <li><b>프로젝트 저장</b>(Ctrl+S, 상단): 도면 이미지·마킹·사진까지 작업 전체를 파일 하나로 보관 — 이어서 하려면 이것으로 저장하세요</li>
+              <li>그 밖의 내보내기는 전부 도구줄 오른쪽 <b>「내보내기」</b> 창 안에 있습니다 — CSV·엑셀, 도면 이미지(PNG·PDF), 사진 일괄저장, 통계</li>
+              <li>같은 창의 「저장 모양」에서 도면틀(A4 도곽+표제란)과 범례를 켜고 끕니다 — 작업 화면은 바뀌지 않습니다</li>
             </ul>
           </div>
           <div class="help-note">모든 처리는 브라우저 안에서만 이루어지며 인터넷 연결 없이도 사용할 수 있습니다.</div>
@@ -850,27 +997,62 @@
 
     <!-- CENTER CANVAS -->
     <main class="canvas-area">
+      <!-- 도구줄은 두 줄이다. 예전에는 세 줄(194px, 900px 화면의 22%)이었는데, 그 셋째 줄은 배율·회전·
+           자르기·좌표안내처럼 "가끔" 쓰는 조작이 늘 펼쳐져 있어서 생긴 것이었다. 늘 쓰는 것(모드 3개,
+           배율, 화면 맞춤)만 첫 줄에 남기고, 가끔 쓰는 것은 「도면 편집 ▾」 메뉴 안으로 넣었다.
+           둘째 줄은 "지금 무엇을 하면 되는지" 안내 한 줄이라 접지 않는다. -->
       <div class="toolbar2">
-        <!-- 확대/축소가 있던 칸(첫 줄) 자리부터: 전체보기 → 자르기 → 선택 → 이동 → 지우개 → 좌표안내 순 -->
-        <div class="toolbar-row">
-          <button id="btnGridView" class="tool" title="모든 도면을 축소판으로 한 번에 훑어봅니다 (단축키 g)"><svg class="icon"><use href="#i-grid"/></svg> 전체 보기 (G)</button>
-          <div class="toolbar-sep"></div>
-          <button id="btnCropMode" class="tool" title="도면 이미지의 일부만 남기고 잘라냅니다 (단축키 c)"><svg class="icon"><use href="#i-crop"/></svg> 자르기 (C)</button>
+        <div class="toolbar-row toolbar-row-main">
+          <div class="btn-group">
+            <button id="btnSelectMode" class="tool" title="선택 모드 — 드래그 영역에 완전히 들어온 마커만 선택 (단축키 s)"><svg class="icon"><use href="#i-select"/></svg> 선택</button>
+            <button id="btnMoveMode" class="tool" title="이동 모드 — 마커 이동 전용, 빈 곳 클릭으로는 아무 것도 생기지 않음 (단축키 m)"><svg class="icon"><use href="#i-move"/></svg> 이동</button>
+            <button id="btnEraseMode" class="tool" title="지우개 모드 — 마커는 클릭으로 삭제, 도면은 드래그하면 브러시로 지워짐 (단축키 d)"><svg class="icon"><use href="#i-eraser"/></svg> 지우개</button>
+          </div>
+          <button type="button" id="btnZoomFit" class="tool" title="도면 전체가 보이도록 배율을 맞추고 가운데로 되돌립니다 (단축키 F). 스크롤하다 도면을 놓쳤을 때도 이 버튼으로 돌아옵니다."><svg class="icon"><use href="#i-fit"/></svg> 화면 맞춤</button>
+          <!-- 가끔 쓰는 조작 묶음 — 배율 고르기, 자르기·회전, 좌표안내, 아이콘 크기.
+               버튼 id·핸들러는 예전 그대로이고 위치만 메뉴 안으로 들어왔다. 확대·축소는 평소 휠로
+               하고 되돌릴 때는 옆의 "화면 맞춤"을 쓰므로, 배율 목록까지 줄 위에 늘 펼쳐 둘 이유가 없다. -->
+          <div class="settings-menu-wrap" id="drawEditMenuWrap">
+            <button type="button" id="btnDrawEditMenuToggle" class="tool" title="배율 · 자르기 · 회전 · 좌표안내 · 아이콘 크기" aria-expanded="false"><svg class="icon"><use href="#i-crop"/></svg> 보기·편집 ▾</button>
+            <div class="settings-menu" id="drawEditMenu" style="display:none;">
+              <label class="tool-slider" style="padding:4px 2px;">배율
+                <select id="zoomSelect" title="화면 배율">
+                  <option value="fit">화면 맞춤</option>
+                  <option value="0.25">25%</option>
+                  <option value="0.5">50%</option>
+                  <option value="0.75">75%</option>
+                  <option value="1" selected>100%</option>
+                  <option value="1.5">150%</option>
+                  <option value="2">200%</option>
+                </select>
+              </label>
+              <button id="btnCropMode" class="tool settings-menu-item" title="도면 이미지의 일부만 남기고 잘라냅니다 (단축키 c)"><svg class="icon"><use href="#i-crop"/></svg> 자르기 (C)</button>
+              <button id="btnRotateCCW" class="tool settings-menu-item" title="도면 이미지를 왼쪽으로 90° 회전"><svg class="icon"><use href="#i-rotate-ccw"/></svg> 좌회전</button>
+              <button id="btnRotateCW" class="tool settings-menu-item" title="도면 이미지를 오른쪽으로 90° 회전"><svg class="icon"><use href="#i-rotate-cw"/></svg> 우회전</button>
+              <button id="btnCoordGuide" class="tool settings-menu-item" title="10% 간격 점선 그리드와 커서 위치의 정확한 % 좌표를 보여줍니다. CSV에 좌표를 직접 입력할 때 참고하세요 (단축키 q)"><svg class="icon"><use href="#i-guide"/></svg> 좌표안내 (Q)</button>
+              <label class="tool-slider" style="padding:4px 2px;" title="마커 아이콘(번호·기호)의 크기입니다.">아이콘 크기
+                <button type="button" class="stepper-btn" id="btnSizeMinus" title="아이콘 크기 줄이기">−</button>
+                <input type="range" id="sizeSlider" min="0.6" max="2" step="0.1" value="1" />
+                <button type="button" class="stepper-btn" id="btnSizePlus" title="아이콘 크기 늘리기">+</button>
+                <span class="val" id="sizeVal">100%</span>
+              </label>
+            </div>
+          </div>
+          <!-- 자르기를 켜면 나타나는 적용/취소는 메뉴 밖(줄 위)에 둔다 — 메뉴는 자르기를 누르는 순간
+               닫히므로, 그 안에 있으면 적용할 방법이 보이지 않는다. -->
           <span id="cropActions">
             <button class="primary" id="btnCropApply">자르기 적용</button>
             <button id="btnCropCancel" class="tool">취소</button>
           </span>
-          <div class="toolbar-sep"></div>
-          <div class="btn-group">
-            <button id="btnSelectMode" class="tool" title="선택 모드 — 드래그 영역에 완전히 들어온 마커만 선택 (단축키 s)"><svg class="icon"><use href="#i-select"/></svg> 선택 (S)</button>
-            <button id="btnMoveMode" class="tool" title="이동 모드 — 마커 이동 전용, 빈 곳 클릭으로는 아무 것도 생기지 않음 (단축키 m)"><svg class="icon"><use href="#i-move"/></svg> 이동 (M)</button>
-            <button id="btnEraseMode" class="tool" title="지우개 모드 — 마커는 클릭으로 삭제, 도면은 드래그하면 브러시로 지워짐 (단축키 d)"><svg class="icon"><use href="#i-eraser"/></svg> 지우개 (D)</button>
-          </div>
-          <div class="toolbar-sep"></div>
-          <button id="btnCoordGuide" class="tool" title="10% 간격 점선 그리드와 커서 위치의 정확한 % 좌표를 보여줍니다. CSV에 좌표를 직접 입력할 때 참고하세요 (단축키 q)"><svg class="icon"><use href="#i-guide"/></svg> 좌표안내 (Q)</button>
-          <!-- 브러시 굵기는 줄의 맨 끝에 둔다. 예전에는 지우개/좌표안내 사이에 있어서, 지우개를 켤 때마다
-               이 칸이 중간에 끼어들며 "좌표안내" 버튼이 다른 줄로 밀려났다 — 껐다 켤 때마다 같은 버튼이
-               다른 자리에 있게 되는 흔들림을 없애기 위해 뒤로 옮겼다. -->
+          <div style="flex:1;"></div>
+          <!-- 내보내는 것은 전부 이 버튼 하나 뒤에 있다(우측 패널에 늘 펼쳐져 있던 버튼 8개를 대신한다). -->
+          <button type="button" id="btnOpenExport" class="strong" title="CSV·엑셀·도면 이미지(PNG·PDF)·사진·통계를 한 창에서 내보냅니다"><svg class="icon"><use href="#i-upload"/></svg> 내보내기</button>
+        </div>
+        <div class="toolbar-row toolbar-row-hint">
+          <div class="mode-hint" id="modeHint">현재 선택된 유형: <b id="activeTypeLabel">벽체</b> (단축키 1/2) — 클릭해 추가, 드래그로 방향 지정 (Shift: 수직/수평 고정)</div>
+          <!-- 브러시 굵기는 지우개를 켤 때만 나타난다. 첫 줄이 아니라 안내 줄 옆에 두는 이유: 첫 줄은
+               한 줄에 딱 맞게 채워져 있어서, 여기 슬라이더가 끼어들면 그때만 줄이 하나 더 늘어난다.
+               지우개를 켜면 안내 줄 문구도 지우개 설명으로 바뀌므로 내용상으로도 이쪽이 짝이 맞는다. -->
           <div class="tool-slider" id="eraseBrushGroup" style="display:none;">브러시 굵기
             <button type="button" class="stepper-btn" id="btnBrushMinus" title="브러시 굵기 줄이기">−</button>
             <input type="range" id="eraseBrushSlider" min="0.4" max="4" step="0.1" value="1" />
@@ -878,21 +1060,13 @@
             <span class="val" id="eraseBrushVal">100%</span>
           </div>
         </div>
-        <div class="toolbar-row">
-          <div class="mode-hint" id="modeHint">현재 선택된 유형: <b id="activeTypeLabel">벽체</b> (단축키 1/2) — 클릭해 추가, 드래그로 방향 지정 (Shift: 수직/수평 고정)</div>
-          <div style="flex:1;"></div>
-          <div class="tool-slider">아이콘 크기
-            <button type="button" class="stepper-btn" id="btnSizeMinus" title="아이콘 크기 줄이기">−</button>
-            <input type="range" id="sizeSlider" min="0.6" max="2" step="0.1" value="1" />
-            <button type="button" class="stepper-btn" id="btnSizePlus" title="아이콘 크기 늘리기">+</button>
-            <span class="val" id="sizeVal">100%</span>
-          </div>
-        </div>
       </div>
       <div class="canvas-wrap" id="canvasWrap">
         <div class="canvas-shell" id="canvasShell">
           <canvas id="mainCanvas" tabindex="0"></canvas>
           <canvas id="markerCanvas"></canvas>
+          <!-- 배타 모드(선택·이동·지우개)일 때만 보이는 이름표. 도면 테두리 색과 짝을 이룬다. -->
+          <div class="mode-badge" id="modeBadge"></div>
         </div>
         <div class="thumb-grid" id="thumbGrid"></div>
       </div>
@@ -919,7 +1093,9 @@
         <span class="tablet-float-autosave" id="tabletFloatAutosaveLabel"></span>
       </div>
       <!-- 마커를 찍은 직후 뜨는 퀵 입력 시트(태블릿 전용, 헤더의 "퀵입력" 토글로 켬/끔) — 서랍을 열어
-           카드를 찾아가지 않아도 유형·부재명·결함명만 바로 채울 수 있다. maybeOpenQuickInputSheet()가
+           카드를 찾아가지 않아도 그 마커의 입력칸을 "전부" 그 자리에서 채울 수 있다.
+           칸 구성은 quickInputSpecFor()가 마커의 typeKey를 보고 정하며, 우측 결함 목록 카드와
+           같은 기준으로 갈라진다(기울기/부동침하/장비조사/기본). maybeOpenQuickInputSheet()가
            마커 생성 3경로(클릭/드래그/범위 3클릭) 직후 이 시트를 채워 보여준다. -->
       <div class="quick-input-sheet" id="quickInputSheet" style="display:none;">
         <div class="qis-row">
@@ -927,11 +1103,7 @@
           <button type="button" id="btnQuickInputSame" class="tool" style="display:none;">직전 값 그대로</button>
           <button type="button" id="btnQuickInputClose" class="icon-btn" title="닫기"><svg class="icon"><use href="#i-close"/></svg></button>
         </div>
-        <div class="qis-fields">
-          <label class="qis-field">유형<select id="quickInputSelType"></select></label>
-          <label class="qis-field">부재명<select id="quickInputSelMember"></select></label>
-          <label class="qis-field">결함명<select id="quickInputSelDefect"></select></label>
-        </div>
+        <div class="qis-fields" id="quickInputFields"></div>
       </div>
     </main>
 
@@ -940,12 +1112,26 @@
 
     <!-- RIGHT SIDEBAR -->
     <aside class="sidebar right">
-      <div>
-        <div class="panel-title" style="display:flex;align-items:center;justify-content:space-between;gap:6px;">
-          <span>결함 목록 (<span id="markerCount">0</span>건)</span>
+      <div class="needs-drawing">
+        <div class="panel-title" style="justify-content:space-between;gap:6px;">
+          <span><span class="zone">4</span>결함 목록 (<span id="markerCount">0</span>건)</span>
           <button type="button" class="tool" id="btnEditFieldOptions" style="font-size:10.5px;padding:3px 7px;font-weight:400;text-transform:none;letter-spacing:0;" title="유형·부재명·결함명 드롭다운의 선택지 목록을 수정합니다"><svg class="icon"><use href="#i-settings"/></svg> 목록수정</button>
         </div>
-        <input type="text" class="side-input" id="markerSearchInput" placeholder="검색 (유형·부재명·결함명·사진번호)" style="width:100%;margin:2px 0 8px;" />
+        <input type="text" class="side-input" id="markerSearchInput" placeholder="검색 (유형·부재명·결함명·사진번호)" style="width:100%;margin:2px 0 6px;" />
+        <!-- 값 이어받기 — 같은 부재·자재·결함이 연달아 나오는 게 보통인데(벽체·콘크리트·균열이
+             스무 건씩), 예전에는 데스크톱에서 그 세 칸을 매번 다시 골라야 했다. 켜 두면 새로 찍는
+             결함이 "직전에 내가 채운 값"을 그대로 물려받고, 다른 것만 고치면 된다.
+             앱을 처음 열었을 때는 물려받을 값이 없으므로 아무 일도 일어나지 않는다 — 값을 한 번
+             채운 뒤부터 이어진다. 켬/끔은 다음 방문에도 유지된다(localStorage). -->
+        <div class="list-tools">
+          <button type="button" id="btnCarryToggle" class="tool carry-toggle" title="켜 두면 새로 찍는 결함이 직전에 채운 부재·자재·결함(위치도 종류에 따라 그룹명·층수 등)을 그대로 물려받습니다. 폭·길이·개수처럼 결함마다 다른 실측값은 물려받지 않습니다."><svg class="icon"><use href="#i-download"/></svg> 값 이어받기: <span id="carryStateLabel">켬</span></button>
+          <span class="grow"></span>
+        </div>
+        <!-- 2건 이상 골랐을 때만 나타나는 일괄 채우기 줄. 여기서 값을 고르면 고른 결함 전부에 즉시 들어간다. -->
+        <div class="bulkfill-bar" id="bulkFillBar">
+          <span class="bf-label" id="bulkFillLabel">선택한 0건에 채우기</span>
+          <span id="bulkFillFields" style="display:flex;gap:6px;flex-wrap:wrap;"></span>
+        </div>
         <!-- 결함 목록 표: 헤더(.marker-list-head)와 카드(.marker-card)가 .marker-table의 직계
              자식으로 열 트랙(subgrid)을 공유한다 — 사이에 다른 래퍼를 넣으면 subgrid가 끊긴다.
              헤더 내용은 renderMarkerListHead()가 활성 프리셋에 맞춰 채운다(renderTable()이 최초 호출). -->
@@ -971,10 +1157,42 @@
         </div>
       </div>
 
-      <hr class="sep" />
+      <div class="footer-note">
+        Ver 2.2 (<span id="buildDateLabel"></span>) · 건축시설물 정밀안전진단/점검용 결함 마킹 도구
+        <span id="storageUsageLabel"></span>
+      </div>
+    </aside>
+
+  </div>
+</div>
+
+<!-- 창 안으로 파일을 끌고 들어오는 동안만 보이는 안내막. 도면을 넣는 길이 "버튼 → 파일 대화상자"
+     하나뿐이라는 것을 모르는 채로 이미지를 끌어다 놓는 사람이 많아, 그 동작을 실제로 받아준다. -->
+<div class="drop-overlay" id="dropOverlay">
+  <div class="dz-box">여기에 놓으면 도면으로 추가됩니다
+    <small>이미지 파일(PNG·JPG 등) 여러 개 · 프로젝트 파일(.json)도 됩니다</small>
+  </div>
+</div>
+
+<!-- ────────────────────────────────────────────────────────────────────────────
+     내보내기 창. 예전에는 이 안의 내용(버튼 8개 · 형식 셀렉트 2개 · 체크박스 3개 · 표제란 5칸)이
+     우측 결함 목록 아래에 늘 펼쳐져 있었다. 작업 내내 보이지만 실제로는 일이 끝난 뒤 한 번 쓰는
+     것들이라, 우측 패널이 "결함 목록"이 아니라 "결함 목록과 그 밖의 모든 것"이 돼 있었다.
+     여기로 옮기면서 요소의 id는 하나도 바꾸지 않았다 — 기존 클릭 핸들러·상태 갱신 코드가 전부
+     id로 붙어 있어 위치만 옮겨도 동작은 그대로다. -->
+<div class="modal-backdrop" id="exportBackdrop" style="display:none;">
+  <div class="modal-panel" id="exportPanel" style="width:min(720px, 94vw);">
+    <div class="modal-header" id="exportDragHandle" title="여기를 마우스로 눌러 끌면 창을 옮길 수 있습니다">
+      <div>
+        <div class="modal-title">내보내기</div>
+        <div class="modal-sub">결함 표(CSV·엑셀), 도면 이미지(PNG·PDF), 사진, 통계를 여기서 내보냅니다. 아래 「저장 모양」은 PNG·PDF로 저장할 때의 모습만 바꾸며 작업 화면은 그대로입니다.</div>
+      </div>
+      <button type="button" id="btnExportModalClose" class="icon-btn"><svg class="icon icon-lg"><use href="#i-close"/></svg></button>
+    </div>
+    <div class="modal-body">
 
       <div>
-        <div class="panel-title">좌표 입력·내보내기</div>
+        <div class="panel-title">불러오기</div>
         <div class="sidebar-btn-grid">
           <label class="file-label" style="display:block;">
             <button type="button" id="btnImportCSVVisual" style="width:100%;"><svg class="icon"><use href="#i-download"/></svg> CSV 불러오기</button>
@@ -982,17 +1200,57 @@
           </label>
           <button type="button" id="btnTableInput" style="width:100%;"><svg class="icon"><use href="#i-table"/></svg> 표로 입력</button>
         </div>
-        <div class="sidebar-btn-grid" style="margin-top:10px;">
-          <button id="btnExportCSV" class="primary" style="width:100%;"><svg class="icon"><use href="#i-upload"/></svg> CSV로 저장</button>
-          <button id="btnExportXLSX" class="primary" style="width:100%;"><svg class="icon"><use href="#i-spreadsheet"/></svg> 엑셀로 저장</button>
-        </div>
-        <button id="btnExportPhotosZip" style="width:100%;margin-top:10px;" title="모든 도면의 결함 사진을 zip으로 한 번에 저장합니다. 파일명은 번호·유형·부재명·결함명 순으로 자동 생성됩니다"><svg class="icon"><use href="#i-camera"/></svg> 사진 일괄저장</button>
-        <button id="btnShowStats" style="width:100%;margin-top:10px;"><svg class="icon"><use href="#i-chart"/></svg> 통계 보기</button>
       </div>
 
       <hr class="sep" />
 
       <div>
+        <div class="panel-title">결함 표로 내보내기</div>
+        <div class="sidebar-btn-grid">
+          <button id="btnExportCSV" class="strong" style="width:100%;"><svg class="icon"><use href="#i-upload"/></svg> CSV로 저장</button>
+          <button id="btnExportXLSX" class="strong" style="width:100%;"><svg class="icon"><use href="#i-spreadsheet"/></svg> 엑셀로 저장</button>
+        </div>
+      </div>
+
+      <hr class="sep" />
+
+      <div>
+        <div class="panel-title">도면 이미지로 내보내기</div>
+        <!-- 형식(PNG/PDF)이 버튼 바로 위에 붙어 있어 "무슨 형식으로 나가는지"를 누르기 전에 확인할 수 있다. -->
+        <div class="tool-slider">도면 이미지 형식
+          <select id="exportFormatSelect">
+          <option value="png" selected>PNG</option>
+          <option value="pdf">PDF</option>
+          </select>
+        </div>
+          <select id="pdfPageSizeSelect" style="display:none;font-size:12.5px;padding:5px 6px;border-radius:6px;border:1px solid var(--gridline);">
+          <option value="original" selected>원본 비율</option>
+          <option value="a4l">A4 가로</option>
+          <option value="a4p">A4 세로</option>
+          <option value="a3l">A3 가로</option>
+          <option value="a3p">A3 세로</option>
+          </select>
+        <div class="sidebar-btn-grid" style="margin-top:6px;">
+          <button class="strong" style="width:100%;" id="btnExportPNG" title="현재 도면을 이미지로 저장 (단축키 Ctrl+D)"><svg class="icon"><use href="#i-image"/></svg> 현재 도면 저장</button>
+          <button id="btnExportAll" class="strong" style="width:100%;" title="현재 형식(PNG/PDF)으로 모든 도면을 한 번에 저장합니다. PDF는 도면 수만큼 페이지가 있는 파일 1개로, PNG는 도면별로 순서대로 저장됩니다."><svg class="icon"><use href="#i-archive"/></svg> 전체 도면 저장</button>
+        </div>
+      </div>
+
+      <hr class="sep" />
+
+      <div>
+        <div class="panel-title">그 밖에</div>
+        <div class="sidebar-btn-grid">
+          <button id="btnExportPhotosZip" style="width:100%;" title="모든 도면의 결함 사진을 zip으로 한 번에 저장합니다. 파일명은 번호·유형·부재명·결함명 순으로 자동 생성됩니다"><svg class="icon"><use href="#i-camera"/></svg> 사진 일괄저장</button>
+          <button id="btnShowStats" style="width:100%;"><svg class="icon"><use href="#i-chart"/></svg> 통계 보기</button>
+        </div>
+      </div>
+
+      <hr class="sep" />
+
+      <div>
+        <!-- 여기부터는 "저장했을 때 어떻게 보이는가"에 대한 설정 — 작업 화면은 바뀌지 않는다. -->
+        <div class="panel-title">저장 모양 (PNG·PDF)</div>
         <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;">
           <label class="check-row" title="켜면 PNG/PDF로 저장할 때 A4 도곽과 상단 표제란이 함께 들어갑니다. 작업 화면은 바뀌지 않으므로, 켜는 순간 실제 저장 모습을 미리보기로 보여줍니다.">
             <input type="checkbox" id="titleBlockToggle" />
@@ -1008,7 +1266,8 @@
           <input type="checkbox" id="legendUsedOnlyToggle" />
           사용된 유형만
         </label>
-        <div class="panel-title" style="margin-top:10px;">표제란 입력</div>
+        <button class="help-toggle" id="tbFieldsToggle" style="margin-top:10px;">표제란 입력 (도면틀에 들어갈 내용)</button>
+        <div id="tbFieldsPanel" style="display:none;margin-top:8px;">
         <div class="tb-template-row">
           <select id="tbTemplateSelect" title="자주 쓰는 표제란 값을 템플릿으로 저장해뒀다가 바로 불러올 수 있습니다">
             <option value="">템플릿 불러오기…</option>
@@ -1034,14 +1293,14 @@
         <div class="side-field">도면 제목 (비워두면 자동 생성)
           <input type="text" class="side-input" id="docTitleInput" placeholder="예: 외관조사망도" />
         </div>
+        </div>
       </div>
 
-      <div class="footer-note">
-        Ver 2.1 (<span id="buildDateLabel"></span>) · 건축시설물 정밀안전진단/점검용 결함 마킹 도구
-        <span id="storageUsageLabel"></span>
-      </div>
-    </aside>
-
+    </div>
+    <div class="modal-footer">
+      <div style="font-size:11px;color:var(--text-secondary);flex:1;">저장한 파일은 브라우저의 다운로드 폴더로 갑니다. 작업 전체를 보관하려면 상단 「프로젝트 저장」(Ctrl+S)을 쓰세요.</div>
+      <button type="button" id="btnExportModalCloseFooter">닫기</button>
+    </div>
   </div>
 </div>
 
@@ -1254,6 +1513,15 @@
       <div class="empty-marker-note" id="tbPreviewNote" style="display:none;">먼저 도면을 추가해주세요.</div>
     </div>
     <div class="modal-footer" style="flex-wrap:wrap;">
+      <!-- 아이콘 크기: 작업 화면 툴바의 슬라이더와 같은 전역 값(iconSizeMult)을 공유한다. 저장 결과를
+           보면서 바로 조절하라고 미리보기 안에도 둔 것이므로, 여기서 바꾸면 작업 화면도 함께 바뀐다. -->
+      <label class="tool-slider" title="마커 아이콘(번호·기호)의 크기입니다. 작업 화면 툴바의 아이콘 크기와 같은 값이라 함께 바뀝니다.">
+        아이콘 크기
+        <button type="button" class="stepper-btn" id="btnPvSizeMinus" title="아이콘 크기 줄이기">−</button>
+        <input type="range" id="tbPreviewIconSizeSlider" min="0.6" max="2" step="0.1" value="1" style="width:140px;" />
+        <button type="button" class="stepper-btn" id="btnPvSizePlus" title="아이콘 크기 늘리기">+</button>
+        <span class="val" id="tbPreviewIconSizeVal">100%</span>
+      </label>
       <label style="display:flex;align-items:center;gap:8px;font-size:11px;color:var(--text-secondary);" title="이 도면의 NOTE 범례 박스 크기입니다(도면마다 따로 저장됩니다).">
         범례(NOTE) 크기 <span id="tbPreviewLegendScaleLabel">1.5</span>배
         <input type="range" id="tbPreviewLegendScaleSlider" min="1" max="12" step="0.5" value="1.5" style="width:140px;" />
@@ -1378,7 +1646,10 @@
   // 태블릿에서만 헤더의 저빈도 버튼들을 "설정" 드롭다운 안으로 옮긴다. 버튼 자체를 그대로 이동시키므로
   // id로 걸어둔 클릭 핸들러·상태 갱신 로직은 전혀 손댈 필요가 없고, 데스크톱으로 돌아오면 원래 자리
   // (기억해 둔 부모와 다음 형제)로 정확히 되돌린다.
-  const TABLET_HEADER_EXTRA_IDS = ['btnExportAll','btnRotateCCW','btnRotateCW','btnRedo','btnThemeToggle'];
+  // 태블릿에서 헤더가 길어지지 않도록 "설정" 메뉴로 옮기는 버튼들. 예전에는 전체도면저장·좌우회전도
+  // 여기 있었지만, 지금은 전체도면저장이 「내보내기」 창으로, 회전이 「도면 편집」 메뉴로 들어가
+  // 애초에 헤더·도구줄을 차지하지 않는다 — 옮길 필요가 없어져 목록에서 뺐다.
+  const TABLET_HEADER_EXTRA_IDS = ['btnRedo','btnThemeToggle'];
   const tabletHeaderHome = new Map(); // id -> {parent, next}
   function moveTabletHeaderExtras(on){
     const menu = document.getElementById('settingsMenu');
@@ -2479,6 +2750,14 @@
       slider.value = String(v);
       if(label) label.textContent = v.toFixed(1);
     }
+    // 아이콘 크기는 도면별이 아니라 전역 값이라 범례처럼 도면마다 되읽을 필요는 없지만,
+    // 미리보기를 열었을 때 슬라이더가 현재 값을 가리키고 있어야 한다.
+    const iconSlider = document.getElementById('tbPreviewIconSizeSlider');
+    if(iconSlider){
+      iconSlider.value = String(iconSizeMult);
+      const iv = document.getElementById('tbPreviewIconSizeVal');
+      if(iv) iv.textContent = Math.round(iconSizeMult*100)+'%';
+    }
     drawTbPreviewCanvas(d);
   }
   function refreshTbPreviewIfOpen(){ if(isTbPreviewOpen()) renderTbPreview(); }
@@ -2693,12 +2972,21 @@
     renderMarkerLayer();
   }
 
+  // 도면이 한 장도 없는 동안에는 body에 .no-drawing을 붙인다. 도면을 전제로 하는 조작(도구줄 전체,
+  // 저장·실행취소, 유형 팔레트, 결함 목록)이 CSS 한 줄로 흐려지고 클릭도 막힌다 — 예전에는 그 버튼들이
+  // 보통 상태로 떠 있다가 누르면 "먼저 도면 이미지를 추가해주세요" 토스트만 떴다. 처음 여는 사람에게는
+  // 지금 눌러야 할 버튼이 어느 것인지가 화면에 드러나야 한다.
+  function updateNoDrawingState(){
+    document.body.classList.toggle('no-drawing', drawings.length===0);
+  }
+
   // 정적 레이어(도면 이미지)를 그리고, 두 캔버스의 크기·위치를 함께 맞춘다. 도면이 없으면 false 반환.
   function renderBaseLayer(){
     const canvas = document.getElementById('mainCanvas');
     const markerCanvas = document.getElementById('markerCanvas');
     const wrap = document.getElementById('canvasWrap');
     const d = getActiveDrawing();
+    updateNoDrawingState();
     if(!d){
       canvas.style.display='none';
       markerCanvas.style.display='none';
@@ -2707,7 +2995,14 @@
         placeholder = document.createElement('div');
         placeholder.id = 'emptyState';
         placeholder.className = 'empty-state';
-        placeholder.innerHTML = '평면도 또는 입면도 이미지를 추가하면 여기에 표시됩니다.<br/><button class="primary" id="btnEmptyAdd">+ 도면 이미지 추가</button>';
+        // 시작 화면은 할 일을 하나만 말한다. 이 화면이 떠 있는 동안 나머지 조작은 body.no-drawing으로
+        // 전부 흐려져 있으므로(updateNoDrawingState), 눌리는 것은 여기 이 버튼과 "프로젝트 불러오기"뿐이다.
+        placeholder.innerHTML =
+          '<div class="es-title">도면 이미지부터 넣어주세요</div>'
+          + '<div class="es-sub">평면도·입면도 이미지를 넣으면 그 위에 결함을 찍을 수 있습니다.<br/>여러 장을 한 번에 넣어도 됩니다.</div>'
+          + '<button class="primary" id="btnEmptyAdd">+ 도면 이미지 추가</button>'
+          + '<div class="es-or">이미지 파일을 이 창으로 끌어다 놓거나, 복사한 이미지를 Ctrl+V로 붙여넣어도 됩니다.<br/>'
+          + '이어서 하던 작업이 있으면 상단 「프로젝트 불러오기」로 여세요.</div>';
         wrap.appendChild(placeholder);
         placeholder.querySelector('#btnEmptyAdd').addEventListener('click', ()=> document.getElementById('addDrawingInput').click());
       }
@@ -3465,6 +3760,7 @@
       bx = x - len;
     }
     const marker = { ...newMarkerIdPair(), typeKey: activeTypeKey, xPct: clamp(bx/w*100,0,100), yPct: clamp(by/h*100,0,100), angle: 0, lenMult: 1, numRot: 0, note:'' };
+    applyCarryToNewMarker(marker);
     d.markers.push(marker);
     selectOnly(marker.id);
     maybeOpenQuickInputSheet(marker);
@@ -3483,6 +3779,7 @@
     const marker = { ...newMarkerIdPair(), typeKey: activeTypeKey,
       xPct: clamp(geom.badgeX/w*100,0,100), yPct: clamp(geom.badgeY/h*100,0,100),
       angle: geom.markerAngleDeg, lenMult, numRot: 0, note:'' };
+    applyCarryToNewMarker(marker);
     d.markers.push(marker);
     selectOnly(marker.id);
     maybeOpenQuickInputSheet(marker);
@@ -3524,6 +3821,7 @@
         rectXPct: rx/w*100, rectYPct: ry/h*100, rectWPct: rw/w*100, rectHPct: rh/h*100,
         xPct: clamp(snapped.x/w*100,0,100), yPct: clamp(snapped.y/h*100,0,100),
         angle: 0, lenMult: 1, numRot: 0, note:'' };
+      applyCarryToNewMarker(marker);
       d.markers.push(marker);
       pendingRectCreate = null;
       updateModeHint();
@@ -3736,17 +4034,17 @@
   function buildTiltPosCardHTML(m, idx){
     const res = tiltResultParts(m);
     return `
-        <input type="text" class="mc-seq" data-role="pos" tabindex="-1" value="${m.seq||idx+1}" title="번호"/>
+        <input type="text" class="mc-seq" inputmode="numeric" data-role="pos" tabindex="-1" value="${m.seq||idx+1}" title="번호"/>
         <span class="mc-cell" data-label="구분"><input type="text" data-role="tiltBldg" placeholder="예: 205동" title="예: 205동" value="${escapeAttr(m.tiltBldg||'')}"/></span>
         <span class="mc-cell tilt-dms-group" data-label="상부(도분초)" title="상부시준 도/분/초">
-          <input type="text" class="tilt-dms" data-role="tiltUpD" placeholder="도" value="${escapeAttr(m.tiltUpD||'')}"/>°<input type="text" class="tilt-dms" data-role="tiltUpM" placeholder="분" value="${escapeAttr(m.tiltUpM||'')}"/>′<input type="text" class="tilt-dms" data-role="tiltUpS" placeholder="초" value="${escapeAttr(m.tiltUpS||'')}"/>″
+          <input type="text" class="tilt-dms" inputmode="numeric" data-role="tiltUpD" placeholder="도" value="${escapeAttr(m.tiltUpD||'')}"/>°<input type="text" class="tilt-dms" inputmode="numeric" data-role="tiltUpM" placeholder="분" value="${escapeAttr(m.tiltUpM||'')}"/>′<input type="text" class="tilt-dms" inputmode="numeric" data-role="tiltUpS" placeholder="초" value="${escapeAttr(m.tiltUpS||'')}"/>″
         </span>
         <span class="mc-cell tilt-dms-group" data-label="하부(도분초)" title="하부시준 도/분/초">
-          <input type="text" class="tilt-dms" data-role="tiltLoD" placeholder="도" value="${escapeAttr(m.tiltLoD||'')}"/>°<input type="text" class="tilt-dms" data-role="tiltLoM" placeholder="분" value="${escapeAttr(m.tiltLoM||'')}"/>′<input type="text" class="tilt-dms" data-role="tiltLoS" placeholder="초" value="${escapeAttr(m.tiltLoS||'')}"/>″
+          <input type="text" class="tilt-dms" inputmode="numeric" data-role="tiltLoD" placeholder="도" value="${escapeAttr(m.tiltLoD||'')}"/>°<input type="text" class="tilt-dms" inputmode="numeric" data-role="tiltLoM" placeholder="분" value="${escapeAttr(m.tiltLoM||'')}"/>′<input type="text" class="tilt-dms" inputmode="numeric" data-role="tiltLoS" placeholder="초" value="${escapeAttr(m.tiltLoS||'')}"/>″
         </span>
-        <span class="mc-cell" data-label="수평거리(mm)"><input type="text" class="num" data-role="tiltDist" placeholder="거리" title="수평거리(mm)" value="${escapeAttr(m.tiltDist||'')}"/></span>
+        <span class="mc-cell" data-label="수평거리(mm)"><input type="text" class="num" inputmode="decimal" data-role="tiltDist" placeholder="거리" title="수평거리(mm)" value="${escapeAttr(m.tiltDist||'')}"/></span>
         <span class="mc-cell tilt-dms-group" data-label="수평각차" title="상부-하부로 자동계산되지만 직접 입력해 덮어쓸 수도 있습니다(방향은 도면의 화살표로 표시됩니다. 상부·하부 각도를 다시 바꾸면 자동계산 값으로 갱신됩니다)">
-          <input type="text" class="tilt-dms" data-role="tiltDiffD" placeholder="도" value="${escapeAttr(res.d)}"/>°<input type="text" class="tilt-dms" data-role="tiltDiffM" placeholder="분" value="${escapeAttr(res.m)}"/>′<input type="text" class="tilt-dms" data-role="tiltDiffS" placeholder="초" value="${escapeAttr(res.s)}"/>″
+          <input type="text" class="tilt-dms" inputmode="numeric" data-role="tiltDiffD" placeholder="도" value="${escapeAttr(res.d)}"/>°<input type="text" class="tilt-dms" inputmode="numeric" data-role="tiltDiffM" placeholder="분" value="${escapeAttr(res.m)}"/>′<input type="text" class="tilt-dms" inputmode="numeric" data-role="tiltDiffS" placeholder="초" value="${escapeAttr(res.s)}"/>″
         </span>
         <button class="mc-photo" data-role="photo" tabindex="-1" title="사진 첨부"><svg class="icon"><use href="#i-camera"/></svg>${(m.photos&&m.photos.length)?`<span class="photo-count">${m.photos.length}</span>`:''}</button>
         <button class="row-del" data-role="del" tabindex="-1" title="삭제"><svg class="icon"><use href="#i-close"/></svg></button>`;
@@ -3757,7 +4055,7 @@
   function buildTiltDirCardHTML(m, idx){
     const linkedNote = '측정위치 인출선 중앙에 직각으로 자동 표시됨 (클릭·드래그로 직접 옮길 수 없습니다)';
     return `
-        <input type="text" class="mc-seq" data-role="pos" tabindex="-1" value="${m.seq||idx+1}" title="번호"/>
+        <input type="text" class="mc-seq" inputmode="numeric" data-role="pos" tabindex="-1" value="${m.seq||idx+1}" title="번호"/>
         <span class="mc-cell" style="grid-column:2 / span 5;color:var(--text-secondary);">${linkedNote}</span>
         <button class="mc-photo" data-role="photo" tabindex="-1" title="사진 첨부" style="grid-column:7;"><svg class="icon"><use href="#i-camera"/></svg>${(m.photos&&m.photos.length)?`<span class="photo-count">${m.photos.length}</span>`:''}</button>
         <button class="row-del" data-role="del" tabindex="-1" title="삭제" style="grid-column:8;"><svg class="icon"><use href="#i-close"/></svg></button>`;
@@ -3849,14 +4147,14 @@
   }
   function buildLvCardHTML(m, idx){
     return `
-        <input type="text" class="mc-seq" data-role="pos" tabindex="-1" value="${m.seq||idx+1}" title="번호"/>
+        <input type="text" class="mc-seq" inputmode="numeric" data-role="pos" tabindex="-1" value="${m.seq||idx+1}" title="번호"/>
         <span class="mc-cell mc-type-badge-cell" data-label="유형">
           <select data-role="type" class="mc-marktype" tabindex="-1" title="마킹 색상·모양">${typeOptionsHTML(m.typeKey)}</select>
           <span class="mc-type-badge" title="자동 채번(P1, P2…)">${escapeHTML(formatMarkerLabel(m, idx))}</span>
         </span>
         <span class="mc-cell" data-label="그룹명"><input type="text" data-role="lvGroup" placeholder="예: 1구간" title="그룹명 — 같은 이름을 입력한 위치끼리 자동으로 묶여 침하량이 계산됩니다" value="${escapeAttr(m.lvGroup||'')}"/></span>
-        <span class="mc-cell" data-label="측정값(cm)"><input type="text" class="num" data-role="lvValue" placeholder="측정값" title="측정값(cm)" value="${escapeAttr(m.lvValue||'')}"/></span>
-        <span class="mc-cell" data-label="경간(mm)"><input type="text" class="num" data-role="lvSpan" placeholder="경간" title="경간(mm)" value="${escapeAttr(m.lvSpan||'')}"/></span>
+        <span class="mc-cell" data-label="측정값(cm)"><input type="text" class="num" inputmode="decimal" data-role="lvValue" placeholder="측정값" title="측정값(cm)" value="${escapeAttr(m.lvValue||'')}"/></span>
+        <span class="mc-cell" data-label="경간(mm)"><input type="text" class="num" inputmode="decimal" data-role="lvSpan" placeholder="경간" title="경간(mm)" value="${escapeAttr(m.lvSpan||'')}"/></span>
         <button class="mc-photo" data-role="photo" tabindex="-1" title="사진 첨부"><svg class="icon"><use href="#i-camera"/></svg>${(m.photos&&m.photos.length)?`<span class="photo-count">${m.photos.length}</span>`:''}</button>
         <button class="row-del" data-role="del" tabindex="-1" title="삭제"><svg class="icon"><use href="#i-close"/></svg></button>`;
   }
@@ -3876,7 +4174,7 @@
   // 문구가 아니라 실제 컬럼명을 보여줄 수 있다.
   function buildEqCardHTML(m, idx){
     return `
-        <input type="text" class="mc-seq" data-role="pos" tabindex="-1" value="${m.seq||idx+1}" title="번호"/>
+        <input type="text" class="mc-seq" inputmode="numeric" data-role="pos" tabindex="-1" value="${m.seq||idx+1}" title="번호"/>
         <span class="mc-cell mc-type-badge-cell" data-label="유형">
           <select data-role="type" class="mc-marktype" tabindex="-1" title="마킹 색상·모양">${typeOptionsHTML(m.typeKey)}</select>
           <span class="mc-type-badge" title="자동 채번(SH-01, PH-01, DM-01…)">${escapeHTML(formatMarkerLabel(m, idx))}</span>
@@ -3884,7 +4182,7 @@
         <span class="mc-cell" data-label="층수"><input type="text" data-role="eqFloor" placeholder="층수" title="층수" value="${escapeAttr(m.eqFloor||'')}"/></span>
         <span class="mc-cell" data-label="위치"><input type="text" data-role="eqLoc" placeholder="위치" title="위치" value="${escapeAttr(m.eqLoc||'')}"/></span>
         <span class="mc-cell" data-label="부재"><input type="text" data-role="eqMember" placeholder="부재" title="부재" value="${escapeAttr(m.eqMember||'')}"/></span>
-        <span class="mc-cell" data-label="사진 #"><input type="text" data-role="eqTag" placeholder="사진번호" title="사진번호" value="${escapeAttr(m.eqTag||'')}"/></span>
+        <span class="mc-cell" data-label="사진 #"><input type="text" inputmode="numeric" data-role="eqTag" placeholder="사진번호" title="사진번호" value="${escapeAttr(m.eqTag||'')}"/></span>
         <button class="mc-photo" data-role="photo" tabindex="-1" title="사진 첨부"><svg class="icon"><use href="#i-camera"/></svg>${(m.photos&&m.photos.length)?`<span class="photo-count">${m.photos.length}</span>`:''}</button>
         <button class="row-del" data-role="del" tabindex="-1" title="삭제"><svg class="icon"><use href="#i-close"/></svg></button>`;
   }
@@ -3912,7 +4210,9 @@
   let quickInputMarkerId = null;
   // "직전 값 그대로" 버튼이 재사용할, 이 세션에서 퀵 입력 시트로 마지막으로 확정한 값 — 같은 결함이
   // 여러 개 이어질 때(예: 같은 벽면의 균열을 연달아 몇 개씩 찍을 때) 한 번의 탭으로 반복 입력을 줄인다.
-  let lastQuickInputValues = { rptType:'', rptMember:'', rptDefect:'' };
+  // 시트로 마지막에 채운 값 — "직전 값 그대로" 버튼이 재사용한다. 칸 구성이 프리셋마다 다르므로
+  // 고정 3칸이 아니라 {필드키: 값} 형태로 통째로 들고 있는다.
+  let lastQuickInputValues = {};
   function hideQuickInputSheet(){
     const el = document.getElementById('quickInputSheet');
     if(el) el.style.display = 'none';
@@ -3928,16 +4228,116 @@
       .concat(opts.map(o=>`<option value="${escapeAttr(o)}" ${value===o?'selected':''}>${escapeHTML(o)}</option>`))
       .join('');
   }
+  // 이 마커에 어떤 칸이 필요한가 — 우측 결함 목록 카드의 분기(renderTable의 isTiltPos/isLv/isEq)와
+  // 같은 typeKey 기준으로 갈라, 카드에 있는 입력칸이 시트에도 빠짐없이 나오게 한다. 한쪽만 늘어나
+  // 어긋나는 일이 없도록 갈라지는 조건을 일부러 똑같이 맞춰 두었다.
+  //   kind: select=드롭다운(reportFieldOptions), text=자유 입력,
+  //         num=소수점 있는 실측값(숫자 자판), int=정수(숫자 자판), dms=도·분·초 3칸 묶음
+  function quickInputSpecFor(m){
+    const t = m.typeKey;
+    if(t==='tilt_pos') return [
+      {k:'tiltBldg', label:'구분', kind:'text', ph:'예: 205동'},
+      {kind:'dms', label:'상부(도분초)', keys:['tiltUpD','tiltUpM','tiltUpS']},
+      {kind:'dms', label:'하부(도분초)', keys:['tiltLoD','tiltLoM','tiltLoS']},
+      {k:'tiltDist', label:'수평거리(mm)', kind:'num', ph:'거리'},
+    ];
+    // 측정방향은 측정위치에 종속돼 자동으로 그려지는 마커라 채울 값이 없다.
+    if(t==='tilt_dir') return [];
+    if(t==='lv_x' || t==='lv_y') return [
+      {k:'lvGroup', label:'그룹명', kind:'text', ph:'예: 1구간'},
+      {k:'lvValue', label:'측정값(cm)', kind:'num', ph:'측정값'},
+      {k:'lvSpan', label:'경간(mm)', kind:'num', ph:'경간'},
+    ];
+    if(t==='sh' || t==='ph' || t==='dm') return [
+      {k:'eqFloor', label:'층수', kind:'text', ph:'층수'},
+      {k:'eqLoc', label:'위치', kind:'text', ph:'위치'},
+      {k:'eqMember', label:'부재', kind:'text', ph:'부재'},
+      {k:'eqTag', label:'사진 #', kind:'int', ph:'사진번호'},
+    ];
+    return [
+      {k:'rptType', label:'부재', kind:'select'},
+      {k:'rptMember', label:'자재', kind:'select'},
+      {k:'rptDefect', label:'결함', kind:'select'},
+      {k:'rptWidth', label:'폭(mm)', kind:'num', ph:'폭'},
+      {k:'rptLength', label:'길이(mm)', kind:'num', ph:'길이'},
+      {k:'rptCount', label:'개수', kind:'int', ph:'개수'},
+      {k:'rptTag', label:'사진 #', kind:'int', ph:'사진번호'},
+    ];
+  }
+  function quickInputFieldHTML(fld, m){
+    if(fld.kind==='dms'){
+      const marks = ['°','′','″'], names = ['도','분','초'];
+      const inner = fld.keys.map((k,i)=>
+        `<input type="text" inputmode="numeric" data-qis="${k}" placeholder="${names[i]}" value="${escapeAttr(m[k]||'')}"/>${marks[i]}`).join('');
+      return `<label class="qis-field">${escapeHTML(fld.label)}<span class="qis-dms">${inner}</span></label>`;
+    }
+    if(fld.kind==='select'){
+      return `<label class="qis-field">${escapeHTML(fld.label)}<select data-qis="${fld.k}">${buildQuickInputOptionsHTML(fld.k, m[fld.k]||'')}</select></label>`;
+    }
+    const mode = fld.kind==='num' ? ' inputmode="decimal"' : fld.kind==='int' ? ' inputmode="numeric"' : '';
+    return `<label class="qis-field">${escapeHTML(fld.label)}<input type="text"${mode} data-qis="${fld.k}" placeholder="${escapeAttr(fld.ph||'')}" value="${escapeAttr(m[fld.k]||'')}"/></label>`;
+  }
+  // 시트에 처음부터 펼쳐 두는 칸 수. 그 뒤는 「더 입력 ▾」 안으로 접힌다.
+  const QUICK_INPUT_HEAD_COUNT = 3;
+  const QUICK_INPUT_MORE_KEY = 'defectMarkerQuickInputMore_v1';
+  let quickInputMoreOpen = (function(){
+    try{ return localStorage.getItem(QUICK_INPUT_MORE_KEY) === 'on'; } catch(err){ return false; }
+  })();
+  // 시트 전체를 다시 그린다. 타이핑 중에는 부르지 않는다(입력칸이 통째로 새로 만들어져 포커스가
+  // 날아가기 때문) — 값 반영은 applyQuickInputField가 DOM을 건드리지 않고 처리한다.
   function renderQuickInputSheet(){
     const m = quickInputMarker();
     const el = document.getElementById('quickInputSheet');
-    if(!el || !m) return;
-    document.getElementById('quickInputSelType').innerHTML = buildQuickInputOptionsHTML('rptType', m.rptType||'');
-    document.getElementById('quickInputSelMember').innerHTML = buildQuickInputOptionsHTML('rptMember', m.rptMember||'');
-    document.getElementById('quickInputSelDefect').innerHTML = buildQuickInputOptionsHTML('rptDefect', m.rptDefect||'');
-    const hasLast = lastQuickInputValues.rptType || lastQuickInputValues.rptMember || lastQuickInputValues.rptDefect;
-    document.getElementById('btnQuickInputSame').style.display = hasLast ? '' : 'none';
+    const box = document.getElementById('quickInputFields');
+    if(!el || !m || !box) return;
+    const spec = quickInputSpecFor(m);
+    if(spec.length === 0){
+      box.innerHTML = '<div class="qis-none">이 마커는 측정위치에 따라 자동으로 그려져서 따로 채울 값이 없습니다.</div>';
+    } else {
+      // 시트는 도면 위에 뜨는 창이라, 칸이 많은 위치도 종류(외관조사 7칸·장비조사 4칸)에서는 시트가
+      // 방금 찍은 마커 주변을 통째로 가렸다. 현장에서 바로 채우는 것은 앞의 몇 칸(분류)이고 폭·길이·
+      // 개수 같은 실측값은 나중에 표에서 채우는 경우가 많으므로, 앞 3칸만 펼치고 나머지는 접어 둔다.
+      // 펼쳐 둔 상태는 다음 마커에도 이어진다(quickInputMoreOpen) — 접었다 폈다를 반복하지 않도록.
+      const head = spec.slice(0, QUICK_INPUT_HEAD_COUNT);
+      const rest = spec.slice(QUICK_INPUT_HEAD_COUNT);
+      let html = head.map(fld=> quickInputFieldHTML(fld, m)).join('');
+      if(rest.length){
+        html += `<button type="button" class="tool qis-more-toggle" id="btnQuickInputMore">`
+              + `${quickInputMoreOpen ? '▴ 접기' : '▾ 더 입력 ('+rest.length+'칸)'}</button>`
+              + `<div class="qis-more${quickInputMoreOpen ? ' open' : ''}" id="quickInputMore">`
+              + rest.map(fld=> quickInputFieldHTML(fld, m)).join('')
+              + `</div>`;
+      }
+      box.innerHTML = html;
+      const moreBtn = document.getElementById('btnQuickInputMore');
+      if(moreBtn) moreBtn.addEventListener('click', ()=>{
+        quickInputMoreOpen = !quickInputMoreOpen;
+        try{ localStorage.setItem(QUICK_INPUT_MORE_KEY, quickInputMoreOpen ? 'on' : 'off'); } catch(err){ /* 저장 실패해도 이번 세션 동작에는 지장 없음 */ }
+        renderQuickInputSheet();
+        // 접거나 펴면 시트 높이가 달라진다 — 마커를 가리는지 다시 판정해 위/아래 위치를 고쳐 잡는다.
+        const sheet = document.getElementById('quickInputSheet');
+        if(sheet) sheet.classList.toggle('pinned-top', quickInputSheetShouldPinTop(quickInputMarker()));
+      });
+    }
+    updateQuickInputSameButton();
     el.style.display = 'flex';
+  }
+  // "직전 값 그대로"는 지금 마커와 같은 칸 구성으로 저장된 값이 있을 때만 의미가 있다.
+  function updateQuickInputSameButton(){
+    const m = quickInputMarker();
+    const btn = document.getElementById('btnQuickInputSame');
+    if(!btn) return;
+    const keys = m ? quickInputKeys(m) : [];
+    const hasLast = keys.some(k=> lastQuickInputValues[k]);
+    btn.style.display = hasLast ? '' : 'none';
+  }
+  // 그 마커가 쓰는 필드키 전부(도분초 묶음은 안쪽 3개로 펼친다).
+  function quickInputKeys(m){
+    const out = [];
+    quickInputSpecFor(m).forEach(fld=>{
+      if(fld.kind==='dms') out.push(...fld.keys); else out.push(fld.k);
+    });
+    return out;
   }
   // 방금 찍은 마커가 화면 아래쪽에 있으면, 하단에 고정되는 시트(+플로팅 조작바)가 그 마커 자체를
   // 가려버려 제대로 찍혔는지 눈으로 확인하기 어렵다. 마커의 화면상 Y 좌표를 캔버스 CSS 크기
@@ -3948,34 +4348,233 @@
     if(!canvas) return false;
     const rect = canvas.getBoundingClientRect();
     if(rect.height<=0) return false;
+    // 시트 높이는 위치도 종류마다 칸 수가 달라(3칸~8칸) 크게 차이난다. 예전처럼 260px로 못박아 두면
+    // 칸이 많은 종류에서 시트가 마커를 덮는데도 아래에 그대로 남는다. 실제로 그려진 높이를 재서 쓴다.
+    const sheet = document.getElementById('quickInputSheet');
+    let sheetH = (sheet && sheet.style.display !== 'none') ? sheet.getBoundingClientRect().height : 0;
+    if(!sheetH) sheetH = 200; // 아직 한 번도 안 띄워 높이를 알 수 없을 때의 넉넉한 기본값
+    const covered = sheetH + 74 + 24; // 시트 + 하단 플로팅 바 + 여백
     const markerScreenY = rect.top + (marker.yPct/100) * rect.height;
-    return markerScreenY > window.innerHeight - 260; // 시트(~140px)+플로팅 바(~60px)+여백이 덮는 대략적 높이
+    return markerScreenY > window.innerHeight - covered;
   }
   // 마커 생성 3경로(클릭/드래그/범위 3클릭) 공통으로 호출 — 태블릿 모드 + 토글이 켜져 있을 때만 뜬다.
   function maybeOpenQuickInputSheet(marker){
     if(!quickInputSheetEnabled || !document.body.classList.contains('layout-tablet')) return;
     quickInputMarkerId = marker.id;
     const el = document.getElementById('quickInputSheet');
-    if(el) el.classList.toggle('pinned-top', quickInputSheetShouldPinTop(marker));
+    // 높이를 재려면 먼저 그려야 한다 — 그린 뒤에 위로 올릴지 정한다(순서를 바꾸면 항상 기본값으로 판단됨).
+    if(el) el.classList.remove('pinned-top');
     renderQuickInputSheet();
+    if(el) el.classList.toggle('pinned-top', quickInputSheetShouldPinTop(marker));
   }
-  function applyQuickInputField(fieldKey, value){
+  // 타이핑 한 글자마다 호출되므로 시트를 다시 그리지 않는다(포커스 유지). 우측 목록 갱신처럼
+  // 무거운 일은 commit=true(값 확정: 드롭다운 선택, 칸을 빠져나갈 때)일 때만 한다.
+  function applyQuickInputField(fieldKey, value, commit){
     const m = quickInputMarker(); if(!m) return;
     m[fieldKey] = value;
     markDirty();
     lastQuickInputValues[fieldKey] = value;
-    renderQuickInputSheet(); // "직전 값 그대로" 버튼 표시 여부 갱신
-    renderTable(); // 우측 카드·범례 집계에도 즉시 반영
+    recordCarryValue(fieldKey, value); // 태블릿에서 채운 값도 데스크톱과 같은 "직전 값"으로 이어진다
+    if(commit){
+      updateQuickInputSameButton();
+      renderTable();       // 우측 카드·범례 집계에 반영
+      renderLvSummary();   // 부동침하 그룹별 자동계산도 값이 바뀌면 다시 계산
+    }
   }
   function applyQuickInputSameAsLast(){
     const m = quickInputMarker(); if(!m) return;
-    m.rptType = lastQuickInputValues.rptType;
-    m.rptMember = lastQuickInputValues.rptMember;
-    m.rptDefect = lastQuickInputValues.rptDefect;
+    // 지금 마커가 쓰는 칸만 되쓴다 — 프리셋이 다른 마커의 값이 섞여 들어가지 않는다.
+    quickInputKeys(m).forEach(k=>{
+      if(lastQuickInputValues[k] !== undefined) m[k] = lastQuickInputValues[k];
+    });
     markDirty();
     hideQuickInputSheet();
     renderTable();
+    renderLvSummary();
   }
+
+  // ---------- 값 이어받기 · 여러 건 일괄 채우기 · 표 안에서 키보드 이동 ----------
+  // 현장에서 나오는 결함은 같은 것이 연달아 나온다 — 벽체·콘크리트·균열이 스무 건씩 이어지는 식이다.
+  // 예전에는 데스크톱에서 그 세 칸을 결함마다 다시 골라야 했고(태블릿 시트에만 "직전 값 그대로"가
+  // 있었다), 그게 이 도구에서 가장 오래 걸리는 일이었다. 아래 세 가지가 그 반복을 없앤다.
+  //   ① 값 이어받기 — 새로 찍는 결함이 직전에 채운 "분류" 칸을 그대로 물려받는다.
+  //   ② 일괄 채우기 — 이미 찍어 둔 여러 건을 골라 한 번에 같은 값으로 채운다.
+  //   ③ 키보드 이동  — Enter/↑↓로 같은 칸을 세로로 따라 내려가며 채운다.
+  const CARRY_STORE_KEY = 'defectMarkerCarryValues_v1';
+  function isCarryOn(){
+    try{ return localStorage.getItem(CARRY_STORE_KEY) !== 'off'; } catch(err){ return true; }
+  }
+  function setCarryOn(on){
+    try{ localStorage.setItem(CARRY_STORE_KEY, on ? 'on' : 'off'); } catch(err){ /* 저장 실패해도 이번 세션 동작에는 지장 없음 */ }
+  }
+  function updateCarryToggleUI(){
+    const on = isCarryOn();
+    const btn = document.getElementById('btnCarryToggle');
+    const lab = document.getElementById('carryStateLabel');
+    if(btn) btn.classList.toggle('on', on);
+    if(lab) lab.textContent = on ? '켬' : '끔';
+  }
+  // 이 세션에서 마지막으로 채운 분류 값. 앱을 열자마자는 비어 있으므로, 값을 한 번 채우기 전까지는
+  // 이어받기가 켜져 있어도 아무 일도 일어나지 않는다 — 처음 쓰는 사람이 놀랄 일이 없다.
+  let lastCarryValues = {};
+  // 이어받을 칸 = 그 마커의 입력칸 중 "분류"에 해당하는 것(드롭다운·자유 입력)만.
+  // 폭·길이·개수·사진번호·측정값·경간·도분초 같은 실측값은 결함마다 다르므로 절대 물려주지 않는다 —
+  // 그대로 넘기면 틀린 수치가 조용히 채워져 성과품에 그대로 실린다.
+  function carryKeysFor(m){
+    const out = [];
+    quickInputSpecFor(m).forEach(fld=>{
+      if(fld.kind==='select' || fld.kind==='text') out.push(fld.k);
+    });
+    return out;
+  }
+  // 위 carryKeysFor가 프리셋별로 돌려주는 키 전부의 합집합 — 표에서 값이 바뀌었을 때 "이건 분류
+  // 칸인가"를 한 번에 판정하기 위한 목록이다. 프리셋에 분류 칸을 새로 추가하면 여기에도 넣어야 한다.
+  const ALL_CARRY_KEYS = ['rptType','rptMember','rptDefect','eqFloor','eqLoc','eqMember','lvGroup','tiltBldg'];
+  function recordCarryValue(key, value){
+    if(!key) return;
+    if(ALL_CARRY_KEYS.indexOf(key) < 0) return;
+    lastCarryValues[key] = value;
+  }
+  function applyCarryToNewMarker(m){
+    if(!isCarryOn() || !m) return;
+    carryKeysFor(m).forEach(k=>{
+      if(lastCarryValues[k]) m[k] = lastCarryValues[k];
+    });
+  }
+  document.getElementById('btnCarryToggle').addEventListener('click', ()=>{
+    const next = !isCarryOn();
+    setCarryOn(next);
+    updateCarryToggleUI();
+    showToast(next
+      ? '값 이어받기를 켰습니다 — 새로 찍는 결함이 직전에 채운 부재·자재·결함을 그대로 물려받습니다.'
+      : '값 이어받기를 껐습니다 — 새로 찍는 결함은 빈 칸으로 시작합니다.');
+  });
+  updateCarryToggleUI();
+
+  // 표에서 값을 확정할 때마다 "직전 값"을 갱신한다. 카드마다 걸린 개별 핸들러를 건드리지 않고
+  // 표 전체에 위임으로 한 번만 건다 — 프리셋이 늘어도 여기만 알고 있으면 된다.
+  document.getElementById('markerTable').addEventListener('change', e=>{
+    const el = e.target.closest('[data-role]');
+    if(!el) return;
+    recordCarryValue(el.getAttribute('data-role'), el.value);
+  });
+
+  // ---------- 여러 건 일괄 채우기 ----------
+  // 2건 이상 골랐을 때만 목록 위에 줄이 하나 나타난다. 거기서 값을 고르면 고른 결함 전부에 즉시 들어간다.
+  // (표를 한 줄씩 고치는 것보다, "이 스무 건은 전부 같은 균열"이라고 한 번에 말하는 쪽이 실제 작업에 가깝다.)
+  function bulkFillTargets(){
+    const d = getActiveDrawing(); if(!d) return [];
+    return d.markers.filter(m=> selectedIds.has(m.id));
+  }
+  function renderBulkFillBar(){
+    const bar = document.getElementById('bulkFillBar');
+    const box = document.getElementById('bulkFillFields');
+    const lab = document.getElementById('bulkFillLabel');
+    if(!bar || !box || !lab) return;
+    const targets = bulkFillTargets();
+    // 고른 것들의 칸 구성이 서로 다르면(기울기와 외관조사를 함께 고른 경우 등) 공통 칸만 다룬다.
+    let keys = null;
+    targets.forEach(m=>{
+      const k = carryKeysFor(m);
+      keys = (keys===null) ? k : keys.filter(x=> k.indexOf(x)>=0);
+    });
+    if(targets.length < 2 || !keys || keys.length===0){
+      bar.classList.remove('show');
+      box.innerHTML = '';
+      return;
+    }
+    lab.textContent = `선택한 ${targets.length}건에 채우기`;
+    // 라벨은 그 프리셋의 카드/시트와 같은 이름을 쓴다 — 같은 칸을 두 이름으로 부르지 않기 위함.
+    const specByKey = {};
+    quickInputSpecFor(targets[0]).forEach(fld=>{ if(fld.k) specByKey[fld.k] = fld; });
+    box.innerHTML = keys.map(k=>{
+      const fld = specByKey[k] || { label:k, kind:'text' };
+      if(fld.kind==='select'){
+        return `<select data-bulk="${k}" title="${escapeAttr(fld.label)}">`
+             + `<option value="">${escapeHTML(fld.label)}…</option>`
+             + buildQuickInputOptionsHTML(k, '') + `</select>`;
+      }
+      return `<input type="text" data-bulk="${k}" placeholder="${escapeAttr(fld.label)}" style="width:96px;" />`;
+    }).join('');
+    bar.classList.add('show');
+  }
+  function applyBulkFill(key, value){
+    const targets = bulkFillTargets();
+    if(targets.length===0 || !key) return;
+    pushUndo();
+    targets.forEach(m=>{ if(carryKeysFor(m).indexOf(key)>=0) m[key] = value; });
+    recordCarryValue(key, value);
+    markDirty();
+    renderTable();
+    renderLvSummary();
+    renderCanvas();
+    showToast(`${targets.length}건에 값을 채웠습니다.`);
+  }
+  {
+    const box = document.getElementById('bulkFillFields');
+    // 드롭다운은 고르는 즉시(change), 자유 입력은 칸을 빠져나갈 때(change) 적용한다.
+    box.addEventListener('change', e=>{
+      const el = e.target.closest('[data-bulk]'); if(!el) return;
+      if(el.value==='') return;   // 안내용 첫 항목("부재…")을 고른 것은 적용하지 않는다
+      applyBulkFill(el.getAttribute('data-bulk'), el.value);
+    });
+  }
+
+  // ---------- 표 안에서 키보드로 이동 ----------
+  // Enter는 같은 칸의 다음 줄로 내려간다 — 한 열을 위에서 아래로 훑으며 채우는 것이 실제 입력 방식이다.
+  // ↑↓도 같은 열 위아래로 움직인다(드롭다운은 ↑↓가 원래 값을 바꾸는 키라 건드리지 않는다).
+  // ←→는 글자를 옮겨 다니는 키이므로, 커서가 칸의 맨 앞/맨 뒤에 있을 때만 옆 칸으로 넘어간다.
+  function markerTableCells(){
+    // 화면에 실제로 보이는(검색으로 걸러지지 않은) 카드의 입력칸만 대상으로 한다.
+    return Array.from(document.querySelectorAll('#markerTable .marker-card'))
+      .filter(c=> c.style.display !== 'none');
+  }
+  function moveTableFocus(fromEl, rowDelta, colDelta){
+    const card = fromEl.closest('.marker-card'); if(!card) return false;
+    const cards = markerTableCells();
+    const rowIdx = cards.indexOf(card);
+    if(rowIdx < 0) return false;
+    const fieldsIn = c=> Array.from(c.querySelectorAll('input:not([tabindex="-1"]), select'))
+      .filter(el=> !el.disabled && el.type !== 'hidden');
+    if(colDelta){
+      const fields = fieldsIn(card);
+      const i = fields.indexOf(fromEl);
+      const next = fields[i + colDelta];
+      if(!next) return false;
+      next.focus(); if(next.select) try{ next.select(); }catch(err){ /* select 요소는 select()가 없다 */ }
+      return true;
+    }
+    const myFields = fieldsIn(card);
+    const colIdx = myFields.indexOf(fromEl);
+    if(colIdx < 0) return false;
+    const targetCard = cards[rowIdx + rowDelta];
+    if(!targetCard) return false;
+    const targetFields = fieldsIn(targetCard);
+    const target = targetFields[colIdx] || targetFields[targetFields.length-1];
+    if(!target) return false;
+    target.focus(); if(target.select) try{ target.select(); }catch(err){ /* 위와 같음 */ }
+    return true;
+  }
+  document.getElementById('markerTable').addEventListener('keydown', e=>{
+    const el = e.target;
+    if(!el.matches || !el.matches('input, select')) return;
+    const isSelect = el.tagName === 'SELECT';
+    if(e.key==='Enter'){
+      if(moveTableFocus(el, 1, 0)) e.preventDefault();
+      return;
+    }
+    if(!isSelect && (e.key==='ArrowDown' || e.key==='ArrowUp')){
+      if(moveTableFocus(el, e.key==='ArrowDown' ? 1 : -1, 0)) e.preventDefault();
+      return;
+    }
+    if(!isSelect && (e.key==='ArrowLeft' || e.key==='ArrowRight')){
+      // 글자 사이를 오가는 중이면 그대로 둔다. 칸의 끝에 닿았을 때만 옆 칸으로 넘긴다.
+      const atStart = el.selectionStart===0 && el.selectionEnd===0;
+      const atEnd = el.selectionStart===el.value.length && el.selectionEnd===el.value.length;
+      if(e.key==='ArrowLeft' && atStart && moveTableFocus(el, 0, -1)) e.preventDefault();
+      if(e.key==='ArrowRight' && atEnd && moveTableFocus(el, 0, 1)) e.preventDefault();
+    }
+  });
 
   // 결함 목록 상단 고정 헤더(marker-list-head)의 컬럼 라벨 — 활성 프리셋이 기울기/부동침하면 그
   // 프리셋 전용 카드(아래)의 칸 이름으로 바꿔 보여준다. 한 도면은 프리셋 하나만 쓴다는 전제(5-1)라
@@ -3990,10 +4589,10 @@
     <span>부재</span>
     <span>자재</span>
     <span>결함</span>
-    <span class="num">폭 (mm)</span>
-    <span class="num">길이 (mm)</span>
+    <span class="num" title="폭 (mm)">폭㎜</span>
+    <span class="num" title="길이 (mm)">길이㎜</span>
     <span class="num">개수</span>
-    <span>사진 #</span>
+    <span title="사진번호">사진#</span>
     <span class="mc-head-sticky" style="right:30px;"></span>
     <span class="mc-head-sticky" style="right:0;"></span>`;
   const TILT_MARKER_LIST_HEAD_HTML = `
@@ -4094,22 +4693,30 @@
         // rptType엔 "벽체/천장/바닥" 같은 부재 값이, rptMember엔 "콘크리트/조적" 같은 자재 값이 들어간다
         // (사용자 확인: 부재=벽체 등, 자재=콘크리트 등). CSV/XLSX 내보내기도 이 짝을 그대로 따른다.
         card.innerHTML = `
-            <input type="text" class="mc-seq" data-role="pos" tabindex="-1" value="${m.seq||idx+1}" title="번호 — 값을 바꾸면 도면·목록의 순서(번호)가 그 위치로 바뀝니다"/>
+            <input type="text" class="mc-seq" inputmode="numeric" data-role="pos" tabindex="-1" value="${m.seq||idx+1}" title="번호 — 값을 바꾸면 도면·목록의 순서(번호)가 그 위치로 바뀝니다"/>
             <select data-role="type" class="mc-marktype" tabindex="-1" title="마킹 색상·모양(도면에 표시되는 유형)">${typeOptions}</select>
             ${buildReportFieldHTML('rptType', m.rptType, '부재')}
             ${buildReportFieldHTML('rptMember', m.rptMember, '자재')}
             ${buildReportFieldHTML('rptDefect', m.rptDefect, '결함')}
-            <span class="mc-cell" data-label="폭(mm)"><input type="text" class="num" data-role="rptWidth" placeholder="폭" title="폭(mm)" value="${escapeAttr(m.rptWidth||'')}"/></span>
-            <span class="mc-cell" data-label="길이(mm)"><input type="text" class="num" data-role="rptLength" placeholder="길이" title="길이(mm)" value="${escapeAttr(m.rptLength||'')}"/></span>
-            <span class="mc-cell" data-label="개수"><input type="text" class="num" data-role="rptCount" placeholder="개수" title="개수" value="${escapeAttr(m.rptCount||'')}"/></span>
-            <span class="mc-cell" data-label="사진 #"><input type="text" data-role="rptTag" placeholder="사진번호" title="사진번호" value="${escapeAttr(m.rptTag||'')}"/></span>
+            <span class="mc-cell" data-label="폭(mm)"><input type="text" class="num" inputmode="decimal" data-role="rptWidth" placeholder="폭" title="폭(mm)" value="${escapeAttr(m.rptWidth||'')}"/></span>
+            <span class="mc-cell" data-label="길이(mm)"><input type="text" class="num" inputmode="decimal" data-role="rptLength" placeholder="길이" title="길이(mm)" value="${escapeAttr(m.rptLength||'')}"/></span>
+            <span class="mc-cell" data-label="개수"><input type="text" class="num" inputmode="numeric" data-role="rptCount" placeholder="개수" title="개수" value="${escapeAttr(m.rptCount||'')}"/></span>
+            <span class="mc-cell" data-label="사진 #"><input type="text" inputmode="numeric" data-role="rptTag" placeholder="사진번호" title="사진번호" value="${escapeAttr(m.rptTag||'')}"/></span>
             <button class="mc-photo" data-role="photo" tabindex="-1" title="사진 첨부"><svg class="icon"><use href="#i-camera"/></svg>${(m.photos&&m.photos.length)?`<span class="photo-count">${m.photos.length}</span>`:''}</button>
             <button class="row-del" data-role="del" tabindex="-1" title="삭제"><svg class="icon"><use href="#i-close"/></svg></button>
         `;
       }
       card.addEventListener('click', (e)=>{
         if(e.target.closest('select,input,button')) return;
+        // Shift/Ctrl을 누른 채 누르면 골라 둔 것에 더한다 — "선택한 N건에 채우기"를 쓰려면 여러 건을
+        // 골라야 하는데, 예전에는 도면 위에서 드래그하는 방법밖에 없었다.
+        if(e.shiftKey || e.ctrlKey || e.metaKey){
+          if(selectedIds.has(m.id)) selectedIds.delete(m.id); else selectedIds.add(m.id);
+          renderCanvas(); renderTable();
+          return;
+        }
         selectOnly(m.id);
+        scrollCanvasToMarker(m); // 확대해 놓아 화면 밖에 있으면 그 위치로 따라간다
       });
       // 기울기 카드는 유형 열 자체가 없다(계열이 사실상 1종뿐이라 요청으로 뺌) — 있을 때만 연결.
       const typeSelEl = card.querySelector('[data-role="type"]');
@@ -4157,9 +4764,34 @@
       table.appendChild(card);
     });
     applyMarkerSearchFilter();
+    renderBulkFillBar(); // 고른 건수가 바뀌면 "선택한 N건에 채우기" 줄도 함께 따라간다
     } finally {
       renderTableInProgress = false;
     }
+  }
+  // 목록에서 결함을 고르면 도면에서도 그 마커가 보이게 화면을 옮긴다. 예전에는 선택 표시만 바뀌어서,
+  // 확대해 놓고 작업하는 중에는 "골랐는데 어디 있는지 안 보이는" 상태가 됐다(도면 → 목록 방향은
+  // scrollMarkerCardIntoView로 이미 이어져 있었는데 반대 방향만 비어 있었다).
+  // 이미 화면 안에 있으면 아무것도 하지 않는다 — 고를 때마다 화면이 튀면 오히려 방해가 된다.
+  function scrollCanvasToMarker(m){
+    if(!m || gridViewMode) return;
+    const wrap = document.getElementById('canvasWrap');
+    const canvas = document.getElementById('mainCanvas');
+    if(!wrap || !canvas) return;
+    const cRect = canvas.getBoundingClientRect();
+    const wRect = wrap.getBoundingClientRect();
+    if(cRect.width === 0 || cRect.height === 0) return;
+    const px = cRect.left + cRect.width * ((m.xPct||0)/100);
+    const py = cRect.top + cRect.height * ((m.yPct||0)/100);
+    const margin = 70; // 가장자리에 딱 붙지 않도록 남기는 여백
+    let dx = 0, dy = 0;
+    if(px < wRect.left + margin) dx = px - (wRect.left + margin);
+    else if(px > wRect.right - margin) dx = px - (wRect.right - margin);
+    if(py < wRect.top + margin) dy = py - (wRect.top + margin);
+    else if(py > wRect.bottom - margin) dy = py - (wRect.bottom - margin);
+    if(dx === 0 && dy === 0) return;
+    wrap.scrollLeft += dx;
+    wrap.scrollTop += dy;
   }
   // 결함 목록 검색/필터 — 마커 데이터·내보내기 로직은 건드리지 않고, 렌더링된 카드를
   // display:none으로 숨기고 보여주는 순수 UI 필터다(검색해도 CSV/PDF 내보내기 내용은 그대로).
@@ -4207,6 +4839,18 @@
     const fmv = document.getElementById('btnFloatMoveMode'); if(fmv) fmv.classList.toggle('active', moveMode);
     const fsel = document.getElementById('btnFloatSelectMode'); if(fsel) fsel.classList.toggle('active', selectMode);
     const fer = document.getElementById('btnFloatEraseMode'); if(fer) fer.classList.toggle('active', eraseMode);
+    // 배타 모드는 도면 자체가 말해준다 — 테두리 색(CSS)과 좌상단 이름표. 시선이 도면에 가 있을 때
+    // 툴바 버튼 하나의 배경색만으로는 "지금 지우개"라는 걸 알아채지 못해 실수로 마커를 지우게 된다.
+    document.body.classList.toggle('mode-move', moveMode);
+    document.body.classList.toggle('mode-select', selectMode);
+    document.body.classList.toggle('mode-erase', eraseMode);
+    const badge = document.getElementById('modeBadge');
+    if(badge){
+      badge.textContent = eraseMode ? '지우개 모드 — Esc 또는 유형을 고르면 해제'
+        : selectMode ? '선택 모드 — Esc 또는 유형을 고르면 해제'
+        : moveMode ? '이동 모드 — Esc 또는 유형을 고르면 해제'
+        : '';
+    }
   }
   function updateModeHint(){
     const hint = document.getElementById('modeHint');
@@ -4425,10 +5069,11 @@
     panel.appendChild(list);
     panel.appendChild(addBtn);
   }
-  document.getElementById('seriesEditorToggle').addEventListener('click', ()=>{
+  document.getElementById('seriesEditorToggle').addEventListener('click', (e)=>{
     const panel = document.getElementById('seriesEditorPanel');
     const willShow = panel.style.display==='none';
     panel.style.display = willShow ? 'block' : 'none';
+    e.currentTarget.classList.toggle('open', willShow); // 화살표 방향으로 펼침 상태를 보여준다
     if(willShow) renderSeriesEditor();
   });
   document.getElementById('seriesPresetSelect').addEventListener('change', e=> setActivePreset(e.target.value));
@@ -5670,8 +6315,8 @@
       <td><select data-col="type">${typeOptions}</select></td>
       <td><input type="text" data-col="x" placeholder="화살표 끝 X"/></td>
       <td><input type="text" data-col="y" placeholder="화살표 끝 Y"/></td>
-      <td><input type="text" data-col="angle" placeholder="0"/></td>
-      <td><input type="text" data-col="len" placeholder="1.0"/></td>
+      <td><input type="text" inputmode="decimal" data-col="angle" placeholder="0"/></td>
+      <td><input type="text" inputmode="decimal" data-col="len" placeholder="1.0"/></td>
       <td><input type="text" data-col="rptType" placeholder="부재" list="dl-rptType" autocomplete="off"/></td>
       <td><input type="text" data-col="rptMember" placeholder="자재" list="dl-rptMember" autocomplete="off"/></td>
       <td><input type="text" data-col="rptDefect" placeholder="결함" list="dl-rptDefect" autocomplete="off"/></td>
@@ -6671,11 +7316,30 @@
     wrap.scrollTop += (nowClientY - e.clientY);
   }, { passive: false });
 
-  document.getElementById('sizeSlider').addEventListener('input', e=>{
-    iconSizeMult = parseFloat(e.target.value);
-    document.getElementById('sizeVal').textContent = Math.round(iconSizeMult*100)+'%';
-    renderMarkerLayer(); // 아이콘 크기는 마커에만 영향 — 슬라이더를 끄는 동안 매번 도면까지 다시 그릴 필요 없음
-  });
+  // 아이콘 크기는 작업 화면 툴바와 인쇄 미리보기 두 곳에서 조절할 수 있다. 실제 값은 전역
+  // iconSizeMult 하나뿐이므로 어느 쪽을 움직이든 여기로 모아, 반대쪽 슬라이더와 표시값까지 함께
+  // 맞춘다. from으로 "지금 드래그 중인 쪽"을 알려 그 슬라이더의 value는 건드리지 않는다 —
+  // 드래그 도중 value를 되쓰면 손가락 아래에서 노브가 튀기 때문이다.
+  function setIconSizeMult(v, from){
+    iconSizeMult = clamp(parseFloat(v) || 1, 0.6, 2);
+    const pct = Math.round(iconSizeMult*100)+'%';
+    const main = document.getElementById('sizeSlider');
+    const pv = document.getElementById('tbPreviewIconSizeSlider');
+    if(main && from !== 'main') main.value = String(iconSizeMult);
+    if(pv && from !== 'preview') pv.value = String(iconSizeMult);
+    const mainVal = document.getElementById('sizeVal');
+    const pvVal = document.getElementById('tbPreviewIconSizeVal');
+    if(mainVal) mainVal.textContent = pct;
+    if(pvVal) pvVal.textContent = pct;
+    renderMarkerLayer(); // 아이콘 크기는 마커에만 영향 — 도면 이미지까지 다시 그릴 필요는 없다
+    // 미리보기가 열려 있으면 저장 결과도 즉시 갱신한다. 슬라이더 값은 위에서 이미 맞췄으므로
+    // renderTbPreview(슬라이더까지 다시 세팅)가 아니라 캔버스만 그리는 쪽을 쓴다.
+    if(isTbPreviewOpen()){ const d = getActiveDrawing(); if(d) drawTbPreviewCanvas(d); }
+  }
+  document.getElementById('sizeSlider').addEventListener('input', e=> setIconSizeMult(e.target.value, 'main'));
+  document.getElementById('tbPreviewIconSizeSlider').addEventListener('input', e=> setIconSizeMult(e.target.value, 'preview'));
+  document.getElementById('btnPvSizeMinus').addEventListener('click', ()=> stepRangeInput('tbPreviewIconSizeSlider', -1));
+  document.getElementById('btnPvSizePlus').addEventListener('click', ()=> stepRangeInput('tbPreviewIconSizeSlider', 1));
   document.getElementById('btnSelectMode').addEventListener('click', toggleSelectMode);
   document.getElementById('btnMoveMode').addEventListener('click', toggleMoveMode);
   document.getElementById('btnEraseMode').addEventListener('click', toggleEraseMode);
@@ -6748,13 +7412,18 @@
   document.getElementById('btnExportPhotosZip').addEventListener('click', exportAllPhotosZip);
 
   document.getElementById('btnImportCSVVisual').addEventListener('click', ()=> document.getElementById('importCSVInput').click());
-  document.getElementById('importCSVInput').addEventListener('change', e=>{
-    const file = e.target.files[0]; if(!file) return;
+  // CSV 파일 하나를 읽어 들인다. 파일 선택 대화상자와 창에 끌어다 놓기(initFileDropAndPaste)가
+  // 같은 경로를 쓰도록 함수로 빼 두었다.
+  function importCSVFile(file){
+    if(!file) return;
     const reader = new FileReader();
     // readAsText 대신 readAsArrayBuffer로 원본 바이트를 받아 UTF-8/CP949를 자동 판별해 디코딩한다
     // (readAsText는 인코딩을 지정하지 않으면 항상 UTF-8로 읽어, CP949로 저장된 CSV의 한글이 깨진다).
     reader.onload = ()=> importCSVText(decodeCsvBuffer(reader.result));
     reader.readAsArrayBuffer(file);
+  }
+  document.getElementById('importCSVInput').addEventListener('change', e=>{
+    importCSVFile(e.target.files[0]);
     e.target.value='';
   });
 
@@ -6828,9 +7497,25 @@
   document.getElementById('btnFloatUndo').addEventListener('click', undo);
   document.getElementById('btnFloatRedo').addEventListener('click', redo);
   document.getElementById('btnFloatZoomFit').addEventListener('click', zoomToFit);
-  document.getElementById('helpToggle').addEventListener('click', ()=>{
+  document.getElementById('helpToggle').addEventListener('click', (e)=>{
     const box = document.getElementById('helpBox');
-    box.style.display = (box.style.display==='none') ? 'block' : 'none';
+    const willShow = box.style.display==='none';
+    box.style.display = willShow ? 'block' : 'none';
+    e.currentTarget.classList.toggle('open', willShow);
+  });
+  // 표제란 입력 — 도면틀을 켤 때만 쓰는 값이라 평소에는 접어 둔다(우측 패널이 그만큼 짧아진다).
+  document.getElementById('tbFieldsToggle').addEventListener('click', (e)=>{
+    const panel = document.getElementById('tbFieldsPanel');
+    const willShow = panel.style.display==='none';
+    panel.style.display = willShow ? 'block' : 'none';
+    e.currentTarget.classList.toggle('open', willShow);
+  });
+  // 도면틀을 켜면 그 안에 들어갈 내용을 바로 채울 수 있게 표제란을 함께 펼친다.
+  document.getElementById('titleBlockToggle').addEventListener('change', (e)=>{
+    if(!e.target.checked) return;
+    const panel = document.getElementById('tbFieldsPanel');
+    const btn = document.getElementById('tbFieldsToggle');
+    if(panel && panel.style.display==='none'){ panel.style.display='block'; if(btn) btn.classList.add('open'); }
   });
 
   // 결함 목록의 부재/자재/결함(등) 입력칸에서 내용을 지우다가(Backspace 연타) 그 마커가 하필 선택된
@@ -6867,11 +7552,20 @@
     if((e.key==='Delete' || e.key==='Backspace') && selectedIds.size>0 && !isEditing && !justLeftEditable){ e.preventDefault(); deleteSelected(); return; }
     if(e.key==='Enter' && cropMode && cropRect && !isEditing){ e.preventDefault(); performCropApply(); return; }
     if(e.key==='Escape'){
+      // 창이 겹쳐 있으면 위에 있는 것부터 닫는다. 「표로 입력」은 내보내기 창 안의 버튼으로 열리므로
+      // 항상 그 위에 뜬다 — 순서를 바꾸면 Esc가 아래쪽 창만 닫아, 위쪽 창이 갈 곳 없이 남는다.
       if(isTableInputOpen()){ e.preventDefault(); closeTableInputModal(); return; }
+      if(isExportModalOpen()){ e.preventDefault(); closeExportModal(); return; }
       if(cropMode){ e.preventDefault(); exitCropMode(); return; }
       if(pendingRectCreate){ e.preventDefault(); cancelRectCreate(); return; }
       if(!isEditing && legendSelected){ e.preventDefault(); legendSelected=false; renderCanvas(); return; }
       if(!isEditing && selectedIds.size>0){ e.preventDefault(); clearSelection(); return; }
+      // 선택할 것이 없으면 Esc는 배타 모드(선택·이동·지우개)를 푼다 — 모드 이름표가 그렇게 안내한다.
+      if(!isEditing && (selectMode || moveMode || eraseMode)){
+        e.preventDefault();
+        setSelectMode(false); setMoveMode(false); setEraseMode(false);
+        return;
+      }
       return;
     }
     if(isEditing) return;
@@ -7398,6 +8092,130 @@
   });
   document.getElementById('settingsMenu').addEventListener('click', e=> e.stopPropagation());
 
+  // ---------- 「도면 편집」 드롭다운 ----------
+  // 자르기·회전·좌표안내·아이콘 크기는 가끔 쓰는 조작이라 도구줄에 늘 펼쳐 두면 줄만 하나 더 늘어난다.
+  // "설정" 메뉴와 같은 방식(바깥 클릭으로 닫힘)으로 묶었다. 항목을 누르면 메뉴는 곧바로 닫는다 —
+  // 자르기처럼 캔버스를 봐야 하는 조작이 메뉴에 가려지지 않도록.
+  function isDrawEditMenuOpen(){
+    const m = document.getElementById('drawEditMenu');
+    return !!m && m.style.display !== 'none';
+  }
+  function openDrawEditMenu(){
+    const m = document.getElementById('drawEditMenu'); if(!m) return;
+    m.style.display = 'flex';
+    const btn = document.getElementById('btnDrawEditMenuToggle');
+    if(btn){ btn.classList.add('active'); btn.setAttribute('aria-expanded','true'); }
+  }
+  function closeDrawEditMenu(){
+    const m = document.getElementById('drawEditMenu'); if(!m) return;
+    m.style.display = 'none';
+    const btn = document.getElementById('btnDrawEditMenuToggle');
+    if(btn){ btn.classList.remove('active'); btn.setAttribute('aria-expanded','false'); }
+  }
+  document.getElementById('btnDrawEditMenuToggle').addEventListener('click', e=>{
+    e.stopPropagation();
+    if(isDrawEditMenuOpen()) closeDrawEditMenu(); else openDrawEditMenu();
+  });
+  document.addEventListener('click', e=>{
+    if(!isDrawEditMenuOpen()) return;
+    const wrap = document.getElementById('drawEditMenuWrap');
+    if(wrap && !wrap.contains(e.target)) closeDrawEditMenu();
+  });
+  // 메뉴 안의 버튼을 누르면 그 조작을 하고 메뉴는 닫는다. 아이콘 크기 슬라이더는 값을 보며 조절해야
+  // 하므로 예외로 열어 둔다(label 안의 요소는 닫지 않음).
+  document.getElementById('drawEditMenu').addEventListener('click', e=>{
+    e.stopPropagation();
+    if(e.target.closest('label')) return;
+    if(e.target.closest('button')) closeDrawEditMenu();
+  });
+
+  // ---------- 「내보내기」 창 ----------
+  // 우측 패널 아래쪽에 늘 펼쳐져 있던 내보내기·저장 모양 묶음을 그대로 옮겨 담은 창이다.
+  // 안의 요소 id를 하나도 바꾸지 않았으므로 각 버튼의 동작은 예전 코드가 그대로 처리한다.
+  function isExportModalOpen(){
+    const b = document.getElementById('exportBackdrop');
+    return !!b && b.style.display !== 'none';
+  }
+  function openExportModal(){
+    const b = document.getElementById('exportBackdrop'); if(!b) return;
+    b.style.display = 'flex';
+  }
+  function closeExportModal(){
+    const b = document.getElementById('exportBackdrop'); if(!b) return;
+    b.style.display = 'none';
+  }
+  document.getElementById('btnOpenExport').addEventListener('click', ()=>{
+    if(drawings.length===0){ showToast('먼저 도면 이미지를 추가해주세요.'); return; }
+    openExportModal();
+  });
+  document.getElementById('btnExportModalClose').addEventListener('click', closeExportModal);
+  document.getElementById('btnExportModalCloseFooter').addEventListener('click', closeExportModal);
+  // 바깥(어두운 바탕)을 클릭하면 닫는다. 창 안쪽 클릭은 여기까지 올라오지 않도록 패널에서 막는다.
+  document.getElementById('exportBackdrop').addEventListener('click', e=>{
+    if(e.target.id === 'exportBackdrop') closeExportModal();
+  });
+  // 인쇄 미리보기는 내보내기 창보다 위에 떠야 보인다 — "도면틀"을 켜면 미리보기가 자동으로 열리므로,
+  // 그 순간에는 내보내기 창을 닫아 미리보기를 가리지 않게 한다.
+  document.getElementById('titleBlockToggle').addEventListener('change', e=>{
+    if(e.target.checked && isExportModalOpen()) closeExportModal();
+  });
+
+  // ---------- 도면을 넣는 다른 두 가지 길: 끌어다 놓기 · 붙여넣기 ----------
+  // 예전에는 "버튼 → 파일 대화상자"가 유일한 길이었다. 도면 이미지는 보통 탐색기나 캡처 도구에서
+  // 바로 넘어오므로, 그 자리에서 끌어다 놓거나 붙여넣는 쪽이 훨씬 짧다.
+  (function initFileDropAndPaste(){
+    let dragDepth = 0; // dragenter/leave가 자식 요소마다 오므로 깊이를 세야 깜빡이지 않는다
+    function hasFiles(e){
+      const dt = e.dataTransfer;
+      return !!dt && Array.from(dt.types||[]).indexOf('Files') >= 0;
+    }
+    window.addEventListener('dragenter', e=>{
+      if(!hasFiles(e)) return;
+      e.preventDefault();
+      dragDepth++;
+      document.body.classList.add('dragging-file');
+    });
+    window.addEventListener('dragover', e=>{
+      if(!hasFiles(e)) return;
+      e.preventDefault();                    // 이걸 막지 않으면 브라우저가 파일을 그냥 열어버린다
+      e.dataTransfer.dropEffect = 'copy';
+    });
+    window.addEventListener('dragleave', e=>{
+      if(!hasFiles(e)) return;
+      dragDepth = Math.max(0, dragDepth-1);
+      if(dragDepth===0) document.body.classList.remove('dragging-file');
+    });
+    window.addEventListener('drop', e=>{
+      if(!hasFiles(e)) return;
+      e.preventDefault();
+      dragDepth = 0;
+      document.body.classList.remove('dragging-file');
+      const files = Array.from(e.dataTransfer.files||[]);
+      if(files.length===0) return;
+      // 프로젝트 파일(.json)을 놓으면 이어서 작업하는 것으로 본다 — 이미지와 섞여 있으면 프로젝트가 우선.
+      const proj = files.find(f=> /\.json$/i.test(f.name));
+      if(proj){ loadProjectFile(proj); return; }
+      const csv = files.find(f=> /\.csv$/i.test(f.name));
+      if(csv && drawings.length>0){ importCSVFile(csv); return; }
+      const images = files.filter(f=> /^image\//.test(f.type));
+      if(images.length===0){ showToast('이미지 파일(PNG·JPG 등), 프로젝트 파일(.json), CSV 파일만 받을 수 있습니다.'); return; }
+      addImagesFromFiles(images);
+    });
+    // 캡처 도구나 다른 프로그램에서 복사한 이미지를 Ctrl+V로 바로 도면에 넣는다.
+    // 글자를 입력하는 중에는 가로채지 않는다 — 표제란에 문자열을 붙여넣는 것이 우선이다.
+    window.addEventListener('paste', e=>{
+      const tag = document.activeElement && document.activeElement.tagName;
+      if(tag==='INPUT' || tag==='TEXTAREA' || tag==='SELECT') return;
+      const items = Array.from((e.clipboardData && e.clipboardData.items) || []);
+      const imgs = items.filter(it=> it.kind==='file' && /^image\//.test(it.type))
+                        .map(it=> it.getAsFile()).filter(Boolean);
+      if(imgs.length===0) return;
+      e.preventDefault();
+      addImagesFromFiles(imgs);
+      showToast('붙여넣은 이미지를 도면으로 추가했습니다.');
+    });
+  })();
+
   applyStylusOnlyUI();
   document.getElementById('btnStylusOnlyToggle').addEventListener('click', ()=>{
     const next = !isStylusOnlyActive();
@@ -7425,9 +8243,18 @@
     saveQuickInputSheetSetting(quickInputSheetEnabled);
     applyQuickInputToggleUI();
   });
-  document.getElementById('quickInputSelType').addEventListener('change', e=> applyQuickInputField('rptType', e.target.value));
-  document.getElementById('quickInputSelMember').addEventListener('change', e=> applyQuickInputField('rptMember', e.target.value));
-  document.getElementById('quickInputSelDefect').addEventListener('change', e=> applyQuickInputField('rptDefect', e.target.value));
+  // 칸이 프리셋마다 달라 매번 새로 만들어지므로, 개별 요소가 아니라 컨테이너에 한 번만 걸어 위임한다.
+  {
+    const qisBox = document.getElementById('quickInputFields');
+    qisBox.addEventListener('input', e=>{
+      const el = e.target.closest('[data-qis]'); if(!el) return;
+      applyQuickInputField(el.dataset.qis, el.value, false);
+    });
+    qisBox.addEventListener('change', e=>{
+      const el = e.target.closest('[data-qis]'); if(!el) return;
+      applyQuickInputField(el.dataset.qis, el.value, true);
+    });
+  }
   document.getElementById('btnQuickInputSame').addEventListener('click', applyQuickInputSameAsLast);
   document.getElementById('btnQuickInputClose').addEventListener('click', ()=>{
     // 닫을 때 뭔가 하나라도 입력돼 있었다면 "직전 값"으로 남겨, 다음 마커에서 이어 쓸 수 있게 한다.
@@ -7967,10 +8794,12 @@
 
   // 결함 목록이 한 줄짜리 표로 다 들어가지 못할 만큼 사이드바가 좁아지면, 칸을 줄바꿈해 담는
   // 카드 배치(.narrow)로 바꾼다 — 가로 스크롤이 없어져 사진·삭제 버튼을 포함한 모든 칸이 항상 보인다.
-  // 기준을 표의 min-width(640px)가 아니라 그보다 낮은 600px로 잡은 이유: 조금 모자란 정도라면
-  // 한 줄 표가 훨씬 조밀하고 Tab으로 옆 칸으로 넘어가며 입력하기 좋다(잘리는 사진·삭제 버튼은
+  // 기준을 표의 min-width(580px)가 아니라 그보다 조금 낮게 잡은 이유: 조금 모자란 정도라면
+  // 한 줄 표가 훨씬 조밀하고 Tab·Enter로 칸을 옮겨 다니며 입력하기 좋다(잘리는 사진·삭제 버튼은
   // position:sticky로 이미 붙잡아 두었다). 정말 좁아졌을 때만 줄바꿈 카드로 바꾼다.
-  const MARKER_LIST_NARROW_WIDTH = 600;
+  // 표 최소폭을 바꾸면 이 값도 함께 내려야 한다 — 안 그러면 한 줄 표가 들어가는 폭인데도
+  // 카드 배치로 떨어져 한 화면에 보이는 결함 수가 절반이 된다.
+  const MARKER_LIST_NARROW_WIDTH = 560;
   function updateMarkerListNarrowMode(){
     const wrap = document.querySelector('.marker-list-wrap');
     if(!wrap) return;
