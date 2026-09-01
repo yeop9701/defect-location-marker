@@ -36,9 +36,10 @@
     --signal:#a8560c;         /* "지금 이걸 하세요" 한 곳에만 — 현재 유형·다음 단계 안내 */
     --signal-soft:#fbeedd;
     --danger:#a72e2e;
-    --mode-select:#6b3fbf;    /* 배타적 모드 3개 중 "선택" */
-    --mode-move:#0d7a4f;      /* 배타적 모드 3개 중 "이동" */
-    --mode-erase:#a72e2e;     /* 배타적 모드 3개 중 "지우개" */
+    --mode-select:#6b3fbf;    /* 배타적 모드 4개 중 "선택" */
+    --mode-move:#0d7a4f;      /* 배타적 모드 4개 중 "이동" */
+    --mode-erase:#a72e2e;     /* 배타적 모드 4개 중 "지우개" */
+    --mode-sketch:#0a6a72;    /* 배타적 모드 4개 중 "그리기"(현장 스케치) */
     --shadow-1:0 1px 2px rgba(15,21,28,.06), 0 2px 8px rgba(15,21,28,.07);
     --shadow-2:0 4px 16px rgba(15,21,28,.13);
     --shadow-modal:0 16px 48px rgba(15,21,28,.32);
@@ -70,6 +71,7 @@
       --mode-select:#b48af0;
       --mode-move:#3fbf88;
       --mode-erase:#e6716a;
+      --mode-sketch:#4dc9d6;
       --shadow-1:0 1px 2px rgba(0,0,0,.30), 0 2px 8px rgba(0,0,0,.30);
       --shadow-2:0 4px 16px rgba(0,0,0,.45);
       --shadow-modal:0 16px 48px rgba(0,0,0,.60);
@@ -98,6 +100,7 @@
     --mode-select:#b48af0;
     --mode-move:#3fbf88;
     --mode-erase:#e6716a;
+    --mode-sketch:#4dc9d6;
     --shadow-1:0 1px 2px rgba(0,0,0,.30), 0 2px 8px rgba(0,0,0,.30);
     --shadow-2:0 4px 16px rgba(0,0,0,.45);
     --shadow-modal:0 16px 48px rgba(0,0,0,.60);
@@ -160,11 +163,12 @@
   /* 편집 도구(실행취소·다시실행·회전·자르기 등)는 저장 버튼보다 한 단계 옅게 — 테두리 없이 은은하게 */
   button.tool{border-color:transparent;background:transparent;color:var(--text-secondary);}
   button.tool:hover{background:var(--surface-hover);color:var(--text-primary);}
-  /* 색으로 구분되는 토글은 서로 배타적인 모드 3개(선택/이동/지우개)뿐 — 그 외 토글(전체보기·좌표안내
-     등)은 중립 회색 계열로 통일해, 이 3개만 "지금 어떤 모드인지" 색으로 바로 눈에 띄게 한다 */
+  /* 색으로 구분되는 토글은 서로 배타적인 모드 4개(선택/이동/지우개/그리기)뿐 — 그 외 토글(전체보기·좌표안내
+     등)은 중립 회색 계열로 통일해, 이 4개만 "지금 어떤 모드인지" 색으로 바로 눈에 띄게 한다 */
   button#btnSelectMode.active{background:var(--mode-select);border-color:var(--mode-select);color:#fff;font-weight:700;}
   button#btnMoveMode.active{background:var(--mode-move);border-color:var(--mode-move);color:#fff;font-weight:700;}
   button#btnEraseMode.active{background:var(--mode-erase);border-color:var(--mode-erase);color:#fff;font-weight:700;}
+  button#btnSketchMode.active{background:var(--mode-sketch);border-color:var(--mode-sketch);color:#fff;font-weight:700;}
   button#btnGridView.active,
   button#btnCoordGuide.active,
   button#btnTabletModeToggle.active,
@@ -280,6 +284,14 @@
   .tablet-float-type-btn .type-swatch{width:20px;height:20px;flex:0 0 20px;}
   .tablet-float-type-btn.active{border-color:var(--type-color);background:color-mix(in srgb, var(--type-color) 18%, var(--surface-1));}
   .tablet-float-autosave{flex:0 0 auto;font-size:10.5px;color:var(--muted);white-space:nowrap;padding:0 2px;}
+  /* 하단 플로팅 바의 그리기 도구 묶음 — 그리기 모드일 때만 나타나고, 그 대신 그 순간 쓸 수 없는
+     선택/이동/지우개 버튼이 사라져 바가 가로로 넘치지 않는다(넘치면 스크롤이라 펜으로 쓰기 나쁘다). */
+  .tablet-float-sketch{display:none;align-items:center;gap:6px;flex:0 0 auto;}
+  body.layout-tablet.mode-sketch .tablet-float-sketch{display:flex;}
+  body.layout-tablet.mode-sketch #btnFloatSelectMode,
+  body.layout-tablet.mode-sketch #btnFloatMoveMode,
+  body.layout-tablet.mode-sketch #btnFloatEraseMode{display:none;}
+  .float-sketch-tool.active{background:var(--mode-sketch);color:#fff;}
 
   /* 마커 생성 직후 뜨는 퀵 입력 시트 — position:fixed라 .layout의 overflow:hidden/clip과 무관하게
      항상 화면에 고정된다. 기본은 플로팅 조작바(.tablet-float-bar) 바로 위 하단이지만, 방금 찍은
@@ -496,12 +508,50 @@
   body.mode-select .canvas-shell{outline:3px solid var(--mode-select);outline-offset:0;}
   body.mode-move   .canvas-shell{outline:3px solid var(--mode-move);outline-offset:0;}
   body.mode-erase  .canvas-shell{outline:3px solid var(--mode-erase);outline-offset:0;}
+  body.mode-sketch .canvas-shell{outline:3px solid var(--mode-sketch);outline-offset:0;}
   body.mode-select .mode-badge,
   body.mode-move   .mode-badge,
-  body.mode-erase  .mode-badge{display:block;}
+  body.mode-erase  .mode-badge,
+  body.mode-sketch .mode-badge{display:block;}
   body.mode-select .mode-badge{background:var(--mode-select);}
   body.mode-move   .mode-badge{background:var(--mode-move);}
   body.mode-erase  .mode-badge{background:var(--mode-erase);}
+  body.mode-sketch .mode-badge{background:var(--mode-sketch);}
+
+  /* ── 그리기(현장 스케치) 도구줄 ─────────────────────────────────────────────
+     그리기 모드일 때만 도구줄 셋째 줄로 나타난다. 지우개의 "브러시 굵기"(#eraseBrushGroup)를
+     안내 줄 옆에 붙인 것과 같은 발상이되, 도구·색·굵기가 한 줄을 다 쓰므로 별도 줄로 뺐다. */
+  /* 그리기 도구줄은 도구줄의 셋째 줄로 붙는다. 여기서 줄이 하나 더 늘어나면 그리기를 켤 때마다
+     도면이 그만큼 아래로 밀리므로, 글자 라벨("색"·"굵기") 없이 아이콘·스와치만으로 한 줄에
+     들어가도록 촘촘하게 짰다 — 스와치는 색 그 자체가 라벨이고, 굵기는 선 굵기 그림이 라벨이다. */
+  .toolbar-row-sketch{display:none;gap:5px;align-items:center;flex-wrap:wrap;}
+  body.mode-sketch .toolbar-row-sketch{display:flex;}
+  .sketch-tool-btn{min-width:26px;padding:5px 5px;}
+  .sketch-tool-btn.active{background:var(--mode-sketch);border-color:var(--mode-sketch);color:#fff;font-weight:700;}
+  .sketch-colors{display:flex;align-items:center;gap:3px;flex:0 0 auto;
+    padding:3px 4px;border-radius:9px;background:var(--surface-2);}
+  /* 전역 button 규칙에 min-height가 걸려 있어 width/height만으로는 동그라미가 세로로 늘어난다. */
+  .sketch-color-btn{flex:0 0 auto;width:18px;height:18px;min-width:18px;min-height:18px;padding:0;
+    border-radius:50%;border:1px solid var(--border);cursor:pointer;background:var(--sk-color);}
+  /* 고른 색은 테두리 두께가 아니라 바깥 고리로 표시한다 — 어두운 배경에서 검정 스와치는
+     테두리만으로는 선택 여부가 보이지 않는다. */
+  .sketch-color-btn.active{box-shadow:0 0 0 2px var(--surface-2), 0 0 0 4px var(--mode-sketch);}
+  /* 굵기는 글자 대신 실제 선 굵기를 그려 보여준다(가는 선/보통/굵은 선). */
+  .sketch-width-btn{min-width:26px;padding:5px 5px;}
+  .sketch-width-btn i{display:block;width:16px;border-radius:2px;background:currentColor;}
+  .sketch-width-btn.active{background:var(--text-primary);border-color:var(--text-primary);color:var(--surface-1);}
+  /* 태블릿에서는 좌우 목록이 서랍으로 빠져 도구줄이 화면 폭을 다 쓰므로, 손가락·펜으로 정확히
+     누를 수 있도록 데스크톱보다 크게 되돌린다(작게 만든 이유는 좁은 노트북 폭 때문이었다). */
+  body.layout-tablet .sketch-tool-btn,
+  body.layout-tablet .sketch-width-btn{min-width:42px;min-height:42px;}
+  body.layout-tablet .sketch-color-btn{width:28px;height:28px;min-width:28px;min-height:28px;}
+  body.layout-tablet .sketch-colors{gap:7px;padding:4px 8px;}
+  /* 그리기 중에는 커서가 십자여야 어디에 선이 시작될지 정확히 보인다. */
+  body.mode-sketch #markerCanvas, body.mode-sketch #mainCanvas{cursor:crosshair;}
+  /* 글자 도구로 클릭한 자리에 뜨는 인라인 입력칸 — prompt()는 태블릿에서 쓰기 나빠서 직접 얹는다. */
+  .sketch-text-input{position:absolute;z-index:8;padding:3px 6px;border:2px solid var(--mode-sketch);
+    border-radius:5px;background:var(--surface-1);color:var(--text-primary);font-weight:600;
+    box-shadow:var(--shadow-2);min-width:90px;outline:none;}
 
   /* ────────────────────────────────────────────────────────────────────────────
      결함 목록 머리줄 — 값 이어받기 토글과 여러 건 일괄 채우기 줄. */
@@ -853,6 +903,16 @@
 <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14.2A8.5 8.5 0 1 1 9.8 4a6.8 6.8 0 0 0 10.2 10.2z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></symbol>
 <symbol id="i-tablet" viewBox="0 0 24 24"><rect x="4" y="2.5" width="16" height="19" rx="2.2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M10.4 18.5h3.2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
 <symbol id="i-pencil" viewBox="0 0 24 24"><path d="M4 20l1-4.6L15.6 4.8a1.8 1.8 0 0 1 2.6 0l1 1a1.8 1.8 0 0 1 0 2.6L8.6 19 4 20z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M13.6 6.8l3.6 3.6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+<!-- 그리기 도구 아이콘. 도구 이름(직선·사각형·자유선…)은 버튼 title과 화면 좌상단 모드 이름표,
+     그리고 도구줄 위 안내문에 한글로 계속 나오므로, 버튼 자체는 아이콘만으로 좁게 유지한다 —
+     글자로 두면 도구줄이 노트북 폭(1366)에서 두 줄로 늘어나 도면이 그만큼 아래로 밀린다. -->
+<symbol id="i-sk-line" viewBox="0 0 24 24"><path d="M4 19L20 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="4" cy="19" r="2" fill="currentColor"/><circle cx="20" cy="5" r="2" fill="currentColor"/></symbol>
+<symbol id="i-sk-rect" viewBox="0 0 24 24"><rect x="4" y="6" width="16" height="12" rx="1" fill="none" stroke="currentColor" stroke-width="1.8"/></symbol>
+<symbol id="i-sk-scribble" viewBox="0 0 24 24"><path d="M3 15c3-7 5 3 7-2s4 4 6-1 3 2 5 0" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="i-sk-ellipse" viewBox="0 0 24 24"><ellipse cx="12" cy="12" rx="9" ry="7" fill="none" stroke="currentColor" stroke-width="1.8"/></symbol>
+<symbol id="i-sk-arrow" viewBox="0 0 24 24"><path d="M4 20L18 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M20 4l-1.2 6.4-5.2-5.2z" fill="currentColor"/></symbol>
+<symbol id="i-sk-text" viewBox="0 0 24 24"><path d="M5 6h14M12 6v13M9 19h6" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></symbol>
+<symbol id="i-sk-grid" viewBox="0 0 24 24"><path d="M4 4v16M10 4v16M14 4v16M20 4v16M4 4h16M4 10h16M4 14h16M4 20h16" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></symbol>
 </defs>
 </svg>
 <div class="app">
@@ -905,6 +965,9 @@
           <button type="button" class="add-drawing-btn" id="btnAddDrawing">+ 도면 이미지 추가</button>
           <input type="file" id="addDrawingInput" accept="image/*" multiple />
         </label>
+        <!-- 도면(이미지)이 아예 없는 현장을 위한 길. 백지를 한 장 만들어 두면 그 위에 「그리기」로
+             평면을 직접 그린 뒤, 이미지 도면과 똑같이 결함을 찍고 내보낼 수 있다. -->
+        <button type="button" class="add-drawing-btn" id="btnAddBlankDrawing" style="margin-top:6px;" title="도면 이미지가 없을 때 — 백지를 만들어 현장에서 직접 그립니다">+ 빈 도면(백지) 추가</button>
         <!-- "모든 도면을 한 번에 훑어보기"는 도면 목록에 대한 조작이므로 도구줄이 아니라 여기 둔다.
              (도구줄은 지금 보고 있는 도면 하나를 다루는 자리다. 단축키 g는 그대로 동작한다.) -->
         <button id="btnGridView" class="tool needs-drawing" style="width:100%;margin-top:6px;" title="모든 도면을 축소판으로 한 번에 훑어봅니다 (단축키 g)"><svg class="icon"><use href="#i-grid"/></svg> 전체 보기 (G)</button>
@@ -950,6 +1013,19 @@
             </ul>
           </div>
           <div class="help-sec">
+            <h5>도면이 없을 때 — 직접 그리기</h5>
+            <ul>
+              <li>좌측 <b>「+ 빈 도면(백지) 추가」</b>로 A4·A3 비율의 백지를 만들면, 그 위에 평면을 직접 그린 뒤 이미지 도면과 똑같이 결함을 찍고 내보낼 수 있습니다</li>
+              <li>도구줄의 <b>「그리기」</b>(W)를 켜면 직선·사각형·자유선·원·화살표·글자를 그립니다. <b>직선은 다른 선의 끝점 근처에서 시작·종료하면 자동으로 이어붙어</b> 벽선을 끊김 없이 그릴 수 있습니다</li>
+              <li>Shift를 누르고 그리면 직선은 수평·수직·45°, 사각형·원은 정사각·정원으로 맞춰집니다</li>
+              <li><b>모눈(Shift+G)</b>을 켜면 그리는 점이 눈금에 맞춰져, 손으로 그려도 자로 잰 듯한 평면이 됩니다. 모눈은 <b>화면에만 보이고 저장한 PNG·PDF에는 나오지 않습니다</b>. 특정 획만 눈금을 벗어나고 싶으면 Alt를 누른 채 그리세요</li>
+              <li><b>자유선을 거의 곧게 그으면 놓는 순간 반듯한 직선이 됩니다</b>(수평·수직에 가까우면 정확히 수평·수직으로). 일부러 그린 곡선은 그대로 남고, 마음에 안 들면 Ctrl+Z로 되돌립니다</li>
+              <li>태블릿에서는 그리기를 켜면 <b>화면 아래 조작바</b>에 직선·사각형·자유선·글자·선지우개와 색이 함께 나타납니다 — 도구를 바꾸러 화면 위까지 손을 올릴 필요가 없습니다</li>
+              <li>그린 선은 이미지에 굽는 것이 아니라 따로 보관되므로, 선 하나씩 지울 수 있고 Ctrl+Z로 몇 번이든 되돌아갑니다. 이미 있는 도면 위에 덧그리는 것도 같은 방식입니다</li>
+              <li>태블릿에서 손날이 닿아 선이 튀면 상단 「설정」의 <b>펜슬 전용</b>을 켜세요</li>
+            </ul>
+          </div>
+          <div class="help-sec">
             <h5>같은 값을 다시 고르지 않기</h5>
             <ul>
               <li><b>값 이어받기</b>(결함 목록 위 버튼): 새로 찍는 결함이 직전에 채운 부재·자재·결함을 그대로 물려받습니다. 폭·길이·개수 같은 실측값은 물려받지 않습니다</li>
@@ -963,8 +1039,9 @@
               <li><span class="kbd-hint">1~4</span>유형 선택</li>
               <li><span class="kbd-hint">S</span>선택 모드 — 드래그 영역에 완전히 들어온 마커만 선택</li>
               <li><span class="kbd-hint">M</span>이동 모드 — 마커 이동 전용, 빈 곳 클릭은 무시</li>
-              <li><span class="kbd-hint">D</span>지우개 모드 — 클릭으로 마커 삭제, 드래그로 브러시 지우기</li>
-              <li><span class="kbd-hint">C</span><span class="kbd-hint">G</span><span class="kbd-hint">Q</span>자르기 · 전체 보기 · 좌표 안내</li>
+              <li><span class="kbd-hint">D</span>지우개 모드 — <b>도면 원본</b>을 지웁니다(클릭으로 마커 삭제, 드래그로 흰색 브러시). 직접 그린 선은 그리기의 <b>선 지우개(E)</b>로</li>
+              <li><span class="kbd-hint">W</span>그리기 모드 — 켠 뒤 <span class="kbd-hint">L</span>직선 <span class="kbd-hint">R</span>사각형 <span class="kbd-hint">P</span>자유선 <span class="kbd-hint">C</span>원 <span class="kbd-hint">A</span>화살표 <span class="kbd-hint">T</span>글자 <span class="kbd-hint">E</span>선 지우개</li>
+              <li><span class="kbd-hint">Shift+C</span><span class="kbd-hint">Shift+G</span><span class="kbd-hint">G</span><span class="kbd-hint">Q</span>자르기 · 모눈(격자 스냅) · 전체 보기 · 좌표 안내</li>
               <li><span class="kbd-hint">F</span>화면 맞춤 — 도면 전체가 보이도록 배율을 맞추고 가운데로</li>
               <li><span class="kbd-hint">Space</span>+드래그 · 우클릭 드래그 · 휠 버튼 드래그 — 화면 이동</li>
               <li><span class="kbd-hint">Delete</span><span class="kbd-hint">Esc</span>선택 삭제 · 선택/모드 해제</li>
@@ -1006,7 +1083,8 @@
           <div class="btn-group">
             <button id="btnSelectMode" class="tool" title="선택 모드 — 드래그 영역에 완전히 들어온 마커만 선택 (단축키 s)"><svg class="icon"><use href="#i-select"/></svg> 선택</button>
             <button id="btnMoveMode" class="tool" title="이동 모드 — 마커 이동 전용, 빈 곳 클릭으로는 아무 것도 생기지 않음 (단축키 m)"><svg class="icon"><use href="#i-move"/></svg> 이동</button>
-            <button id="btnEraseMode" class="tool" title="지우개 모드 — 마커는 클릭으로 삭제, 도면은 드래그하면 브러시로 지워짐 (단축키 d)"><svg class="icon"><use href="#i-eraser"/></svg> 지우개</button>
+            <button id="btnEraseMode" class="tool" title="지우개 모드 — 도면 원본을 지웁니다. 마커는 클릭으로 삭제, 도면 이미지는 드래그하면 흰색 브러시로 지워짐. 직접 그린 선은 그리기의 선 지우개(E)로 지웁니다 (단축키 d)"><svg class="icon"><use href="#i-eraser"/></svg> 지우개</button>
+            <button id="btnSketchMode" class="tool" title="그리기 모드 — 도면 위에 직선·사각형·자유선·글자를 그립니다. 도면이 없으면 빈 도면을 만들어 현장에서 직접 그릴 수 있습니다 (단축키 w)"><svg class="icon"><use href="#i-pencil"/></svg> 그리기</button>
           </div>
           <button type="button" id="btnZoomFit" class="tool" title="도면 전체가 보이도록 배율을 맞추고 가운데로 되돌립니다 (단축키 F). 스크롤하다 도면을 놓쳤을 때도 이 버튼으로 돌아옵니다."><svg class="icon"><use href="#i-fit"/></svg> 화면 맞춤</button>
           <!-- 가끔 쓰는 조작 묶음 — 배율 고르기, 자르기·회전, 좌표안내, 아이콘 크기.
@@ -1026,7 +1104,7 @@
                   <option value="2">200%</option>
                 </select>
               </label>
-              <button id="btnCropMode" class="tool settings-menu-item" title="도면 이미지의 일부만 남기고 잘라냅니다 (단축키 c)"><svg class="icon"><use href="#i-crop"/></svg> 자르기 (C)</button>
+              <button id="btnCropMode" class="tool settings-menu-item" title="도면 이미지의 일부만 남기고 잘라냅니다 (단축키 Shift+C)"><svg class="icon"><use href="#i-crop"/></svg> 자르기 (Shift+C)</button>
               <button id="btnRotateCCW" class="tool settings-menu-item" title="도면 이미지를 왼쪽으로 90° 회전"><svg class="icon"><use href="#i-rotate-ccw"/></svg> 좌회전</button>
               <button id="btnRotateCW" class="tool settings-menu-item" title="도면 이미지를 오른쪽으로 90° 회전"><svg class="icon"><use href="#i-rotate-cw"/></svg> 우회전</button>
               <button id="btnCoordGuide" class="tool settings-menu-item" title="10% 간격 점선 그리드와 커서 위치의 정확한 % 좌표를 보여줍니다. CSV에 좌표를 직접 입력할 때 참고하세요 (단축키 q)"><svg class="icon"><use href="#i-guide"/></svg> 좌표안내 (Q)</button>
@@ -1059,6 +1137,36 @@
             <button type="button" class="stepper-btn" id="btnBrushPlus" title="브러시 굵기 늘리기">+</button>
             <span class="val" id="eraseBrushVal">100%</span>
           </div>
+          <!-- 모눈 칸 수. 브러시 굵기와 같은 이유로 안내 줄에 둔다(첫 줄은 이미 꽉 차 있어서,
+               여기 말고 위에 넣으면 모눈을 켤 때마다 도구줄이 한 줄씩 늘었다 줄었다 한다).
+               모눈이 켜져 있을 때만 나타난다 — 꺼져 있으면 조절할 것이 없다. -->
+          <div class="tool-slider" id="sketchGridDivGroup" style="display:none;" title="모눈 칸 수 — 도면의 짧은 변을 몇 칸으로 나눌지 정합니다(칸은 항상 정사각형입니다). 대괄호 키 [ 와 ] 로도 조절할 수 있습니다">모눈 칸
+            <button type="button" class="stepper-btn" id="btnGridDivMinus" title="칸을 크게(칸 수 줄이기)">−</button>
+            <input type="range" id="sketchGridDivSlider" min="10" max="80" step="2" value="40" />
+            <button type="button" class="stepper-btn" id="btnGridDivPlus" title="칸을 잘게(칸 수 늘리기)">+</button>
+            <span class="val" id="sketchGridDivVal">40칸</span>
+          </div>
+        </div>
+        <!-- 그리기 도구줄 — body.mode-sketch일 때만 CSS로 나타난다(.toolbar-row-sketch).
+             도구 → 색 → 굵기 순서는 "무엇을 그릴지 → 어떤 색으로 → 얼마나 굵게"라는 결정 순서 그대로다. -->
+        <div class="toolbar-row toolbar-row-sketch" id="sketchToolbar">
+          <div class="btn-group" id="sketchToolGroup">
+            <button type="button" class="tool sketch-tool-btn" data-sketch-tool="line"    title="직선 (L) — 드래그. Shift: 수평/수직/45° 고정. 다른 선의 끝점 근처에서 시작·종료하면 자동으로 이어붙습니다"><svg class="icon"><use href="#i-sk-line"/></svg></button>
+            <button type="button" class="tool sketch-tool-btn" data-sketch-tool="rect"    title="사각형 (R) — 드래그. Shift: 정사각형"><svg class="icon"><use href="#i-sk-rect"/></svg></button>
+            <button type="button" class="tool sketch-tool-btn" data-sketch-tool="pen"     title="자유선 (P) — 손으로 그리듯 드래그"><svg class="icon"><use href="#i-sk-scribble"/></svg></button>
+            <button type="button" class="tool sketch-tool-btn" data-sketch-tool="ellipse" title="원/타원 (C) — 드래그. Shift: 정원"><svg class="icon"><use href="#i-sk-ellipse"/></svg></button>
+            <button type="button" class="tool sketch-tool-btn" data-sketch-tool="arrow"   title="화살표 (A) — 드래그한 방향으로 화살촉이 붙습니다"><svg class="icon"><use href="#i-sk-arrow"/></svg></button>
+            <button type="button" class="tool sketch-tool-btn" data-sketch-tool="text"    title="글자 (T) — 클릭한 자리에 바로 입력합니다(Enter 확정, Esc 취소)"><svg class="icon"><use href="#i-sk-text"/></svg></button>
+            <button type="button" class="tool sketch-tool-btn" data-sketch-tool="sketchErase" title="선 지우개 (E) — 그린 선만 지웁니다(도면 이미지와 마커는 건드리지 않음)"><svg class="icon"><use href="#i-eraser"/></svg></button>
+          </div>
+          <div class="sketch-colors" id="sketchColorRow"></div>
+          <div class="btn-group" id="sketchWidthGroup">
+            <button type="button" class="tool sketch-width-btn" data-sketch-width="0.6" title="가는 선"><i style="height:1px;"></i></button>
+            <button type="button" class="tool sketch-width-btn" data-sketch-width="1" title="보통 굵기"><i style="height:2.5px;"></i></button>
+            <button type="button" class="tool sketch-width-btn" data-sketch-width="1.8" title="굵은 선"><i style="height:4.5px;"></i></button>
+          </div>
+          <button type="button" class="tool sketch-tool-btn" id="btnSketchGrid" title="모눈 보기 · 격자 스냅 (Shift+G) — 그리는 점이 눈금에 맞춰져 손으로 그려도 반듯한 도면이 됩니다. 모눈은 화면에만 보이고 저장물에는 나오지 않습니다. Alt를 누른 채 그리면 그 획만 격자를 무시합니다. 칸 수는 아래 안내 줄의 「모눈 칸」 또는 [ / ] 키로 조절합니다"><svg class="icon"><use href="#i-sk-grid"/></svg></button>
+          <button type="button" class="tool" id="btnSketchClear" title="이 도면에 그린 선을 모두 지웁니다(실행취소로 되돌릴 수 있습니다)"><svg class="icon"><use href="#i-trash"/></svg></button>
         </div>
       </div>
       <div class="canvas-wrap" id="canvasWrap">
@@ -1086,6 +1194,23 @@
         <button type="button" class="tablet-float-btn" id="btnFloatSelectMode" title="선택 모드 (S)"><svg class="icon"><use href="#i-select"/></svg></button>
         <button type="button" class="tablet-float-btn" id="btnFloatMoveMode" title="이동 모드 (M)"><svg class="icon"><use href="#i-move"/></svg></button>
         <button type="button" class="tablet-float-btn" id="btnFloatEraseMode" title="지우개 모드 (D)"><svg class="icon"><use href="#i-eraser"/></svg></button>
+        <button type="button" class="tablet-float-btn" id="btnFloatSketchMode" title="그리기 모드 (W)"><svg class="icon"><use href="#i-pencil"/></svg></button>
+        <!-- 그리기 중에만 나타나는 도구·색 묶음. 그리는 손은 화면 아래쪽에 있는데 도구는 화면 맨 위
+             도구줄에만 있어서, 선 하나 바꿀 때마다 손을 위로 올려야 했다. 자주 쓰는 5개와 색만 여기 둔다
+             (원·화살표는 상단 도구줄에 그대로 있다). 폭을 확보하기 위해 그리기 중에는 선택/이동/지우개
+             버튼을 감춘다 — 그 셋은 누르는 순간 그리기가 꺼지는, 지금은 쓸 수 없는 버튼들이다. -->
+        <div class="tablet-float-sketch" id="tabletFloatSketchGroup">
+          <div class="tablet-float-sep"></div>
+          <button type="button" class="tablet-float-btn float-sketch-tool" data-sketch-tool="line" title="직선 (L)"><svg class="icon"><use href="#i-sk-line"/></svg></button>
+          <button type="button" class="tablet-float-btn float-sketch-tool" data-sketch-tool="rect" title="사각형 (R)"><svg class="icon"><use href="#i-sk-rect"/></svg></button>
+          <button type="button" class="tablet-float-btn float-sketch-tool" data-sketch-tool="pen" title="자유선 (P)"><svg class="icon"><use href="#i-sk-scribble"/></svg></button>
+          <button type="button" class="tablet-float-btn float-sketch-tool" data-sketch-tool="text" title="글자 (T)"><svg class="icon"><use href="#i-sk-text"/></svg></button>
+          <button type="button" class="tablet-float-btn float-sketch-tool" data-sketch-tool="sketchErase" title="선 지우개 (E)"><svg class="icon"><use href="#i-eraser"/></svg></button>
+          <!-- 태블릿에는 Shift+G를 누를 자판이 없으므로 모눈 토글은 여기 버튼으로만 켤 수 있다. -->
+          <button type="button" class="tablet-float-btn" id="btnFloatSketchGrid" title="모눈 보기 · 격자 스냅 (칸 수는 안내 줄의 「모눈 칸」에서 조절)"><svg class="icon"><use href="#i-sk-grid"/></svg></button>
+          <div class="tablet-float-sep"></div>
+          <div class="sketch-colors" id="tabletFloatColorRow"></div>
+        </div>
         <div class="tablet-float-sep"></div>
         <!-- 헤더의 자동저장 상태 문구(#autosaveStatusLabel)와 같은 값을 여기도 함께 보여준다 —
              태블릿에서는 헤더가 다른 버튼들 사이에 묻혀 자동저장이 잘 되고 있는지 확인하기 어려웠다.
@@ -1306,6 +1431,28 @@
 
 <!-- 마킹 전체 복제 모달: 현재 도면의 마킹(좌표·각도·계열·라벨)을 고른 도면들에 그대로 복제. 사진은 제외.
      같은 평면도가 동만 바뀌어 반복되는 실무 패턴(외관조사 등)이 주 용도 — 사무실 데스크톱 작업 위주. -->
+<!-- 빈 도면(백지) 만들기: 규격을 고르면 그 크기의 흰색 이미지를 도면으로 추가한다.
+     규격을 A4/A3 비율에 맞춰 두는 이유는 내보내기의 PDF 용지(PDF_PAGE_SIZES)와 비율이 같아야
+     저장했을 때 위아래로 빈 띠가 생기지 않기 때문이다. -->
+<div class="modal-backdrop" id="blankDrawingBackdrop" style="display:none;">
+  <div class="modal-panel" id="blankDrawingPanel" style="width:min(460px, 92vw);">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title">빈 도면(백지) 만들기</div>
+        <div class="modal-sub">도면 이미지가 없을 때 씁니다. 백지를 추가한 뒤 도구줄의 <b>「그리기」</b>로 평면을 직접 그리고, 그 위에 평소처럼 결함을 찍으면 됩니다. 규격은 저장할 PDF 용지와 비율을 맞춰 두었습니다.</div>
+      </div>
+      <button type="button" id="btnBlankDrawingClose" class="icon-btn"><svg class="icon icon-lg"><use href="#i-close"/></svg></button>
+    </div>
+    <div class="modal-body">
+      <div id="blankSizeList" style="display:flex;flex-direction:column;gap:6px;"></div>
+    </div>
+    <div class="modal-footer">
+      <div style="font-size:11px;color:var(--text-secondary);flex:1;">추가한 뒤에도 「보기·편집 ▾」의 자르기·회전을 그대로 쓸 수 있습니다.</div>
+      <button type="button" class="tool" id="btnBlankDrawingCancel">취소</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-backdrop" id="duplicateBackdrop" style="display:none;">
   <div class="modal-panel" id="duplicatePanel" style="width:min(520px, 92vw);">
     <div class="modal-header" id="duplicateDragHandle" title="여기를 마우스로 눌러 끌면 창을 옮길 수 있습니다">
@@ -1995,10 +2142,12 @@
   let redoStack = []; // Ctrl+Shift+Z / Ctrl+Y로 되돌리기(undo)를 다시 앞으로 돌릴 때 사용
   // 프로젝트 파일(.json)의 스키마 버전. 이보다 높은 version 값을 가진 파일을 열면(더 상위 버전에서 저장된
   // 파일) applyProjectData()가 경고 후 계속할지 확인한다.
-  const PROJECT_FILE_VERSION = 2;
+  // v3: 도면에 그린 선(d.sketch, 벡터 스케치)과 빈 도면 표시(d.isBlank)가 추가됨. 구버전 도구로
+  // 이 파일을 열면 스케치가 무시되므로(경고 후 열림), 그 사실이 드러나도록 버전을 올린다.
+  const PROJECT_FILE_VERSION = 3;
   // 빌드 도구 없이 파일 하나로 배포하는 프로젝트라 커밋 해시를 자동으로 넣을 수 없으므로,
   // 배포용으로 이 파일을 고칠 때 날짜를 함께 갱신한다. 하단 "Ver 2.1" 표기 옆에 표시된다.
-  const APP_BUILD_DATE = '2026-08-27';
+  const APP_BUILD_DATE = '2026-09-01';
   // "미저장 변경사항이 있는가"를 매번 전체 스냅샷을 JSON.stringify해서 비교하면(특히 사진·도면
   // 이미지가 많을 때) beforeunload/자동저장 틱마다 무거운 직렬화가 반복된다. 대신 마커·도면·프로젝트
   // 정보를 실제로 바꾸는 지점에서 markDirty()/markImagesDirty()를 호출해 플래그만 세우고, 파일
@@ -2019,6 +2168,17 @@
   let gridViewMode = false; // true = 모든 도면을 축소판으로 훑어보는 화면
   let eraseBrushMult = 1; // 지우개 브러시 굵기 배율
   let eraseCursorPt = null; // {x,y} 캔버스 backing-px — 지우개 모드 브러시 크기 미리보기용
+  // 그리기(현장 스케치) 모드. 선택/이동/지우개와 배타적이며, 이 값이 null이 아니면 그리기 모드다.
+  // 불리언을 하나 더 늘리는 대신 "지금 든 도구" 하나만 문자열로 들고 있는다 — 도구가 7개라 불리언으로
+  // 두면 조합이 폭발하고, 어느 하나가 꺼지지 않은 채 남는 실수가 나기 쉽다.
+  let sketchTool = null;    // null | 'pen'|'line'|'rect'|'ellipse'|'arrow'|'text'|'sketchErase'
+  let sketchColor = '#0b0b0b';
+  let sketchWidthMult = 1;
+  // 모눈(격자) 보기 + 격자 스냅. 손으로 그린 평면이 "도면"처럼 보이게 하는 것은 사실상 이 기능이다.
+  // 켜고 끈 상태는 다음 방문에도 유지한다(펜슬 전용 옵션과 같은 방식).
+  let sketchGridOn = false;
+  let sketchGridDiv = 40;   // 짧은 변을 몇 칸으로 나눌지. 아래 SKETCH_GRID_DIV_* 에서 다시 정리한다.
+  let sketchTextEditor = null; // 글자 도구로 띄운 인라인 입력칸 {el, xPct, yPct} — 한 번에 하나만
   // 범위(사각형) 마커 3클릭 생성 상태: null(대기) → {stage:1,x1,y1}(첫 코너 찍음) → {stage:2,x1,y1,x2,y2}(반대 코너 찍음, 배지 위치 대기)
   let pendingRectCreate = null;
   let rectCreateCurX = 0, rectCreateCurY = 0; // 3클릭 진행 중 현재 마우스 위치(미리보기용)
@@ -2641,7 +2801,71 @@
     // presetName: 새 도면은 지금 화면에 켜져 있는 프리셋을 그대로 물려받는다(5-1). 이후 도면 탭을
     // 오갈 때마다 setActiveDrawing()이 이 값을 보고 프리셋을 자동으로 맞춰준다.
     return {id: uid(), name: name || ('도면 '+(drawings.length+1)), surveyLocation: '', imgSrc: dataURL, imgEl: img,
-      naturalW, naturalH, baseW, baseH, markers: [], presetName: activePresetName};
+      naturalW, naturalH, baseW, baseH, markers: [], sketch: [], presetName: activePresetName};
+  }
+
+  // ---------- 빈 도면(백지) ----------
+  // 도면 이미지가 아예 없는 현장을 위한 길. 실제로 흰색 이미지 한 장을 만들어 넣는 이유는,
+  // 그래야 렌더링(메인·썸네일·표 입력 미리보기)·내보내기(PNG/PDF)·자르기·회전·자동저장이 전부
+  // 기존 코드 그대로 동작하기 때문이다(d.imgEl이 없으면 그 경로들이 모두 가드에 걸려 죽는다).
+  // 균일한 흰색은 PNG 압축이 극단적으로 잘 들어서 2480×1754도 수십 KB 수준이라 용량 부담도 없다.
+  // 규격을 A4/A3 비율로 두는 것은 내보내기 PDF 용지(PDF_PAGE_SIZES)와 비율을 맞춰, 저장했을 때
+  // 위아래로 빈 띠가 생기지 않게 하기 위함이다.
+  const BLANK_DRAWING_SIZES = [
+    { key:'a4l', label:'A4 가로', w:2480, h:1754, note:'가장 무난한 기본값 — 평면 스케치 대부분이 가로가 길다' },
+    { key:'a4p', label:'A4 세로', w:1754, h:2480, note:'입면·계단실처럼 세로로 긴 대상' },
+    { key:'a3l', label:'A3 가로', w:3508, h:2480, note:'넓은 평면을 크게 그릴 때' },
+    { key:'sq',  label:'정사각',  w:2000, h:2000, note:'용지 비율에 얽매이지 않을 때' },
+  ];
+  function makeBlankImageDataURL(w, h){
+    const off = document.createElement('canvas');
+    off.width = w; off.height = h;
+    const octx = off.getContext('2d');
+    octx.fillStyle = '#ffffff';
+    octx.fillRect(0, 0, w, h);
+    return off.toDataURL('image/png');
+  }
+  function addBlankDrawing(sizeKey){
+    const size = BLANK_DRAWING_SIZES.find(s=> s.key===sizeKey) || BLANK_DRAWING_SIZES[0];
+    const src = makeBlankImageDataURL(size.w, size.h);
+    const img = new Image();
+    img.onerror = ()=> showToast('빈 도면을 만들지 못했습니다.');
+    img.onload = ()=>{
+      const nd = buildDrawingFromImage(img, src, '빈 도면 ' + (drawings.filter(x=>x.isBlank).length + 1));
+      nd.isBlank = true;
+      drawings.push(nd);
+      markImagesDirty();
+      renderDrawingTabs();
+      setActiveDrawing(nd.id);
+      // 백지를 만든 사람은 곧바로 그리려는 것이므로 그리기 모드까지 켜준다 — 여기서 한 단계를
+      // 더 누르게 하면 "백지는 생겼는데 아무것도 안 되는" 막다른 길처럼 느껴진다.
+      setSketchTool(lastSketchTool);
+      maybeSuggestStylusOnly();
+      showToast('빈 도면(' + size.label + ')을 추가했습니다. 도구줄의 「그리기」로 평면을 그린 뒤 평소처럼 결함을 찍으세요.');
+    };
+    img.src = src;
+  }
+  function openBlankDrawingModal(){
+    const list = document.getElementById('blankSizeList');
+    const backdrop = document.getElementById('blankDrawingBackdrop');
+    if(!list || !backdrop) return;
+    list.innerHTML = '';
+    BLANK_DRAWING_SIZES.forEach(s=>{
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'tool';
+      btn.style.cssText = 'width:100%;justify-content:flex-start;text-align:left;padding:10px 12px;border:1px solid var(--gridline);';
+      btn.innerHTML = '<span style="font-weight:700;min-width:66px;display:inline-block;">' + escapeHTML(s.label) + '</span>'
+        + '<span style="font-size:11px;color:var(--muted);margin-right:8px;">' + s.w + '×' + s.h + '</span>'
+        + '<span style="font-size:11.5px;color:var(--text-secondary);">' + escapeHTML(s.note) + '</span>';
+      btn.addEventListener('click', ()=>{ closeBlankDrawingModal(); addBlankDrawing(s.key); });
+      list.appendChild(btn);
+    });
+    backdrop.style.display = 'flex';
+  }
+  function closeBlankDrawingModal(){
+    const backdrop = document.getElementById('blankDrawingBackdrop');
+    if(backdrop) backdrop.style.display = 'none';
   }
 
   function renderDrawingTabs(){
@@ -2678,6 +2902,7 @@
   function setActiveDrawing(id){
     if(cropMode) exitCropMode();
     if(gridViewMode) setGridView(false);
+    if(sketchTextEditor) closeSketchTextEditor(true); // 입력 중이던 글자는 원래 도면에 확정하고 넘어간다
     pendingRectCreate = null; eraseCursorPt = null; pendingAction = null;
     activeDrawingId = id;
     selectedIds = new Set();
@@ -2903,6 +3128,613 @@
     });
   }
 
+  // ---------- 스케치(현장 그리기) ----------
+  // 도면이 없는 현장에서 평면을 직접 그리기 위한 레이어. 지우개 브러시(commitEraseStroke)처럼
+  // 도면 이미지 픽셀에 굽지 않고 "선 목록"(d.sketch)으로 들고 있다가 그릴 때마다 다시 그린다.
+  // 그렇게 한 이유:
+  //   1) 실행취소 — 이미지에 구우면 획 하나가 pushImageUndo 항목 하나가 되는데, 그 타입은 Data URL을
+  //      통째로 들고 있어 trimImageEntries가 최근 8개만 남긴다. 선 9개만 그어도 그 이전 실행취소가
+  //      전부 날아간다. 벡터는 마커와 같은 가벼운 스냅샷이라 기존 60개 스택에 그대로 들어간다.
+  //   2) 자동저장 — 벡터는 buildProjectMetaSnapshot(이미지 제외, 30초 주기)에 실린다. 이미지에 구우면
+  //      획마다 imagesDirty가 서서 모든 도면 이미지를 IndexedDB에 다시 쓴다.
+  //   3) 화질 — 저장 시점 해상도로 매번 다시 그리므로 A3로 크게 뽑아도 계단이 지지 않는다.
+  //   4) 수정 — 그은 선을 나중에 골라 지울 수 있다(이미지에 구우면 흰색으로 덮는 수밖에 없고,
+  //      도면 위에 덧그린 경우엔 원본 도면까지 함께 지워진다).
+  // 좌표는 마커와 완전히 같은 기준(도면 원본 대비 %)이라 자르기·회전 시 마커와 나란히 재매핑된다.
+  const SKETCH_TOOLS = ['pen','line','rect','ellipse','arrow','text'];
+  const SKETCH_COLORS = [
+    { color:'#0b0b0b', label:'검정' },
+    { color:'#c62828', label:'빨강' },
+    { color:'#1544c4', label:'파랑' },
+    { color:'#1b7a3d', label:'초록' },
+    { color:'#c46a00', label:'주황' },
+    { color:'#7a8892', label:'회색' },
+  ];
+  function newSketchId(){ return 's'+Math.random().toString(36).slice(2,10)+Date.now().toString(36); }
+
+  // ── 모눈(격자) ──────────────────────────────────────────────────────────────
+  // 눈금 간격은 "도면 원본의 짧은 변 ÷ 칸 수"로 정한다. 짧은 변 하나만 기준으로 삼고 가로·세로에
+  // 같은 간격을 쓰기 때문에, 가로세로 비율이 어떤 도면이든 칸은 언제나 정사각형이 된다(칸 수를
+  // 가로·세로 따로 받으면 A4처럼 긴 도면에서 칸이 직사각형으로 찌그러진다 — 그래서 받지 않는다).
+  // 캔버스 픽셀이 아니라 원본 픽셀 기준이라 확대·축소해도 격자가 도면 위 같은 자리에 머문다.
+  // 기본 40칸은 A4 가로(2480×1754)에서 가로 56칸 × 세로 40칸, 인쇄하면 한 칸이 약 4.8mm다.
+  const SKETCH_GRID_DIV_DEFAULT = 40;
+  const SKETCH_GRID_DIV_MIN = 10, SKETCH_GRID_DIV_MAX = 80, SKETCH_GRID_DIV_STEP = 2;
+  const SKETCH_GRID_STORE_KEY = 'defectMarkerSketchGrid_v1';
+  const SKETCH_GRID_DIV_STORE_KEY = 'defectMarkerSketchGridDiv_v1';
+  // 아주 작은 이미지에서 칸 수를 최대로 올리면 눈금이 1~2px까지 좁아져 스냅이 무의미해진다 —
+  // 원본 4px을 하한으로 둔다. 하한에 걸려도 가로·세로가 같은 값이라 정사각형은 유지된다.
+  function sketchGridStepNatural(d){ return Math.max(4, Math.min(d.naturalW, d.naturalH) / sketchGridDiv); }
+  // 찍은 점을 가장 가까운 격자 교점으로 옮긴다. 좌표는 % 로 주고받되 계산은 원본 px로 해야
+  // 가로세로 비율이 다른 도면에서도 격자가 정사각형으로 유지된다.
+  function snapToGridPct(d, pct){
+    const step = sketchGridStepNatural(d);
+    const nx = Math.round(pct.x/100*d.naturalW / step) * step;
+    const ny = Math.round(pct.y/100*d.naturalH / step) * step;
+    return { x: clamp(nx/d.naturalW*100, 0, 100), y: clamp(ny/d.naturalH*100, 0, 100) };
+  }
+  // 모눈은 화면(#mainCanvas)에만 그린다 — 내보내기(PNG/PDF)·썸네일은 각자 별도 캔버스를 쓰므로
+  // 여기서 그린 것이 저장물에 딸려 나갈 일이 구조적으로 없다. 인쇄물에 격자가 찍히면 안 되기 때문에
+  // 이 점이 중요하다. 그리는 순서상 도면 이미지 위, 그린 선 아래에 깔린다.
+  function drawSketchGrid(ctx, d, w, h){
+    const scale = (d && d.naturalW>0) ? (w / d.naturalW) : 1;
+    const stepPx = sketchGridStepNatural(d) * scale;
+    // 많이 축소한 상태에서 격자를 다 그리면 화면이 그냥 회색으로 뭉개진다 — 그럴 때는 그리지 않는다.
+    // (기본 칸 수를 40칸으로 올리면서 눈금이 절반으로 좁아졌으므로 이 기준도 7px → 5px로 낮췄다.
+    //  그대로 두면 예전보다 훨씬 이른 배율에서 모눈이 사라져 버린다.)
+    if(stepPx < 5) return;
+    ctx.save();
+    ctx.lineWidth = 1;
+    const line = (major)=>{
+      ctx.beginPath();
+      const mult = major ? 5 : 1;
+      for(let i=1; i*stepPx*mult < w; i++){
+        if(!major && i%5===0) continue;            // 굵은 선 자리는 아래에서 따로 그린다
+        const x = Math.round(i*stepPx*mult)+0.5;
+        ctx.moveTo(x, 0); ctx.lineTo(x, h);
+      }
+      for(let i=1; i*stepPx*mult < h; i++){
+        if(!major && i%5===0) continue;
+        const y = Math.round(i*stepPx*mult)+0.5;
+        ctx.moveTo(0, y); ctx.lineTo(w, y);
+      }
+      ctx.stroke();
+    };
+    // 5칸마다 굵은 선을 둔다 — 눈금을 하나씩 세지 않고도 "여기서 저기까지 세 칸 반"을 읽을 수 있다.
+    ctx.strokeStyle = 'rgba(42,120,214,0.16)'; line(false);
+    ctx.strokeStyle = 'rgba(42,120,214,0.30)'; line(true);
+    ctx.restore();
+  }
+  function getSketch(d){ if(!Array.isArray(d.sketch)) d.sketch = []; return d.sketch; }
+  function cloneSketchForUndo(sketch){
+    return (Array.isArray(sketch)?sketch:[]).map(s=> Object.assign({}, s, { pts: (s.pts||[]).map(p=>({x:p.x,y:p.y})) }));
+  }
+
+  // 선 굵기도 마커 반지름·지우개 브러시와 같은 규칙 — "도면 원본 대비 비율"로 한 번만 정의하고
+  // 그리는 캔버스의 배율을 곱한다. 그래야 화면에서 보이는 굵기와 PNG/PDF로 저장했을 때의 굵기가
+  // 항상 같다(예전에 마커가 겪었던 "저장하면 상대적으로 작아지는" 버그를 되풀이하지 않기 위함).
+  function sketchWidthNatural(d, mult){
+    return clamp(Math.min(d.naturalW, d.naturalH)*0.0022, 1.2, 12) * (mult || 1);
+  }
+  function sketchWidthFor(d, w, h, mult){
+    const scale = (d && d.naturalW>0) ? (w / d.naturalW) : 1;
+    return Math.max(0.6, sketchWidthNatural(d, mult) * scale);
+  }
+  function sketchFontNatural(d, s){
+    return Math.max(6, (s.fontSize || 2.4)/100 * Math.min(d.naturalW, d.naturalH));
+  }
+
+  // 점 하나와 선분 사이의 거리 — 선 지우개 히트 판정과 자유선 단순화(RDP)가 함께 쓴다.
+  function distToSeg(px, py, ax, ay, bx, by){
+    const dx = bx-ax, dy = by-ay;
+    const len2 = dx*dx + dy*dy;
+    let t = len2>0 ? ((px-ax)*dx + (py-ay)*dy)/len2 : 0;
+    t = clamp(t, 0, 1);
+    return Math.hypot(px-(ax+dx*t), py-(ay+dy*t));
+  }
+  // 자유선은 포인터 이벤트가 오는 대로 받으면 획 하나에 점이 수백 개 쌓인다 — 프로젝트 파일이
+  // 부풀고 렌더도 느려지므로, 획을 놓는 순간 모양을 유지하는 선에서 점을 솎아낸다(Ramer-Douglas-Peucker).
+  function simplifyRDP(pts, eps){
+    if(pts.length < 3) return pts.slice();
+    const keep = new Array(pts.length).fill(false);
+    keep[0] = keep[pts.length-1] = true;
+    const stack = [[0, pts.length-1]];
+    while(stack.length){
+      const seg = stack.pop();
+      const a = seg[0], b = seg[1];
+      let maxD = -1, idx = -1;
+      for(let i=a+1; i<b; i++){
+        const dd = distToSeg(pts[i].x, pts[i].y, pts[a].x, pts[a].y, pts[b].x, pts[b].y);
+        if(dd > maxD){ maxD = dd; idx = i; }
+      }
+      if(maxD > eps && idx > 0){ keep[idx] = true; stack.push([a,idx],[idx,b]); }
+    }
+    return pts.filter((p,i)=> keep[i]);
+  }
+
+  // 자유선을 놓는 순간, 그 획이 사실상 직선이면 직선으로 바꿔준다. 태블릿에서 펜으로 그은 벽선은
+  // 반드시 미세하게 흔들리는데, 그 상태로 남으면 보고서에 들어갈 도면이 손그림 티가 난다.
+  // 판정은 보수적으로 한다 — 일부러 그린 곡선까지 펴버리면 그리기 자체를 못 믿게 되므로,
+  // "양 끝을 이은 직선에서 벗어난 최대 거리가 그 길이의 6% 미만"일 때만 편다.
+  // 길이·거리는 전부 도면 원본 px 기준으로 재므로 가로세로 비율이 다른 도면에서도 판정이 같다.
+  // 직선으로 편 뒤 각도가 수평·수직에 4° 이내로 가까우면 정확히 수평·수직으로 맞춘다(벽선 대부분).
+  // 돌려주는 값은 점 2개짜리 배열이거나, 펴지 않기로 했으면 null.
+  function straightenPenStroke(d, pts){
+    // 점이 2개면 simplifyRDP가 이미 "가운데 점이 하나도 필요 없다"고 판정한 것이므로 그 자체로 직선이다.
+    // 여기서 3개 미만을 걸러내면, 아주 반듯하게 그은 획일수록 오히려 자유선으로 남는 거꾸로 된 결과가 된다
+    // (그러면 그 끝점이 이후 스냅 대상이 되지 않고 수평·수직 보정도 받지 못한다).
+    if(pts.length < 2) return null;
+    const a = pts[0], b = pts[pts.length-1];
+    const X = p => p.x/100*d.naturalW, Y = p => p.y/100*d.naturalH;
+    const chord = Math.hypot(X(b)-X(a), Y(b)-Y(a));
+    // 너무 짧은 획은 직선인지 아닌지 판단할 근거가 없다(점 찍기·짧은 표시까지 펴면 곤란하다).
+    if(chord < Math.min(d.naturalW, d.naturalH)*0.04) return null;
+    let maxDev = 0;
+    for(let i=1; i<pts.length-1; i++){
+      maxDev = Math.max(maxDev, distToSeg(X(pts[i]), Y(pts[i]), X(a), Y(a), X(b), Y(b)));
+      if(maxDev/chord > 0.06) return null; // 눈에 띄게 휘었으면 그대로 둔다
+    }
+    const end = { x:b.x, y:b.y };
+    const angDeg = Math.abs(Math.atan2(Y(b)-Y(a), X(b)-X(a)) * 180/Math.PI);
+    const near = (v, t) => Math.abs(v - t) <= 4;
+    if(near(angDeg, 0) || near(angDeg, 180)) end.y = a.y;
+    else if(near(angDeg, 90)) end.x = a.x;
+    return [ {x:a.x, y:a.y}, end ];
+  }
+
+  function drawArrowHead(ctx, fromX, fromY, tipX, tipY, lw){
+    const ang = Math.atan2(tipY-fromY, tipX-fromX);
+    const len = Math.max(6, lw*4.2), spread = Math.PI/7;
+    ctx.beginPath();
+    ctx.moveTo(tipX, tipY);
+    ctx.lineTo(tipX - Math.cos(ang-spread)*len, tipY - Math.sin(ang-spread)*len);
+    ctx.lineTo(tipX - Math.cos(ang+spread)*len, tipY - Math.sin(ang+spread)*len);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  // 선 하나를 그린다. (offX,offY,drawW,drawH)는 "이 캔버스에서 도면 이미지가 차지한 사각형"이다 —
+  // 표제란(도곽) 내보내기처럼 도면이 여백 안쪽에 축소 배치되는 경우가 있어 오프셋을 받는다.
+  function drawOneStroke(ctx, d, s, offX, offY, drawW, drawH){
+    const pts = s.pts || [];
+    if(pts.length === 0) return;
+    const P = i => ({ x: offX + pts[i].x/100*drawW, y: offY + pts[i].y/100*drawH });
+    const lw = sketchWidthFor(d, drawW, drawH, s.width);
+    const color = s.color || '#0b0b0b';
+    ctx.save();
+    ctx.strokeStyle = color; ctx.fillStyle = color;
+    ctx.lineWidth = lw; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+
+    if(s.tool === 'text'){
+      const a = P(0);
+      const scale = (d && d.naturalW>0) ? (drawW / d.naturalW) : 1;
+      const fontPx = Math.max(6, sketchFontNatural(d, s) * scale);
+      ctx.translate(a.x, a.y);
+      if(s.angle) ctx.rotate((s.angle||0)*Math.PI/180);
+      ctx.font = '600 ' + fontPx + 'px system-ui, -apple-system, "Malgun Gothic", sans-serif';
+      ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+      // 어두운 도면·사진 위에 놓여도 읽히도록 흰 테두리를 먼저 깐다(마커 번호 라벨과 같은 처리).
+      ctx.lineWidth = Math.max(2, fontPx*0.16);
+      ctx.strokeStyle = 'rgba(255,255,255,0.92)';
+      ctx.strokeText(s.text || '', 0, 0);
+      ctx.fillStyle = color;
+      ctx.fillText(s.text || '', 0, 0);
+      ctx.restore();
+      return;
+    }
+    if(s.tool === 'rect' && pts.length >= 2){
+      const a = P(0), b = P(1);
+      ctx.strokeRect(Math.min(a.x,b.x), Math.min(a.y,b.y), Math.abs(b.x-a.x), Math.abs(b.y-a.y));
+      ctx.restore();
+      return;
+    }
+    if(s.tool === 'ellipse' && pts.length >= 2){
+      const a = P(0), b = P(1);
+      ctx.beginPath();
+      ctx.ellipse((a.x+b.x)/2, (a.y+b.y)/2, Math.max(0.5,Math.abs(b.x-a.x)/2), Math.max(0.5,Math.abs(b.y-a.y)/2), 0, 0, Math.PI*2);
+      ctx.stroke();
+      ctx.restore();
+      return;
+    }
+    // pen / line / arrow — 점을 순서대로 잇는 것은 같고, arrow만 끝에 화살촉을 더 얹는다.
+    ctx.beginPath();
+    for(let i=0; i<pts.length; i++){
+      const p = P(i);
+      if(i===0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
+    }
+    if(pts.length === 1){
+      const p = P(0);
+      ctx.beginPath(); ctx.arc(p.x, p.y, lw/2, 0, Math.PI*2); ctx.fill();
+    } else {
+      ctx.stroke();
+    }
+    if(s.tool === 'arrow' && pts.length >= 2){
+      const tip = P(pts.length-1), prev = P(pts.length-2);
+      drawArrowHead(ctx, prev.x, prev.y, tip.x, tip.y, lw);
+    }
+    ctx.restore();
+  }
+
+  // 도면 이미지가 (offX,offY,drawW,drawH)에 그려진 직후에 부른다. 마커보다 먼저 그려야
+  // 스케치가 결함 번호를 덮지 않는다(화면에서는 #mainCanvas에 그려지므로 자연히 마커 아래로 간다).
+  function drawSketch(ctx, d, offX, offY, drawW, drawH){
+    if(!d || !Array.isArray(d.sketch) || d.sketch.length === 0) return;
+    d.sketch.forEach(s=> drawOneStroke(ctx, d, s, offX, offY, drawW, drawH));
+  }
+
+  // 선 지우개용 히트 판정. 좌표는 도면 원본 px 기준으로 환산해서 재므로, 가로세로 비율이
+  // 크게 다른 도면에서도 판정 반경이 찌그러지지 않는다. 나중에 그린 선이 먼저 잡힌다.
+  function sketchHitTest(d, xPct, yPct, tolNatural){
+    const list = d.sketch || [];
+    const px = xPct/100*d.naturalW, py = yPct/100*d.naturalH;
+    const X = p => p.x/100*d.naturalW, Y = p => p.y/100*d.naturalH;
+    for(let i=list.length-1; i>=0; i--){
+      const s = list[i], pts = s.pts || [];
+      if(pts.length === 0) continue;
+      const tol = tolNatural + sketchWidthNatural(d, s.width)/2;
+      if(s.tool === 'text'){
+        const fontPx = sketchFontNatural(d, s);
+        const wApprox = Math.max(fontPx, (s.text||'').length * fontPx * 0.62);
+        const ax = X(pts[0]), ay = Y(pts[0]);
+        if(px >= ax-tol && px <= ax+wApprox+tol && py >= ay-fontPx*0.7-tol && py <= ay+fontPx*0.7+tol) return s;
+        continue;
+      }
+      if(s.tool === 'rect' && pts.length>=2){
+        const x0 = Math.min(X(pts[0]),X(pts[1])), x1 = Math.max(X(pts[0]),X(pts[1]));
+        const y0 = Math.min(Y(pts[0]),Y(pts[1])), y1 = Math.max(Y(pts[0]),Y(pts[1]));
+        const edges = [[x0,y0,x1,y0],[x1,y0,x1,y1],[x1,y1,x0,y1],[x0,y1,x0,y0]];
+        if(edges.some(ed=> distToSeg(px,py,ed[0],ed[1],ed[2],ed[3]) <= tol)) return s;
+        continue;
+      }
+      if(s.tool === 'ellipse' && pts.length>=2){
+        const cx = (X(pts[0])+X(pts[1]))/2, cy = (Y(pts[0])+Y(pts[1]))/2;
+        const rx = Math.max(1, Math.abs(X(pts[1])-X(pts[0]))/2), ry = Math.max(1, Math.abs(Y(pts[1])-Y(pts[0]))/2);
+        const k = Math.hypot((px-cx)/rx, (py-cy)/ry);
+        if(Math.abs(k-1) * Math.min(rx,ry) <= tol) return s;
+        continue;
+      }
+      for(let j=0; j<pts.length-1; j++){
+        if(distToSeg(px,py, X(pts[j]),Y(pts[j]), X(pts[j+1]),Y(pts[j+1])) <= tol) return s;
+      }
+      if(pts.length === 1 && Math.hypot(px-X(pts[0]), py-Y(pts[0])) <= tol) return s;
+    }
+    return null;
+  }
+
+  // 이미 그린 선의 끝점(사각형은 네 모서리) 근처에서 시작·끝나면 그 점에 딱 붙인다 —
+  // 벽선을 여러 개 이어 그릴 때 이음매가 벌어지지 않게 하는 것이 목적이다.
+  function sketchSnapPoint(d, xPct, yPct, tolNatural){
+    let best = null, bestDist = tolNatural;
+    const px = xPct/100*d.naturalW, py = yPct/100*d.naturalH;
+    (d.sketch || []).forEach(s=>{
+      const pts = s.pts || [];
+      const cands = [];
+      if(s.tool==='line' || s.tool==='arrow' || s.tool==='pen'){
+        if(pts[0]) cands.push(pts[0]);
+        if(pts[pts.length-1]) cands.push(pts[pts.length-1]);
+      } else if((s.tool==='rect' || s.tool==='ellipse') && pts.length>=2){
+        const a = pts[0], b = pts[1];
+        cands.push({x:a.x,y:a.y},{x:b.x,y:a.y},{x:b.x,y:b.y},{x:a.x,y:b.y});
+      }
+      cands.forEach(c=>{
+        const dist = Math.hypot(px - c.x/100*d.naturalW, py - c.y/100*d.naturalH);
+        if(dist < bestDist){ bestDist = dist; best = { x:c.x, y:c.y }; }
+      });
+    });
+    return best;
+  }
+
+  // Shift를 누른 채 그린 직선은 수평·수직·45°에 맞춘다(도면 벽선은 대부분 수평/수직이라 이게 기본기다).
+  function constrainLinePct(d, x0, y0, x1, y1){
+    const dx = (x1-x0)/100*d.naturalW, dy = (y1-y0)/100*d.naturalH;
+    const len = Math.hypot(dx, dy);
+    if(len < 0.0001) return { x:x1, y:y1 };
+    const step = Math.PI/4;
+    const ang = Math.round(Math.atan2(dy, dx)/step)*step;
+    return {
+      x: x0 + (Math.cos(ang)*len)/d.naturalW*100,
+      y: y0 + (Math.sin(ang)*len)/d.naturalH*100,
+    };
+  }
+
+  // 프로젝트 파일은 협력업체가 보낸 외부 데이터일 수 있다 — 계열 스냅샷(sanitizeSeriesSnapshot)과
+  // 같은 방침으로, 안에 든 객체를 그대로 믿지 않고 허용된 필드만 화이트리스트로 다시 만든다.
+  function sanitizeSketch(raw){
+    if(!Array.isArray(raw)) return [];
+    const out = [];
+    raw.forEach(s=>{
+      if(!s || typeof s !== 'object') return;
+      if(SKETCH_TOOLS.indexOf(s.tool) < 0) return;
+      const pts = (Array.isArray(s.pts) ? s.pts : [])
+        .filter(p=> p && isFinite(p.x) && isFinite(p.y))
+        .map(p=>({ x: clamp(Number(p.x), -50, 150), y: clamp(Number(p.y), -50, 150) }));
+      if(pts.length === 0) return;
+      if(s.tool !== 'pen' && s.tool !== 'text' && pts.length < 2) return;
+      const st = {
+        id: newSketchId(),
+        tool: s.tool,
+        color: (typeof s.color==='string' && /^#[0-9a-fA-F]{6}$/.test(s.color)) ? s.color : '#0b0b0b',
+        width: (isFinite(s.width) && Number(s.width)>0) ? clamp(Number(s.width), 0.2, 6) : 1,
+        pts,
+      };
+      if(s.tool === 'text'){
+        // 캔버스 fillText로만 그리므로 HTML로 해석될 일은 없지만, 제어문자·과도한 길이는 잘라낸다.
+        st.text = String(s.text==null ? '' : s.text).split('').filter(function(ch){ var c = ch.charCodeAt(0); return c >= 32 && c !== 127; }).join('').slice(0,200);
+        if(!st.text) return;
+        st.fontSize = (isFinite(s.fontSize) && Number(s.fontSize)>0) ? clamp(Number(s.fontSize), 0.4, 20) : 2.4;
+        st.angle = isFinite(s.angle) ? ((Number(s.angle)%360)+360)%360 : 0;
+      }
+      out.push(st);
+    });
+    return out;
+  }
+
+  // 자르기: 마커와 같은 규칙으로 좌표를 새 영역 기준으로 옮긴다. 굵기·글자 크기는 "원본 짧은 변 대비"로
+  // 정의돼 있어 짧은 변이 바뀌면 실제 크기가 달라지므로, 보이는 크기가 유지되도록 배율을 함께 보정한다.
+  function remapSketchForCrop(d, nx, ny, nw, nh){
+    const factor = Math.min(d.naturalW, d.naturalH) / Math.max(1, Math.min(nw, nh));
+    const out = [];
+    (d.sketch || []).forEach(s=>{
+      const pts = (s.pts||[]).map(p=>({
+        x: (p.x/100*d.naturalW - nx)/nw*100,
+        y: (p.y/100*d.naturalH - ny)/nh*100,
+      }));
+      // 잘라낸 영역 밖으로 완전히 벗어난 획만 버린다(마커가 영역 밖이면 통째로 사라지는 것과 같은 기준).
+      // 걸쳐 있는 획은 좌표만 옮기고 그대로 두며, 밖으로 나간 부분은 캔버스가 알아서 잘라 그린다.
+      if(!pts.some(p=> p.x>=-2 && p.x<=102 && p.y>=-2 && p.y<=102)) return;
+      const st = Object.assign({}, s, { pts, width: (s.width||1)*factor });
+      if(s.tool==='text') st.fontSize = (s.fontSize||2.4)*factor;
+      out.push(st);
+    });
+    return out;
+  }
+  // 회전: 90°/-90°라 짧은 변 길이가 바뀌지 않으므로 굵기·글자 크기는 손대지 않고 좌표만 돌린다.
+  // rotPt는 rotateDrawing()이 마커에 쓰는 것과 같은 함수를 그대로 받아 쓴다(두 벌로 두면 어긋난다).
+  function remapSketchForRotate(sketch, deltaDeg, rotPt){
+    return (sketch || []).map(s=>{
+      const pts = (s.pts||[]).map(p=>{
+        const r = rotPt(p.x/100, p.y/100);
+        return { x: r.x*100, y: r.y*100 };
+      });
+      const st = Object.assign({}, s, { pts });
+      if(s.tool==='text') st.angle = (((s.angle||0) + deltaDeg) % 360 + 360) % 360;
+      return st;
+    });
+  }
+
+  // ---------- 스케치: 그리는 동작(포인터) ----------
+  // 판정 반경은 전부 "도면 원본 짧은 변 대비"로 정한다 — 확대 배율이나 도면 해상도가 달라도
+  // 손끝에서 느껴지는 여유가 같게 하기 위해서다.
+  function sketchSnapTolNatural(d){ return Math.max(6, Math.min(d.naturalW, d.naturalH)*0.012); }
+  function sketchEraseTolNatural(d){ return Math.max(6, Math.min(d.naturalW, d.naturalH)*0.010); }
+  function sketchTextSizePct(){ return 2.4 * clamp(sketchWidthMult, 0.5, 2.2); }
+  function canvasPtToPct(p){
+    const cv = document.getElementById('mainCanvas');
+    return { x: p.x/cv.width*100, y: p.y/cv.height*100 };
+  }
+  // Shift로 사각형/원을 정사각·정원으로 맞춘다(원본 px 기준으로 재야 가로세로 비율이 다른 도면에서도 정사각이 된다).
+  function squareEndPct(d, startPct, endPct){
+    const dx = (endPct.x-startPct.x)/100*d.naturalW, dy = (endPct.y-startPct.y)/100*d.naturalH;
+    const s = Math.max(Math.abs(dx), Math.abs(dy));
+    return {
+      x: startPct.x + (dx<0 ? -s : s)/d.naturalW*100,
+      y: startPct.y + (dy<0 ? -s : s)/d.naturalH*100,
+    };
+  }
+  // 드래그 상태(pendingAction) 하나를 실제 stroke 객체로 바꾼다. 미리보기와 확정이 이 함수를
+  // 함께 쓰므로, 화면에 보이던 모양과 실제로 저장되는 모양이 어긋날 수 없다.
+  function buildSketchStrokeFromAction(d, pa){
+    if(!pa || pa.mode !== 'sketch') return null;
+    const base = { id: pa.strokeId, tool: pa.tool, color: pa.color, width: pa.width };
+    if(pa.tool === 'pen'){
+      if(!pa.ptsPct || pa.ptsPct.length === 0) return null;
+      return Object.assign(base, { pts: pa.ptsPct.map(p=>({x:p.x, y:p.y})) });
+    }
+    let end = { x: pa.curPct.x, y: pa.curPct.y };
+    if(pa.shiftKey){
+      end = (pa.tool==='line' || pa.tool==='arrow')
+        ? constrainLinePct(d, pa.startPct.x, pa.startPct.y, end.x, end.y)
+        : squareEndPct(d, pa.startPct, end);
+    } else if((pa.tool==='line' || pa.tool==='arrow') && pa.endSnap){
+      end = { x: pa.endSnap.x, y: pa.endSnap.y };   // Shift 각도 고정이 스냅보다 우선
+    } else if(sketchGridOn && !pa.altKey && (pa.tool==='line' || pa.tool==='arrow')){
+      // 격자에 붙였는데도 긴 벽이 한 칸 어긋나 비스듬해지는 일이 흔하다 — 눈금 경계 근처에서 손이
+      // 조금만 흔들려도 시작과 끝이 서로 다른 줄에 붙기 때문이다. 그대로 두면 모눈을 켠 이유
+      // (자로 잰 듯한 평면)가 사라진다.
+      // 판정은 각도가 아니라 "몇 칸 어긋났는가"로 한다 — 각도는 벽 길이에 따라 같은 한 칸 오차가
+      // 4°가 되기도 12°가 되기도 해서 경계가 들쭉날쭉해진다.
+      //   가로로 충분히 길게 뻗었는데 세로로는 1칸 이하 → 수평으로 맞춘다(반대도 같음).
+      // 일부러 그린 대각선은 세로로 2칸 이상 내려가거나(1:2, 1:3 …) 짧아서 이 조건에 걸리지 않는다.
+      // "충분히 길게"는 칸 수의 1/4로 잡는다 — 칸을 잘게 나눌수록 5칸의 실제 길이가 짧아져서,
+      // 고정된 칸 수로 두면 촘촘한 모눈에서 짧은 선까지 눕혀버린다. 1/4로 두면 칸 수를 어떻게
+      // 바꾸든 "짧은 변의 1/4보다 긴 선"이라는 같은 기준이 유지된다(40칸이면 10칸).
+      // 그래도 원치 않으면 Alt를 누른 채 그으면 격자 자체가 적용되지 않는다.
+      const step = sketchGridStepNatural(d);
+      const minRun = sketchGridDiv / 4;
+      const runX = Math.abs(end.x - pa.startPct.x)/100*d.naturalW / step;
+      const runY = Math.abs(end.y - pa.startPct.y)/100*d.naturalH / step;
+      if(runX >= minRun && runY <= 1.001) end.y = pa.startPct.y;
+      else if(runY >= minRun && runX <= 1.001) end.x = pa.startPct.x;
+    }
+    return Object.assign(base, { pts: [ {x:pa.startPct.x, y:pa.startPct.y}, end ] });
+  }
+
+  // 자유선이 저절로 반듯해지면 "내가 그린 게 왜 바뀌었지?"로 읽힐 수 있다. 처음 한 번만 알려주고,
+  // 그 뒤로는 조용히 동작한다(마음에 안 들면 Ctrl+Z가 곧바로 원래 획을 되살린다).
+  let straightenHintShown = false;
+  function notifyStraightenedOnce(){
+    if(straightenHintShown) return;
+    straightenHintShown = true;
+    showToast('거의 곧게 그은 자유선은 자동으로 반듯하게 폅니다. 원하지 않으면 Ctrl+Z로 되돌리세요.');
+  }
+
+  function sketchEraseAt(d, pct){
+    const hit = sketchHitTest(d, pct.x, pct.y, sketchEraseTolNatural(d));
+    if(!hit) return false;
+    const list = getSketch(d);
+    const idx = list.indexOf(hit);
+    if(idx >= 0) list.splice(idx, 1);
+    if(pendingAction) pendingAction.removed = (pendingAction.removed||0) + 1;
+    markDirty();
+    renderCanvas();
+    return true;
+  }
+
+  // 격자 스냅을 적용할지 판단해서 좌표를 돌려준다. 자유선은 손이 가는 대로 그리는 도구이고,
+  // 글자는 격자에 붙으면 오히려 어색한 자리에 놓이므로 둘 다 제외한다.
+  // Alt를 누른 채 그리면 이번 한 번만 격자를 무시한다(스냅이 방해가 되는 자리를 위한 탈출구).
+  function applyGridSnap(d, pct, e){
+    if(!sketchGridOn) return pct;
+    if(e && e.altKey) return pct;
+    if(sketchTool === 'pen' || sketchTool === 'text') return pct;
+    return snapToGridPct(d, pct);
+  }
+
+  function handleSketchPointerDown(d, p, e){
+    const pct = canvasPtToPct(p);
+    if(sketchTool === 'text'){
+      // 캔버스는 tabindex="0"이라 mousedown의 기본 동작으로 포커스를 가져간다. 그 기본 동작은 이
+      // 핸들러가 끝난 뒤에 일어나므로, 여기서 막지 않으면 방금 focus()한 입력칸이 곧바로 blur되어
+      // 글자를 한 자도 못 치고 사라진다(브라우저에서 실제로 그렇게 동작하는 것을 확인).
+      if(e && e.preventDefault) e.preventDefault();
+      openSketchTextEditor(d, pct);
+      return;
+    }
+    if(sketchTool === 'sketchErase'){
+      pushUndo();  // 드래그 한 번(여러 선을 지나가도)이 실행취소 한 번이 되도록 시작할 때만 기록
+      pendingAction = { mode:'sketchErase', removed:0 };
+      sketchEraseAt(d, pct);
+      return;
+    }
+    // 벽선을 이어 그릴 때 이음매가 벌어지지 않도록, 이미 그린 선의 끝점 근처에서 시작하면 그 점에 붙인다.
+    // 자유선은 제외한다 — 손이 가는 대로 긋는 도구라 시작점이 멋대로 끌려가면 오히려 방해가 된다.
+    // (거의 직선으로 그은 자유선은 놓는 순간 직선으로 펴지면서 그때 양 끝이 함께 스냅된다.)
+    const snap = (sketchTool === 'pen') ? null : sketchSnapPoint(d, pct.x, pct.y, sketchSnapTolNatural(d));
+    // 끝점 스냅이 격자 스냅보다 우선한다 — 이미 그어둔 벽에 붙는 것이 격자에 맞추는 것보다 중요하다.
+    const startPct = snap || applyGridSnap(d, pct, e);
+    pendingAction = {
+      mode:'sketch', tool: sketchTool, strokeId: newSketchId(),
+      color: sketchColor, width: sketchWidthMult,
+      startPct: { x:startPct.x, y:startPct.y },
+      curPct: { x:pct.x, y:pct.y },
+      ptsPct: [ { x:startPct.x, y:startPct.y } ],
+      shiftKey: !!e.shiftKey, altKey: !!(e && e.altKey), moved: false, snapHit: snap || null, endSnap: null,
+    };
+    renderMarkerLayer();
+  }
+
+  function handleSketchPointerMove(d, p, e){
+    if(!pendingAction) return;
+    const pct = canvasPtToPct(p);
+    if(pendingAction.mode === 'sketchErase'){ sketchEraseAt(d, pct); return; }
+    if(pendingAction.mode !== 'sketch') return;
+    pendingAction.shiftKey = !!e.shiftKey;
+    pendingAction.altKey = !!e.altKey; // 그리는 도중 Alt를 눌렀다 뗐다 해도 그 순간 상태를 따른다
+    // 미리보기와 실제로 확정되는 좌표가 같아야 하므로, 격자 스냅은 여기서 한 번만 적용한다
+    // (buildSketchStrokeFromAction은 이 값을 그대로 쓴다).
+    pendingAction.curPct = applyGridSnap(d, pct, e);
+    pendingAction.moved = true;
+    if(pendingAction.tool === 'pen'){
+      // 포인터가 오는 대로 다 담지 않고 최소 간격 이상 움직였을 때만 점을 더한다(1차 솎아내기).
+      const last = pendingAction.ptsPct[pendingAction.ptsPct.length-1];
+      const stepN = Math.hypot((pct.x-last.x)/100*d.naturalW, (pct.y-last.y)/100*d.naturalH);
+      if(stepN >= Math.max(1, Math.min(d.naturalW, d.naturalH)*0.0012)) pendingAction.ptsPct.push({x:pct.x, y:pct.y});
+    } else if(pendingAction.tool === 'line' || pendingAction.tool === 'arrow'){
+      const snap = sketchSnapPoint(d, pct.x, pct.y, sketchSnapTolNatural(d));
+      pendingAction.endSnap = snap;
+      pendingAction.snapHit = snap;
+    }
+    scheduleMarkerRender();
+  }
+
+  // onPointerUp이 전역 pendingAction을 먼저 비우고 로컬 변수로 마무리하는 구조라, 여기서도
+  // 그 로컬 변수(pa)를 받아서 처리한다 — 전역을 다시 들여다보면 이미 null이라 아무것도 못 한다.
+  function handleSketchPointerUp(d, pa){
+    if(!pa) return;
+    if(pa.mode === 'sketchErase'){
+      // 아무 선도 지나가지 않았다면 방금 쌓은 실행취소 기록은 빈 기록이므로 걷어낸다
+      // (그냥 두면 Ctrl+Z를 눌러도 아무 일도 안 일어나는 "먹통 한 번"이 생긴다).
+      if(!pa.removed && undoStack.length) undoStack.pop();
+      renderCanvas();
+      return;
+    }
+    if(pa.mode !== 'sketch') return;
+    // 누르기만 하고 움직이지 않은 것은 그리려던 것이 아니라 실수로 찍은 것으로 본다.
+    if(!pa.moved){ renderCanvas(); return; }
+    const stroke = buildSketchStrokeFromAction(d, pa);
+    if(!stroke || !stroke.pts || stroke.pts.length === 0){ renderCanvas(); return; }
+    if(pa.tool === 'pen'){
+      stroke.pts = simplifyRDP(stroke.pts, 0.18);  // % 단위 허용오차 — 모양은 그대로, 점 수는 크게 줄어든다
+      if(stroke.pts.length < 2){ renderCanvas(); return; }
+      // 거의 직선으로 그은 자유선은 직선으로 바꾼다. tool까지 'line'으로 바꾸는 이유는, 그래야
+      // 이 획의 끝점이 이후 다른 선의 끝점 스냅 대상이 되어 벽선을 계속 이어 그릴 수 있기 때문이다.
+      const straight = straightenPenStroke(d, stroke.pts);
+      if(straight){
+        stroke.tool = 'line';
+        stroke.pts = straight;
+        // 편 김에 양 끝을 이미 그린 선의 끝점에도 붙인다(자기 자신은 아직 d.sketch에 없어 자가 스냅 없음).
+        const s0 = sketchSnapPoint(d, straight[0].x, straight[0].y, sketchSnapTolNatural(d));
+        if(s0) stroke.pts[0] = { x:s0.x, y:s0.y };
+        const s1 = sketchSnapPoint(d, straight[1].x, straight[1].y, sketchSnapTolNatural(d));
+        if(s1) stroke.pts[1] = { x:s1.x, y:s1.y };
+        notifyStraightenedOnce();
+      }
+    } else {
+      const a = stroke.pts[0], b = stroke.pts[1];
+      const distN = Math.hypot((b.x-a.x)/100*d.naturalW, (b.y-a.y)/100*d.naturalH);
+      if(distN < Math.max(3, Math.min(d.naturalW, d.naturalH)*0.004)){ renderCanvas(); return; }
+    }
+    pushUndo();
+    getSketch(d).push(stroke);
+    renderCanvas();
+  }
+
+  // 글자 도구: prompt()는 태블릿에서 화면을 가리고 위치 감각을 잃게 만들어서, 클릭한 자리에
+  // 실제 글자 크기와 색으로 보이는 입력칸을 직접 얹는다. Enter 확정 / Esc 취소 / 포커스가 빠지면 확정.
+  function openSketchTextEditor(d, pct){
+    closeSketchTextEditor(false);
+    const shell = document.getElementById('canvasShell');
+    const cv = document.getElementById('mainCanvas');
+    if(!shell || !cv) return;
+    const fontCss = Math.max(11, sketchFontNatural(d, { fontSize: sketchTextSizePct() }) * (cv.clientWidth / d.naturalW));
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'sketch-text-input';
+    input.maxLength = 200;
+    input.placeholder = 'Enter로 확정';
+    input.style.left = Math.round(pct.x/100 * cv.clientWidth) + 'px';
+    input.style.top = Math.round(pct.y/100 * cv.clientHeight - fontCss*0.95) + 'px';
+    input.style.fontSize = Math.round(fontCss) + 'px';
+    input.style.color = sketchColor;
+    shell.appendChild(input);
+    sketchTextEditor = { el: input, pct: { x:pct.x, y:pct.y } };
+    // 포커스는 이번 이벤트 처리가 끝난 다음 프레임에 준다 — 클릭/터치의 기본 동작(캔버스로 포커스
+    // 이동)과 경쟁하지 않게 하려는 것. 그 사이에 다른 이유로 입력칸이 닫혔으면 건너뛴다.
+    setTimeout(()=>{ if(sketchTextEditor && sketchTextEditor.el === input) input.focus(); }, 0);
+    input.addEventListener('keydown', ev=>{
+      if(ev.key === 'Enter'){ ev.preventDefault(); closeSketchTextEditor(true); }
+      else if(ev.key === 'Escape'){ ev.preventDefault(); closeSketchTextEditor(false); }
+      ev.stopPropagation(); // 캔버스 단축키(1~9, s/m/d …)가 타이핑을 가로채지 않도록
+    });
+    input.addEventListener('blur', ()=> closeSketchTextEditor(true));
+  }
+  function closeSketchTextEditor(commit){
+    if(!sketchTextEditor) return;
+    const ed = sketchTextEditor;
+    sketchTextEditor = null; // el.remove()가 blur를 다시 부르므로 먼저 비워 재진입을 막는다
+    const text = String(ed.el.value || '').trim();
+    ed.el.remove();
+    const d = getActiveDrawing();
+    if(commit && text && d){
+      pushUndo();
+      getSketch(d).push({
+        id: newSketchId(), tool:'text', color: sketchColor, width: sketchWidthMult,
+        pts: [ { x:ed.pct.x, y:ed.pct.y } ], text, fontSize: sketchTextSizePct(), angle: 0,
+      });
+      renderCanvas();
+    }
+  }
+
   // ---------- 캔버스 렌더링 ----------
   // 마커 반지름을 "도면 원본 이미지 대비 비율"로 한 번만 정의(markerRadiusNatural)하고,
   // 화면/썸네일/내보내기 등 어디에 그리든 그 캔버스의 실제 배율(자연 이미지 픽셀당 캔버스 픽셀 수)을
@@ -2997,14 +3829,19 @@
         placeholder.className = 'empty-state';
         // 시작 화면은 할 일을 하나만 말한다. 이 화면이 떠 있는 동안 나머지 조작은 body.no-drawing으로
         // 전부 흐려져 있으므로(updateNoDrawingState), 눌리는 것은 여기 이 버튼과 "프로젝트 불러오기"뿐이다.
+        // 시작 화면은 이제 갈래가 둘이다 — 도면 이미지가 있으면 그것을 넣고, 없으면 백지를 만들어
+        // 현장에서 직접 그린다. 두 번째 길이 없으면 도면을 못 구한 현장에서는 앱이 아예 시작되지 않는다.
         placeholder.innerHTML =
-          '<div class="es-title">도면 이미지부터 넣어주세요</div>'
-          + '<div class="es-sub">평면도·입면도 이미지를 넣으면 그 위에 결함을 찍을 수 있습니다.<br/>여러 장을 한 번에 넣어도 됩니다.</div>'
+          '<div class="es-title">도면부터 준비해주세요</div>'
+          + '<div class="es-sub">평면도·입면도 이미지를 넣으면 그 위에 결함을 찍을 수 있습니다. 여러 장을 한 번에 넣어도 됩니다.<br/>'
+          + '도면이 없는 현장이라면 <b>빈 도면</b>을 만들어 평면을 직접 그린 뒤 그 위에 찍으세요.</div>'
           + '<button class="primary" id="btnEmptyAdd">+ 도면 이미지 추가</button>'
+          + '<button class="tool" id="btnEmptyBlank" style="margin-top:8px;border:1px solid var(--gridline);">+ 빈 도면(백지) 만들어 직접 그리기</button>'
           + '<div class="es-or">이미지 파일을 이 창으로 끌어다 놓거나, 복사한 이미지를 Ctrl+V로 붙여넣어도 됩니다.<br/>'
           + '이어서 하던 작업이 있으면 상단 「프로젝트 불러오기」로 여세요.</div>';
         wrap.appendChild(placeholder);
         placeholder.querySelector('#btnEmptyAdd').addEventListener('click', ()=> document.getElementById('addDrawingInput').click());
+        placeholder.querySelector('#btnEmptyBlank').addEventListener('click', ()=> openBlankDrawingModal());
       }
       placeholder.style.display='block';
       return false;
@@ -3047,6 +3884,12 @@
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
     ctx.drawImage(d.imgEl, 0, 0, w, h);
+    // 모눈은 그리는 동안에만, 그리고 화면에서만 보인다(저장물에는 없다 — drawSketchGrid 주석 참고).
+    if(sketchGridOn && sketchTool) drawSketchGrid(ctx, d, w, h);
+    // 확정된 스케치는 마커가 아니라 이 정적 레이어에 그린다 — 마커를 드래그하는 동안(초당 60번
+    // renderMarkerLayer가 도는 동안) 스케치는 다시 그려지지 않고, 그리는 순서상 자동으로
+    // 도면 < 스케치 < 마커가 되어 그려둔 선이 결함 번호를 덮지 않는다.
+    drawSketch(ctx, d, 0, 0, w, h);
     return true;
   }
 
@@ -3177,6 +4020,35 @@
       }
       ctx.restore();
     }
+    // 그리기 모드: 지금 그리는 중인 획 하나만 이 동적 레이어에 미리 그린다(놓는 순간 #mainCanvas로 넘어간다).
+    if(pendingAction && pendingAction.mode === 'sketch'){
+      const d = getActiveDrawing();
+      if(d){
+        const preview = buildSketchStrokeFromAction(d, pendingAction);
+        if(preview) drawOneStroke(ctx, d, preview, 0, 0, w, h);
+        // 끝점 스냅이 걸렸으면 어디에 붙는지 동그라미로 알려준다 — 안 그러면 선이 왜 살짝 옮겨졌는지 알 수 없다.
+        if(pendingAction.snapHit){
+          ctx.save();
+          ctx.strokeStyle = 'rgba(10,106,114,0.95)'; ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.arc(pendingAction.snapHit.x/100*w, pendingAction.snapHit.y/100*h, Math.max(5, Math.min(w,h)*0.008), 0, Math.PI*2);
+          ctx.stroke();
+          ctx.restore();
+        }
+      }
+    }
+    // 선 지우개: 지워질 반경을 커서에 보여준다(이미지 지우개의 브러시 미리보기와 같은 역할).
+    if(sketchTool === 'sketchErase' && eraseCursorPt){
+      const d = getActiveDrawing();
+      if(d){
+        const rPx = sketchEraseTolNatural(d) * (w / d.naturalW);
+        ctx.save();
+        ctx.strokeStyle = 'rgba(10,106,114,0.9)'; ctx.lineWidth = 1.5; ctx.setLineDash([3,3]);
+        ctx.beginPath(); ctx.arc(eraseCursorPt.x, eraseCursorPt.y, Math.max(4, rPx), 0, Math.PI*2); ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.restore();
+      }
+    }
     // 지우개 모드: 브러시 크기 미리보기 + 진행 중인 스트로크를 흰색으로 실시간 미리 칠함
     if(eraseMode){
       const d = getActiveDrawing(); if(!d) return;
@@ -3305,6 +4177,7 @@
       const tctx = cnv.getContext('2d');
       tctx.fillStyle = '#ffffff'; tctx.fillRect(0,0,tw,th);
       tctx.drawImage(d.imgEl, 0, 0, tw, th);
+      drawSketch(tctx, d, 0, 0, tw, th);
       const tr = clamp(Math.min(tw,th)*0.05, 5, 14);
       d.markers.forEach((m, idx)=>{
         drawMarkerDispatch(tctx, d, m, formatMarkerLabel(m, idx, d), tw, th, tr, false);
@@ -3596,7 +4469,10 @@
   function pushUndo(targetDrawing){
     const d = targetDrawing || getActiveDrawing(); if(!d) return;
     markDirty();
-    undoStack.push({type:'markers', drawingId:d.id, markers: cloneMarkersForUndo(d.markers)});
+    // 스케치(그린 선)도 마커와 같은 항목에 함께 싣는다 — 별도 타입/별도 스택을 만들면 마커 작업과
+    // 그리기 작업이 번갈아 일어날 때 되돌아가는 순서가 어긋난다. 하나의 스택에 시간순으로 쌓는
+    // 이 파일의 기존 방침(도면 이미지 편집도 같은 스택에 넣는다)을 그대로 따른다.
+    undoStack.push({type:'markers', drawingId:d.id, markers: cloneMarkersForUndo(d.markers), sketch: cloneSketchForUndo(d.sketch)});
     if(undoStack.length>60) undoStack.shift();
     redoStack = []; // 새 작업이 일어나면 그 이전의 "다시하기" 기록은 더 이상 의미가 없으므로 비운다
   }
@@ -3622,6 +4498,9 @@
       baseW: d.baseW,
       baseH: d.baseH,
       markers: cloneMarkersForUndo(d.markers),
+      // 자르기·회전은 스케치 좌표까지 다시 계산하므로(remapSketchForCrop/Rotate), 되돌릴 때
+      // 이미지만 돌아오고 그려둔 선은 옮겨진 채로 남지 않도록 여기에도 함께 담는다.
+      sketch: cloneSketchForUndo(d.sketch),
     });
     if(undoStack.length>60) undoStack.shift();
     trimImageEntries(undoStack);
@@ -3671,7 +4550,7 @@
     const d = drawings.find(x=>x.id===last.drawingId); if(!d){ undo(); return; }
     if(last.type==='image'){
       redoStack.push({ type:'image', drawingId:d.id, imgSrc:d.imgSrc, naturalW:d.naturalW, naturalH:d.naturalH,
-        baseW:d.baseW, baseH:d.baseH, markers: cloneMarkersForUndo(d.markers) });
+        baseW:d.baseW, baseH:d.baseH, markers: cloneMarkersForUndo(d.markers), sketch: cloneSketchForUndo(d.sketch) });
       trimImageEntries(redoStack);
       if(redoStack.length>60) redoStack.shift();
       const img = new Image();
@@ -3680,14 +4559,16 @@
         d.naturalW = last.naturalW; d.naturalH = last.naturalH;
         d.baseW = last.baseW; d.baseH = last.baseH;
         d.markers = last.markers;
+        if(last.sketch) d.sketch = last.sketch;
         markImagesDirty();
         if(d.id===activeDrawingId){ selectedIds = new Set(); renderCanvas(); renderTable(); }
       };
       img.src = last.imgSrc;
     } else {
-      redoStack.push({type:'markers', drawingId:d.id, markers: cloneMarkersForUndo(d.markers)});
+      redoStack.push({type:'markers', drawingId:d.id, markers: cloneMarkersForUndo(d.markers), sketch: cloneSketchForUndo(d.sketch)});
       if(redoStack.length>60) redoStack.shift();
       d.markers = last.markers;
+      if(last.sketch) d.sketch = last.sketch;
       if(d.id===activeDrawingId){ renderCanvas(); renderTable(); }
     }
   }
@@ -3722,7 +4603,7 @@
     const d = drawings.find(x=>x.id===next.drawingId); if(!d){ redo(); return; }
     if(next.type==='image'){
       undoStack.push({ type:'image', drawingId:d.id, imgSrc:d.imgSrc, naturalW:d.naturalW, naturalH:d.naturalH,
-        baseW:d.baseW, baseH:d.baseH, markers: cloneMarkersForUndo(d.markers) });
+        baseW:d.baseW, baseH:d.baseH, markers: cloneMarkersForUndo(d.markers), sketch: cloneSketchForUndo(d.sketch) });
       trimImageEntries(undoStack);
       if(undoStack.length>60) undoStack.shift();
       const img = new Image();
@@ -3731,14 +4612,16 @@
         d.naturalW = next.naturalW; d.naturalH = next.naturalH;
         d.baseW = next.baseW; d.baseH = next.baseH;
         d.markers = next.markers;
+        if(next.sketch) d.sketch = next.sketch;
         markImagesDirty();
         if(d.id===activeDrawingId){ selectedIds = new Set(); renderCanvas(); renderTable(); }
       };
       img.src = next.imgSrc;
     } else {
-      undoStack.push({type:'markers', drawingId:d.id, markers: cloneMarkersForUndo(d.markers)});
+      undoStack.push({type:'markers', drawingId:d.id, markers: cloneMarkersForUndo(d.markers), sketch: cloneSketchForUndo(d.sketch)});
       if(undoStack.length>60) undoStack.shift();
       d.markers = next.markers;
+      if(next.sketch) d.sketch = next.sketch;
       if(d.id===activeDrawingId){ renderCanvas(); renderTable(); }
     }
   }
@@ -4823,6 +5706,7 @@
     if(gridViewMode) setGridView(false);
     activeTypeKey = key;
     moveMode = false; selectMode = false; eraseMode = false; // 유형을 고르면 추가 모드로 자동 전환
+    exitSketchMode();
     pendingRectCreate = null;
     renderTypeGrid();
     updateModeButtonsUI();
@@ -4833,20 +5717,26 @@
     const mv = document.getElementById('btnMoveMode'); if(mv) mv.classList.toggle('active', moveMode);
     const sel = document.getElementById('btnSelectMode'); if(sel) sel.classList.toggle('active', selectMode);
     const er = document.getElementById('btnEraseMode'); if(er) er.classList.toggle('active', eraseMode);
+    const sk = document.getElementById('btnSketchMode'); if(sk) sk.classList.toggle('active', !!sketchTool);
     const brushGroup = document.getElementById('eraseBrushGroup');
     if(brushGroup) brushGroup.style.display = eraseMode ? '' : 'none';
+    renderGridDivUI(); // 모눈 칸 수 조절은 그리기 모드 + 모눈 켜짐일 때만 보인다
     // 태블릿 하단 플로팅 바의 선택/이동/지우개 버튼도 같은 상태를 그대로 반영한다.
     const fmv = document.getElementById('btnFloatMoveMode'); if(fmv) fmv.classList.toggle('active', moveMode);
     const fsel = document.getElementById('btnFloatSelectMode'); if(fsel) fsel.classList.toggle('active', selectMode);
     const fer = document.getElementById('btnFloatEraseMode'); if(fer) fer.classList.toggle('active', eraseMode);
+    const fsk = document.getElementById('btnFloatSketchMode'); if(fsk) fsk.classList.toggle('active', !!sketchTool);
+    renderSketchToolbar();
     // 배타 모드는 도면 자체가 말해준다 — 테두리 색(CSS)과 좌상단 이름표. 시선이 도면에 가 있을 때
     // 툴바 버튼 하나의 배경색만으로는 "지금 지우개"라는 걸 알아채지 못해 실수로 마커를 지우게 된다.
     document.body.classList.toggle('mode-move', moveMode);
     document.body.classList.toggle('mode-select', selectMode);
     document.body.classList.toggle('mode-erase', eraseMode);
+    document.body.classList.toggle('mode-sketch', !!sketchTool);
     const badge = document.getElementById('modeBadge');
     if(badge){
-      badge.textContent = eraseMode ? '지우개 모드 — Esc 또는 유형을 고르면 해제'
+      badge.textContent = sketchTool ? ('그리기 모드 · ' + sketchToolLabel(sketchTool) + ' — Esc 또는 유형을 고르면 해제')
+        : eraseMode ? '지우개 모드 — Esc 또는 유형을 고르면 해제'
         : selectMode ? '선택 모드 — Esc 또는 유형을 고르면 해제'
         : moveMode ? '이동 모드 — Esc 또는 유형을 고르면 해제'
         : '';
@@ -4855,8 +5745,22 @@
   function updateModeHint(){
     const hint = document.getElementById('modeHint');
     if(!hint) return;
+    if(sketchTool){
+      const guide = {
+        line:  '드래그로 벽선을 긋습니다. <b>Shift</b>: 수평·수직·45° 고정 · 다른 선의 끝점 근처에서 시작·종료하면 자동으로 이어붙습니다',
+        rect:  '드래그로 사각형을 그립니다. <b>Shift</b>: 정사각형',
+        pen:   '손으로 그리듯 드래그합니다 — 거의 곧게 그으면 자동으로 반듯한 직선이 됩니다',
+        ellipse:'드래그로 원/타원을 그립니다. <b>Shift</b>: 정원',
+        arrow: '드래그한 방향으로 화살촉이 붙습니다',
+        text:  '클릭한 자리에 바로 입력합니다 — <b>Enter</b> 확정 · <b>Esc</b> 취소',
+        sketchErase:'지나간 <b>그린 선만</b> 지웁니다(도면 이미지와 결함 마커는 건드리지 않습니다)',
+      }[sketchTool] || '';
+      hint.innerHTML = '<b>그리기 모드</b> (단축키 w) · 지금 도구: <b>' + escapeHTML(sketchToolLabel(sketchTool)) + '</b> — ' + guide
+        + (sketchGridOn ? ' · <b>모눈 ' + sketchGridDiv + '칸</b>(Alt: 이번 획만 눈금 무시)' : '');
+      return;
+    }
     if(eraseMode){
-      hint.innerHTML = '<b>지우개 모드</b> (단축키 d) — 마커 위는 클릭하면 삭제, 그 외 도면 위를 드래그하면 브러시처럼 흰색으로 지워집니다';
+      hint.innerHTML = '<b>지우개 모드</b> (단축키 d) — <b>도면 원본</b>을 지웁니다: 마커 위는 클릭하면 삭제, 그 외 도면 위를 드래그하면 브러시처럼 흰색으로 지워집니다 (직접 그린 선은 그리기의 <b>선 지우개 X</b>로)';
     } else if(selectMode){
       hint.innerHTML = '<b>선택 모드</b> (단축키 s) — 빈 곳을 드래그하면 완전히 안에 들어온 마커만 선택됩니다(Shift: 추가/해제). 마커를 직접 클릭해도 선택됩니다';
     } else if(moveMode){
@@ -4884,7 +5788,7 @@
   function setMoveMode(v){
     if(v && gridViewMode) setGridView(false);
     moveMode = !!v;
-    if(moveMode){ selectMode = false; eraseMode = false; pendingRectCreate = null; }
+    if(moveMode){ selectMode = false; eraseMode = false; pendingRectCreate = null; exitSketchMode(); }
     updateModeButtonsUI();
     updateModeHint();
     renderCanvas();
@@ -4894,17 +5798,160 @@
   function setSelectMode(v){
     if(v && gridViewMode) setGridView(false);
     selectMode = !!v;
-    if(selectMode){ moveMode = false; eraseMode = false; pendingRectCreate = null; }
+    if(selectMode){ moveMode = false; eraseMode = false; pendingRectCreate = null; exitSketchMode(); }
     updateModeButtonsUI();
     updateModeHint();
     renderCanvas();
   }
   function toggleSelectMode(){ setSelectMode(!selectMode); }
 
+  // ---------- 그리기(현장 스케치) 모드 전환 ----------
+  const SKETCH_TOOL_LABELS = { pen:'자유선', line:'직선', rect:'사각형', ellipse:'원', arrow:'화살표', text:'글자', sketchErase:'선 지우개' };
+  function sketchToolLabel(t){ return SKETCH_TOOL_LABELS[t] || '그리기'; }
+  // 그리기를 끄는 유일한 통로. 글자 입력칸이 떠 있는 채로 모드가 바뀌면 입력칸만 화면에 남아
+  // "지워지지 않는 상자"가 되므로, 여기서 반드시 함께 정리한다.
+  function exitSketchMode(){
+    if(sketchTextEditor) closeSketchTextEditor(false);
+    sketchTool = null;
+    eraseCursorPt = null;
+    if(pendingAction && (pendingAction.mode==='sketch' || pendingAction.mode==='sketchErase')) pendingAction = null;
+  }
+  function setSketchTool(t){
+    if(t && gridViewMode) setGridView(false);
+    if(t && cropMode) exitCropMode();
+    if(sketchTextEditor) closeSketchTextEditor(true);
+    sketchTool = t || null;
+    if(sketchTool){
+      moveMode = false; selectMode = false; eraseMode = false; pendingRectCreate = null; clearSelection();
+      if(sketchTool !== 'sketchErase') lastSketchTool = sketchTool; // 「그리기」를 다시 켤 때 돌아올 도구
+    }
+    eraseCursorPt = null;
+    updateModeButtonsUI();
+    updateModeHint();
+    renderCanvas();
+  }
+  // 도구줄의 「그리기」 버튼 — 켤 때는 마지막에 쓰던 도구로 돌아가되, 처음이라면 직선으로 연다
+  // (현장 스케치의 대부분이 벽선이라 직선이 기본값으로 가장 손이 덜 간다).
+  let lastSketchTool = 'line';
+  function toggleSketchMode(){
+    if(sketchTool){ exitSketchMode(); updateModeButtonsUI(); updateModeHint(); renderCanvas(); return; }
+    const d = getActiveDrawing();
+    if(!d){ showToast('먼저 도면을 추가해주세요. 도면 이미지가 없으면 좌측의 「빈 도면(백지) 추가」로 시작할 수 있습니다.'); return; }
+    setSketchTool(lastSketchTool);
+    maybeSuggestStylusOnly();
+  }
+  // 그리기는 손날이 화면에 닿기 가장 쉬운 작업이다. 이미 있는 "펜슬 전용"(팜 리젝션) 옵션이 꺼져
+  // 있으면 태블릿에서 한 번만 알려준다 — 매번 띄우면 잔소리가 되므로 세션당 한 번으로 제한한다.
+  let stylusSuggestShown = false;
+  function maybeSuggestStylusOnly(){
+    if(stylusSuggestShown) return;
+    if(!document.body.classList.contains('layout-tablet')) return;
+    if(isStylusOnlyActive()) return;
+    stylusSuggestShown = true;
+    showToast('그릴 때 손날이 닿아 선이 튀면, 설정에서 「펜슬 전용」을 켜세요.');
+  }
+
+  // 그리기 도구줄(도구·색·굵기)의 활성 표시를 현재 상태에 맞춘다. 색 스와치는 SKETCH_COLORS에서
+  // 매번 다시 만들지 않고 처음 한 번만 만들어 두고 클래스만 갱신한다.
+  function renderSketchToolbar(){
+    // 색 스와치는 상단 도구줄과 태블릿 하단 플로팅 바 두 곳에 같은 목록으로 만든다 — 두 곳 모두
+    // 같은 sketchColor를 읽고 쓰므로, 어느 쪽에서 골라도 반대쪽 표시가 함께 맞춰진다.
+    ['sketchColorRow', 'tabletFloatColorRow'].forEach(id=>{
+      const row = document.getElementById(id);
+      if(!row) return;
+      if(!row.childElementCount){
+        SKETCH_COLORS.forEach(c=>{
+          const b = document.createElement('button');
+          b.type = 'button';
+          b.className = 'sketch-color-btn';
+          b.style.setProperty('--sk-color', c.color);
+          b.title = c.label;
+          b.dataset.sketchColor = c.color;
+          b.addEventListener('click', ()=>{ sketchColor = c.color; renderSketchToolbar(); });
+          row.appendChild(b);
+        });
+      }
+      Array.from(row.children).forEach(b=>
+        b.classList.toggle('active', b.dataset.sketchColor === sketchColor));
+    });
+    document.querySelectorAll('#sketchToolGroup [data-sketch-tool], .float-sketch-tool').forEach(b=>
+      b.classList.toggle('active', b.getAttribute('data-sketch-tool') === sketchTool));
+    document.querySelectorAll('#sketchWidthGroup [data-sketch-width]').forEach(b=>
+      b.classList.toggle('active', Math.abs(parseFloat(b.getAttribute('data-sketch-width')) - sketchWidthMult) < 0.001));
+    ['btnSketchGrid', 'btnFloatSketchGrid'].forEach(id=>{
+      const b = document.getElementById(id);
+      if(b) b.classList.toggle('active', sketchGridOn);
+    });
+  }
+
+  function isSketchGridStored(){
+    try{ return localStorage.getItem(SKETCH_GRID_STORE_KEY) === 'on'; } catch(err){ return false; }
+  }
+  function storedSketchGridDiv(){
+    try{ return normalizeGridDiv(parseInt(localStorage.getItem(SKETCH_GRID_DIV_STORE_KEY), 10)); }
+    catch(err){ return SKETCH_GRID_DIV_DEFAULT; }
+  }
+  // 저장값이 비었거나 손으로 고쳐 이상해졌을 때도 반드시 쓸 수 있는 칸 수가 나오게 한다.
+  function normalizeGridDiv(v){
+    if(!isFinite(v)) return SKETCH_GRID_DIV_DEFAULT;
+    const stepped = Math.round(v / SKETCH_GRID_DIV_STEP) * SKETCH_GRID_DIV_STEP;
+    return clamp(stepped, SKETCH_GRID_DIV_MIN, SKETCH_GRID_DIV_MAX);
+  }
+  function setSketchGridDiv(v){
+    const next = normalizeGridDiv(v);
+    if(next === sketchGridDiv){ renderGridDivUI(); return; }
+    sketchGridDiv = next;
+    try{ localStorage.setItem(SKETCH_GRID_DIV_STORE_KEY, String(sketchGridDiv)); }
+    catch(err){ /* 저장 실패해도 이번 세션 동작은 유지된다 */ }
+    renderGridDivUI();
+    updateModeHint(); // 안내 줄의 "모눈 40칸" 숫자도 같이 바뀐다
+    renderCanvas();
+  }
+  function renderGridDivUI(){
+    const group = document.getElementById('sketchGridDivGroup');
+    // 그리기 모드가 아니거나 모눈이 꺼져 있으면 조절할 것이 없다 — 안내 줄을 비워 둔다.
+    if(group) group.style.display = (sketchTool && sketchGridOn) ? '' : 'none';
+    const slider = document.getElementById('sketchGridDivSlider');
+    if(slider && parseInt(slider.value, 10) !== sketchGridDiv) slider.value = String(sketchGridDiv);
+    const val = document.getElementById('sketchGridDivVal');
+    if(val) val.textContent = sketchGridDiv + '칸';
+  }
+  // [ / ] 로 한 단계씩. 모눈이 꺼져 있으면 켜기부터 한다 — 안 그러면 키를 눌러도 아무 일도
+  // 일어나지 않아 "고장 났나" 싶어진다.
+  function stepSketchGridDiv(delta){
+    if(!sketchGridOn){ setSketchGrid(true); return; }
+    setSketchGridDiv(sketchGridDiv + delta * SKETCH_GRID_DIV_STEP);
+  }
+  function setSketchGrid(on){
+    sketchGridOn = !!on;
+    try{
+      if(sketchGridOn) localStorage.setItem(SKETCH_GRID_STORE_KEY, 'on');
+      else localStorage.removeItem(SKETCH_GRID_STORE_KEY);
+    } catch(err){ /* 저장 실패해도 이번 세션 동작은 유지된다 */ }
+    const btn = document.getElementById('btnSketchGrid');
+    if(btn) btn.classList.toggle('active', sketchGridOn);
+    const fbtn = document.getElementById('btnFloatSketchGrid');
+    if(fbtn) fbtn.classList.toggle('active', sketchGridOn);
+    renderGridDivUI();
+    updateModeHint(); // 안내 줄에 "모눈 40칸"을 함께 띄운다
+    renderCanvas();
+  }
+  function toggleSketchGrid(){ setSketchGrid(!sketchGridOn); }
+
+  function clearSketch(){
+    const d = getActiveDrawing(); if(!d) return;
+    const n = (d.sketch||[]).length;
+    if(n === 0){ showToast('이 도면에는 그린 선이 없습니다.'); return; }
+    if(!confirm('이 도면에 그린 선 ' + n + '개를 모두 지울까요? (실행취소로 되돌릴 수 있습니다)')) return;
+    pushUndo();
+    d.sketch = [];
+    renderCanvas();
+  }
+
   function setEraseMode(v){
     if(v && gridViewMode) setGridView(false);
     eraseMode = !!v;
-    if(eraseMode){ moveMode = false; selectMode = false; pendingRectCreate = null; }
+    if(eraseMode){ moveMode = false; selectMode = false; pendingRectCreate = null; exitSketchMode(); }
     eraseCursorPt = null;
     updateModeButtonsUI();
     updateModeHint();
@@ -4922,14 +5969,31 @@
   function toggleCoordGuide(){ setCoordGuide(!coordGuideOn); }
 
   // 지우개 모드: 지정한 캔버스 좌표(backing-px)에 마커가 있으면 삭제. 드래그 중 여러 번 호출됨.
+  // 이 지우개가 다루는 것은 "원래 도면에 있던 것"(도면 이미지 픽셀)과 마커까지다. 내가 그린 선은
+  // 일부러 건드리지 않는다 — 도구의 역할이 「원본을 지우는 것」과 「내가 그린 것을 지우는 것」으로
+  // 나뉘어 있어야, 도면 위에 덧그린 상태에서 원본만 지우거나 내 선만 지우는 일이 각각 가능해진다.
+  // 그린 선은 「그리기」의 선 지우개(E)가 담당한다.
+  // 판정 순서: ① 마커 → ② 도면 이미지 흰색 브러시(호출부에서 이어서 처리).
   function eraseAtPoint(d, x, y){
     const m = hitTestMarker(d, x, y);
-    if(!m) return false;
-    removeMarkersById(d, idsWithLinkedPairs(d, [m.id]));
-    selectedIds.delete(m.id);
-    renderTable();
-    return true;
+    if(m){
+      removeMarkersById(d, idsWithLinkedPairs(d, [m.id]));
+      selectedIds.delete(m.id);
+      renderTable();
+      return true;
+    }
+    // 그린 선 위를 지나갔는데 아무 일도 안 일어나면 "지우개가 고장났나?"로 읽힌다. 지우지는 않되,
+    // 어느 도구로 지우는지 한 번만 알려준다(드래그 중 수십 번 호출되므로 세션당 한 번으로 제한).
+    if(!sketchEraseHintShown && Array.isArray(d.sketch) && d.sketch.length){
+      const cv = document.getElementById('mainCanvas');
+      if(sketchHitTest(d, x/cv.width*100, y/cv.height*100, eraseBrushRadiusNatural(d))){
+        sketchEraseHintShown = true;
+        showToast('이 지우개는 도면 원본과 결함 마커를 지웁니다. 직접 그린 선은 「그리기」의 선 지우개(E)로 지우세요.');
+      }
+    }
+    return false;
   }
+  let sketchEraseHintShown = false;
 
   function renderTypeGrid(){
     const grid = document.getElementById('typeGrid');
@@ -5107,6 +6171,7 @@
     if(gridViewMode) setGridView(false);
     cropMode = true; cropRect = null; pendingAction = null;
     moveMode = false; selectMode = false; eraseMode = false; pendingRectCreate = null;
+    exitSketchMode();
     updateModeButtonsUI();
     clearSelection();
     document.getElementById('btnCropMode').style.display='none';
@@ -5153,6 +6218,9 @@
         }
         return out;
       });
+      // 그려둔 선도 마커와 같은 기준(도면 대비 %)이라, 같은 자리에서 함께 새 영역 기준으로 옮긴다.
+      // d.naturalW/H를 갱신하기 "전에" 호출해야 한다 — 옛 크기를 기준으로 환산해야 하기 때문.
+      d.sketch = remapSketchForCrop(d, nx, ny, nw, nh);
       d.imgSrc = newSrc; d.imgEl = newImg; d.naturalW = nw; d.naturalH = nh;
       const fit = fitBaseSize(nw, nh);
       d.baseW = fit.baseW; d.baseH = fit.baseH;
@@ -5207,6 +6275,8 @@
         }
         return out;
       });
+      // 마커와 완전히 같은 rotPt를 넘겨 그려둔 선도 함께 돌린다(두 벌로 나누면 언젠가 어긋난다).
+      d.sketch = remapSketchForRotate(d.sketch, deltaDeg, rotPt);
       d.imgSrc = newSrc; d.imgEl = newImg; d.naturalW = nw; d.naturalH = nh;
       const fit = fitBaseSize(nw, nh);
       d.baseW = fit.baseW; d.baseH = fit.baseH;
@@ -5285,6 +6355,7 @@
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
     ctx.drawImage(d.imgEl, 0, 0, w, h);
+    drawSketch(ctx, d, 0, 0, w, h); // 마커보다 먼저 — 그려둔 선이 결함 번호를 덮지 않게
 
     const r = markerRadiusNatural(d);
     d.markers.forEach((m, idx)=>{
@@ -5430,6 +6501,8 @@
     const drawX = contentMarginSide + imageMargin + (availW-drawW)/2;
     const drawY = contentY0 + imageMargin + Math.max(0, (availH-drawH)/2);
     ctx.drawImage(d.imgEl, drawX, drawY, drawW, drawH);
+    // 도곽 안에 축소 배치된 도면 위에 그려야 하므로 오프셋을 넘긴다(마커도 아래에서 같은 기준으로 그린다).
+    drawSketch(ctx, d, drawX, drawY, drawW, drawH);
     const r = markerRadiusNatural(d) * scale;
     d.markers.forEach((m, idx)=>{
       // drawMarkerDispatch는 xPct/yPct·rectXPct 등 "도면 대비 %" 좌표를 그대로 쓰므로,
@@ -6273,6 +7346,7 @@
     const drawW = d.naturalW*scale, drawH = d.naturalH*scale;
     const offX = (w-drawW)/2, offY = (h-drawH)/2;
     ctx.drawImage(d.imgEl, offX, offY, drawW, drawH);
+    drawSketch(ctx, d, offX, offY, drawW, drawH);
     ctx.strokeStyle = 'rgba(11,11,11,0.15)'; ctx.lineWidth = 1;
     ctx.strokeRect(offX+0.5, offY+0.5, Math.max(0,drawW-1), Math.max(0,drawH-1));
     // 아래 점 색은 <canvas> 픽셀에 직접 그리므로 CSS 테마 토큰이 아닌 고정 색을 쓴다(라이트/다크
@@ -7174,6 +8248,11 @@
         nd.id = dd.id || nd.id;
         nd.surveyLocation = dd.surveyLocation || '';
         nd.markers = Array.isArray(dd.markers) ? dd.markers : [];
+        // 프로젝트 파일은 협력업체가 보낸 외부 데이터일 수 있어, 스케치도 계열 스냅샷과 같이
+        // 화이트리스트로 재구성해서 받는다(sanitizeSketch 정의부 참고). 스케치가 없는 예전
+        // 파일은 빈 배열이 되어 지금까지와 똑같이 열린다.
+        nd.sketch = sanitizeSketch(dd.sketch);
+        nd.isBlank = !!dd.isBlank;
         nd.legendPct = (dd.legendPct && typeof dd.legendPct.x==='number' && typeof dd.legendPct.y==='number') ? dd.legendPct : null;
         nd.legendScale = (typeof dd.legendScale==='number' && dd.legendScale>0) ? dd.legendScale : null;
         nd.presetName = dd.presetName || nd.presetName; // 없으면 buildDrawingFromImage가 넣어둔 "지금 프리셋" 유지(구버전 파일 호환)
@@ -7199,7 +8278,7 @@
       docTitle: document.getElementById('docTitleInput').value,
       seriesPresetName: activePresetName,
       seriesSnapshot: DEFECT_TYPES,
-      drawings: drawings.map(d=>({ id:d.id, name:d.name, surveyLocation:d.surveyLocation||'', imgSrc:d.imgSrc, markers:d.markers, legendPct:d.legendPct||null, legendScale:d.legendScale||null, presetName:d.presetName||null }))
+      drawings: drawings.map(d=>({ id:d.id, name:d.name, surveyLocation:d.surveyLocation||'', imgSrc:d.imgSrc, markers:d.markers, sketch:d.sketch||[], isBlank:!!d.isBlank, legendPct:d.legendPct||null, legendScale:d.legendScale||null, presetName:d.presetName||null }))
     };
   }
 
@@ -7347,6 +8426,32 @@
   document.getElementById('btnFloatSelectMode').addEventListener('click', toggleSelectMode);
   document.getElementById('btnFloatMoveMode').addEventListener('click', toggleMoveMode);
   document.getElementById('btnFloatEraseMode').addEventListener('click', toggleEraseMode);
+  // ── 그리기(현장 스케치) ──
+  document.getElementById('btnSketchMode').addEventListener('click', toggleSketchMode);
+  document.getElementById('btnFloatSketchMode').addEventListener('click', toggleSketchMode);
+  // 상단 도구줄과 태블릿 하단 플로팅 바의 도구 버튼은 같은 setSketchTool을 그대로 공유한다.
+  document.querySelectorAll('#sketchToolGroup [data-sketch-tool], .float-sketch-tool').forEach(btn=>{
+    btn.addEventListener('click', ()=> setSketchTool(btn.getAttribute('data-sketch-tool')));
+  });
+  document.querySelectorAll('#sketchWidthGroup [data-sketch-width]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      sketchWidthMult = parseFloat(btn.getAttribute('data-sketch-width'));
+      renderSketchToolbar();
+    });
+  });
+  document.getElementById('btnSketchGrid').addEventListener('click', toggleSketchGrid);
+  document.getElementById('btnFloatSketchGrid').addEventListener('click', toggleSketchGrid);
+  document.getElementById('sketchGridDivSlider').addEventListener('input', (e)=> setSketchGridDiv(parseInt(e.target.value, 10)));
+  document.getElementById('btnGridDivMinus').addEventListener('click', ()=> stepSketchGridDiv(-1));
+  document.getElementById('btnGridDivPlus').addEventListener('click', ()=> stepSketchGridDiv(1));
+  document.getElementById('btnSketchClear').addEventListener('click', clearSketch);
+  // ── 빈 도면(백지) ──
+  document.getElementById('btnAddBlankDrawing').addEventListener('click', openBlankDrawingModal);
+  document.getElementById('btnBlankDrawingClose').addEventListener('click', closeBlankDrawingModal);
+  document.getElementById('btnBlankDrawingCancel').addEventListener('click', closeBlankDrawingModal);
+  document.getElementById('blankDrawingBackdrop').addEventListener('click', e=>{
+    if(e.target === e.currentTarget) closeBlankDrawingModal(); // 바깥 어두운 곳을 누르면 닫힘(다른 모달과 동일)
+  });
   document.getElementById('eraseBrushSlider').addEventListener('input', e=>{
     eraseBrushMult = parseFloat(e.target.value);
     document.getElementById('eraseBrushVal').textContent = Math.round(eraseBrushMult*100)+'%';
@@ -7557,10 +8662,18 @@
       if(isTableInputOpen()){ e.preventDefault(); closeTableInputModal(); return; }
       if(isExportModalOpen()){ e.preventDefault(); closeExportModal(); return; }
       if(cropMode){ e.preventDefault(); exitCropMode(); return; }
+      // 글자 입력칸이 떠 있으면 그 입력칸 자신의 keydown이 먼저 Esc를 받아 취소하지만, 포커스가
+      // 어쩌다 빠져 있는 경우를 위해 여기서도 한 번 더 받는다.
+      if(sketchTextEditor){ e.preventDefault(); closeSketchTextEditor(false); return; }
       if(pendingRectCreate){ e.preventDefault(); cancelRectCreate(); return; }
       if(!isEditing && legendSelected){ e.preventDefault(); legendSelected=false; renderCanvas(); return; }
       if(!isEditing && selectedIds.size>0){ e.preventDefault(); clearSelection(); return; }
-      // 선택할 것이 없으면 Esc는 배타 모드(선택·이동·지우개)를 푼다 — 모드 이름표가 그렇게 안내한다.
+      // 선택할 것이 없으면 Esc는 배타 모드(선택·이동·지우개·그리기)를 푼다 — 모드 이름표가 그렇게 안내한다.
+      if(!isEditing && sketchTool){
+        e.preventDefault();
+        setSketchTool(null);
+        return;
+      }
       if(!isEditing && (selectMode || moveMode || eraseMode)){
         e.preventDefault();
         setSelectMode(false); setMoveMode(false); setEraseMode(false);
@@ -7576,6 +8689,33 @@
     // Ctrl/Alt/Meta가 함께 눌린 조합은 위에서 이미 처리했으므로 여기서는 제외한다.
     if(e.ctrlKey || e.metaKey || e.altKey) return;
     const code = e.code;
+    // 그리기 모드를 켜고 끄는 키(w). 도구를 고르는 키(직선 l · 사각형 r · 자유선 p · 원 o ·
+    // 화살표 a · 글자 t · 선지우개 x)는 "그리기 모드일 때만" 듣는다 — 평소에 이 키들이 모드를
+    // 갑자기 바꿔버리면, 마커를 찍다 오타 한 번에 화면이 다른 모드로 넘어가 버린다.
+    if(code==='KeyW'){
+      if(!cropMode){ e.preventDefault(); toggleSketchMode(); }
+      return;
+    }
+    // 자르기는 Shift+C로 옮겼다 — 그리기의 "원(Circle)"이 c를 쓰기 때문이다. Shift 조합이라
+    // 그리기 모드 안에서도 그대로 눌러 자르기로 들어갈 수 있다(들어가면서 그리기는 해제된다).
+    if(code==='KeyC' && e.shiftKey){
+      e.preventDefault();
+      if(cropMode) exitCropMode(); else enterCropMode();
+      return;
+    }
+    // 모눈은 Shift+G. 맨 g는 이미 "전체 보기"(도면 축소판 훑기)라 겹치지 않게 Shift 조합으로 둔다.
+    if(code==='KeyG' && e.shiftKey){
+      e.preventDefault(); toggleSketchGrid(); return;
+    }
+    // 모눈 칸 수는 [ 와 ] — 편집기에서 관례적으로 "한 단계 줄이기/늘리기" 자리이고, 그리는 손이
+    // 마우스에 있는 채로 왼손만으로 누를 수 있다. 그리기 모드일 때만 듣는다.
+    if(sketchTool && (code==='BracketLeft' || code==='BracketRight')){
+      e.preventDefault(); stepSketchGridDiv(code==='BracketRight' ? 1 : -1); return;
+    }
+    if(sketchTool){
+      const byKey = { KeyL:'line', KeyR:'rect', KeyP:'pen', KeyC:'ellipse', KeyA:'arrow', KeyT:'text', KeyE:'sketchErase' }[code];
+      if(byKey){ e.preventDefault(); setSketchTool(byKey); return; }
+    }
     if(code==='KeyS'){
       if(!cropMode){ e.preventDefault(); toggleSelectMode(); }
       return;
@@ -7586,11 +8726,6 @@
     }
     if(code==='KeyD'){
       if(!cropMode){ e.preventDefault(); toggleEraseMode(); }
-      return;
-    }
-    if(code==='KeyC'){
-      e.preventDefault();
-      if(cropMode) exitCropMode(); else enterCropMode();
       return;
     }
     if(code==='KeyG'){
@@ -7706,6 +8841,13 @@
 
     if(cropMode){
       pendingAction = { mode:'crop', startX:p.x, startY:p.y, curX:p.x, curY:p.y };
+      return;
+    }
+
+    // 그리기 모드는 크롭 다음, 지우개 앞에 둔다 — 이 모드에서는 마커 선택·이동·생성이 전부 일어나지
+    // 않아야 하므로(그리는 도중 도면 위 마커를 건드리면 선이 아니라 마커가 끌려간다) 여기서 곧장 끝낸다.
+    if(sketchTool){
+      handleSketchPointerDown(d, p, e);
       return;
     }
 
@@ -7827,6 +8969,13 @@
         scheduleMarkerRender();
         return;
       }
+      // 그리기 모드에서는 마커 위에 올려도 이동/회전 커서로 바뀌지 않아야 한다 — 지금 끌리는 것은
+      // 마커가 아니라 선이기 때문. 선 지우개일 때만 지워질 반경을 커서 자리에 함께 보여준다.
+      if(sketchTool){
+        canvas.style.cursor = 'crosshair';
+        if(sketchTool === 'sketchErase'){ eraseCursorPt = { x:p0.x, y:p0.y }; scheduleMarkerRender(); }
+        return;
+      }
       if(pendingRectCreate){
         const snapped = (pendingRectCreate.stage===2)
           ? snapAroundCenter((pendingRectCreate.x1+pendingRectCreate.x2)/2, (pendingRectCreate.y1+pendingRectCreate.y2)/2, p0.x, p0.y, e.shiftKey)
@@ -7854,6 +9003,13 @@
     if(pendingAction.mode==='crop'){
       pendingAction.curX = p.x; pendingAction.curY = p.y;
       scheduleMarkerRender();
+      return;
+    }
+
+    // 그리기는 startX/startY(캔버스 px) 대신 %로 상태를 들고 있어 아래의 공통 "움직였나" 판정과
+    // 형태가 다르므로, 그 판정에 닿기 전에 여기서 끝낸다.
+    if(pendingAction.mode==='sketch' || pendingAction.mode==='sketchErase'){
+      handleSketchPointerMove(d, p, e);
       return;
     }
 
@@ -7967,6 +9123,10 @@
       return;
     }
     const d = getActiveDrawing();
+    if(d && (action.mode==='sketch' || action.mode==='sketchErase')){
+      handleSketchPointerUp(d, action);
+      return;
+    }
     if(d){
       if(action.mode==='crop'){
         const x0=Math.min(action.startX,action.curX), x1=Math.max(action.startX,action.curX);
@@ -8548,6 +9708,9 @@
       drawings: drawings.map(d=>({
         id: d.id, name: d.name, surveyLocation: d.surveyLocation||'', legendPct: d.legendPct||null,
         legendScale: d.legendScale||null, presetName: d.presetName||null,
+        // 그린 선은 벡터라 이 "가벼운 메타" 쪽에 실린다 — 30초 주기 자동저장에 그대로 따라오고,
+        // 무거운 이미지 저장(imagesDirty)을 건드리지 않는다.
+        sketch: d.sketch||[], isBlank: !!d.isBlank,
         markers: d.markers.map(m=>{ const {photos, ...rest} = m; return rest; }),
       })),
     };
@@ -8904,6 +10067,9 @@
 
   // ---------- 초기화 ----------
   { const el = document.getElementById('buildDateLabel'); if(el) el.textContent = APP_BUILD_DATE; }
+  sketchGridOn = isSketchGridStored(); // 지난번에 모눈을 켜둔 채 닫았으면 그대로 켜진 상태로 시작한다
+  sketchGridDiv = storedSketchGridDiv(); // 칸 수도 지난번에 맞춰 둔 값으로 시작한다
+  renderGridDivUI();
   renderTypeGrid();
   renderSeriesPresetSelect();
   renderDrawingTabs();
