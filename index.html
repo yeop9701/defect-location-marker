@@ -1031,10 +1031,14 @@
               <li><b>그린 것을 고치려면 그리기 도구줄 맨 왼쪽의 「선택」(V)</b>을 쓰세요 — 다시 그릴 필요가 없습니다:
                 <ul>
                   <li>선을 <b>눌러 고르고 끌어서 옮깁니다</b>. 빈 곳을 끌면 그 안에 완전히 들어온 것들이 한 번에 잡히고, <b>Shift+클릭</b>으로 하나씩 더하거나 뺍니다</li>
-                  <li>하나만 고르면 <b>파란 조절점</b>이 붙습니다 — 직선·화살표는 양 끝, 사각형·원은 네 모서리, 자유선은 외곽 사각형(전체가 비율대로 늘어납니다), 글자는 회전 손잡이입니다. 새로 그릴 때와 똑같이 Shift(각도·정사각)·모눈·끝점 이어붙이기가 그대로 듣습니다</li>
+                  <li>고르면 바깥에 <b>네모 틀</b>이 생깁니다 — 네 모서리를 끌면 <b>크기</b>, 위쪽 동그란 손잡이를 끌면 <b>회전</b>입니다. <b>여러 개를 골라도 똑같이</b> 통째로 늘이고 돌릴 수 있습니다(Shift: 크기는 비율 유지, 회전은 15°씩)</li>
+                  <li>하나만 고르면 도형 위에 <b>둥근 점</b>이 더 붙습니다 — 직선·화살표는 양 끝, 사각형·원은 네 모서리, <b>자유선은 그은 점 하나하나</b>입니다. 그 점을 끌면 한 점만 고쳐지고, 새로 그릴 때와 똑같이 Shift(각도 고정)·모눈·끝점 이어붙이기가 그대로 듣습니다</li>
                   <li>고른 상태에서 <b>색·굵기 단추</b>를 누르면 그 선들의 색·굵기가 바로 바뀝니다(여러 개를 한 번에)</li>
+                  <li>안내 줄의 <b>「순서: 맨 뒤로 · 맨 앞으로」</b>로 겹친 선의 앞뒤를 바꿉니다 — 나중에 그린 선이 앞 선을 덮을 때 쓰세요</li>
+                  <li>고른 것이 하나면 <b>길이와 각도</b>가 선 옆에 뜹니다(모눈을 켜면 <b>칸 수</b>도 함께). 길이는 <b>도면 폭 대비 %</b>라 방향이 다른 벽끼리도 같은 잣대로 비교됩니다. 새로 그리는 동안에도 실시간으로 보입니다</li>
                   <li><b>글자는 두 번 누르면</b> 그 자리에서 고쳐 씁니다. 내용을 비우고 Enter를 치면 지워집니다</li>
                   <li><b>Delete</b> 삭제 · <b>방향키</b> 1px 미세 이동(Shift: 10px) · <b>Alt+드래그</b> 복제 · <b>Ctrl+A</b> 이 도면의 그린 선 전체 선택 · <b>Esc</b> 선택 해제</li>
+                  <li>사각형·원도 이제 눕힐 수 있습니다 — 회전 손잡이로 돌리면 비스듬한 벽·구조물을 그대로 표현할 수 있고, 눕은 상태에서도 네 모서리로 크기를 고칠 수 있습니다</li>
                 </ul>
               </li>
               <li>태블릿에서 손날이 닿아 선이 튀면 상단 「설정」의 <b>펜슬 전용</b>을 켜세요</li>
@@ -1163,6 +1167,14 @@
               <button type="button" class="tool leader-shape-btn" data-leader-shape="straight" title="직선 — 배지에서 결함 위치까지 곧게 잇습니다(기본)">직선</button>
               <button type="button" class="tool leader-shape-btn" data-leader-shape="elbow" title="ㄱ자 — 직각으로 한 번 꺾어 돌아갑니다. 이미 ㄱ자인 마커에 다시 누르면 꺾이는 방향(가로 먼저 ↔ 세로 먼저)이 바뀝니다">ㄱ자</button>
               <button type="button" class="tool leader-shape-btn" data-leader-shape="u" title="ㄷ자 — 직각으로 두 번 꺾어 크게 돌아갑니다. 다시 누르면 꺾이는 방향이 바뀌고, 선택한 마커에 생기는 흰 네모 손잡이를 끌면 돌아가는 폭을 조절할 수 있습니다">ㄷ자</button>
+            </div>
+          </div>
+          <!-- 앞뒤 순서 — 나중에 그린 선이 앞선 것을 덮을 때 쓴다. 「선택」 도구일 때만 나타난다
+               (다른 도구에서는 순서를 바꿀 대상, 즉 고른 것이 없다). -->
+          <div class="tool-slider" id="sketchOrderGroup" style="display:none;" title="그린 것끼리의 앞뒤 순서입니다. 나중에 그린 선이 앞 선을 덮을 때 뒤로 보내세요.">순서
+            <div class="btn-group">
+              <button type="button" class="tool" id="btnSketchToBack" title="맨 뒤로 — 고른 것을 다른 그린 선들 아래로 보냅니다">맨 뒤로</button>
+              <button type="button" class="tool" id="btnSketchToFront" title="맨 앞으로 — 고른 것을 다른 그린 선들 위로 올립니다">맨 앞으로</button>
             </div>
           </div>
           <div class="tool-slider" id="sketchGridDivGroup" style="display:none;" title="모눈 칸 수 — 도면의 짧은 변을 몇 칸으로 나눌지 정합니다(칸은 항상 정사각형입니다). 대괄호 키 [ 와 ] 로도 조절할 수 있습니다">모눈 칸
@@ -1310,7 +1322,7 @@
       </div>
 
       <div class="footer-note">
-        Ver 2.3 (<span id="buildDateLabel"></span>) · 건축시설물 정밀안전진단/점검용 결함 마킹 도구
+        Ver 2.4 (<span id="buildDateLabel"></span>) · 건축시설물 정밀안전진단/점검용 결함 마킹 도구
         <span id="storageUsageLabel"></span>
       </div>
     </aside>
@@ -1489,7 +1501,7 @@
     <div class="modal-header" id="duplicateDragHandle" title="여기를 마우스로 눌러 끌면 창을 옮길 수 있습니다">
       <div>
         <div class="modal-title">마킹 전체 복사</div>
-        <div class="modal-sub">현재 도면(<b id="duplicateSourceName"></b>)의 마킹 <b id="duplicateSourceCount"></b>건을 아래서 고른 도면에 그대로 복제합니다. 번호는 대상 도면에서 다시 매겨지고, 사진은 복제되지 않습니다.</div>
+        <div class="modal-sub">현재 도면(<b id="duplicateSourceName"></b>)의 마킹 <b id="duplicateSourceCount"></b>건을 아래서 고른 도면에 그대로 복제합니다. 직접 그린 선이 있으면 함께 복제할지 고를 수 있습니다. 번호는 대상 도면에서 다시 매겨지고, 사진은 복제되지 않습니다.</div>
       </div>
       <button type="button" id="btnDuplicateClose" class="icon-btn"><svg class="icon icon-lg"><use href="#i-close"/></svg></button>
     </div>
@@ -1500,6 +1512,12 @@
         <div style="flex:1;"></div>
         <span style="font-size:11px;color:var(--muted);align-self:center;">Shift+클릭으로 범위 선택</span>
       </div>
+      <!-- 그린 선(스케치)이 있는 도면에서만 나타난다 — 같은 평면을 동만 바꿔 반복해 쓸 때,
+           손으로 그린 평면까지 함께 복제해야 대상 도면이 비어 있지 않다. -->
+      <label class="check-row" id="duplicateSketchRow" style="margin-bottom:8px;display:none;" title="이 도면에 직접 그린 선·글자도 대상 도면에 함께 복제합니다. 아래 「뒤에 추가」·「덮어쓰기」 방식이 그린 선에도 똑같이 적용됩니다.">
+        <input type="checkbox" id="duplicateIncludeSketch" />
+        <span id="duplicateSketchLabel">그린 선도 함께 복사</span>
+      </label>
       <div id="duplicateDrawingList" style="display:flex;flex-direction:column;gap:2px;max-height:44vh;overflow:auto;border:1px solid var(--gridline);border-radius:8px;padding:4px;"></div>
     </div>
     <div class="modal-footer">
@@ -3643,8 +3661,15 @@
       ctx.restore();
       return;
     }
+    // 사각형·원의 pts 두 점은 언제나 "돌리기 전"의 축에 나란한 대각 코너다. 화면에는 자기 중심을
+    // 축으로 s.angle만큼 돌려 그린다 — 마커의 범위 사각형이 rectAngle을 다루는 약속과 같게 맞췄다.
+    // (이 함수 첫머리의 ctx.save()가 아래 회전까지 함께 되돌려 준다.)
     if(s.tool === 'rect' && pts.length >= 2){
       const a = P(0), b = P(1);
+      if(s.angle){
+        const cx = (a.x+b.x)/2, cy = (a.y+b.y)/2;
+        ctx.translate(cx, cy); ctx.rotate((s.angle||0)*Math.PI/180); ctx.translate(-cx, -cy);
+      }
       ctx.strokeRect(Math.min(a.x,b.x), Math.min(a.y,b.y), Math.abs(b.x-a.x), Math.abs(b.y-a.y));
       ctx.restore();
       return;
@@ -3652,7 +3677,8 @@
     if(s.tool === 'ellipse' && pts.length >= 2){
       const a = P(0), b = P(1);
       ctx.beginPath();
-      ctx.ellipse((a.x+b.x)/2, (a.y+b.y)/2, Math.max(0.5,Math.abs(b.x-a.x)/2), Math.max(0.5,Math.abs(b.y-a.y)/2), 0, 0, Math.PI*2);
+      // 타원은 ctx.ellipse가 회전 각을 직접 받으므로 변환을 따로 걸 필요가 없다.
+      ctx.ellipse((a.x+b.x)/2, (a.y+b.y)/2, Math.max(0.5,Math.abs(b.x-a.x)/2), Math.max(0.5,Math.abs(b.y-a.y)/2), (s.angle||0)*Math.PI/180, 0, Math.PI*2);
       ctx.stroke();
       ctx.restore();
       return;
@@ -3709,18 +3735,20 @@
         if(q.x >= ax-tol && q.x <= ax+wApprox+tol && q.y >= ay-fontPx*0.7-tol && q.y <= ay+fontPx*0.7+tol) return s;
         continue;
       }
-      if(s.tool === 'rect' && pts.length>=2){
-        const x0 = Math.min(X(pts[0]),X(pts[1])), x1 = Math.max(X(pts[0]),X(pts[1]));
-        const y0 = Math.min(Y(pts[0]),Y(pts[1])), y1 = Math.max(Y(pts[0]),Y(pts[1]));
-        const edges = [[x0,y0,x1,y0],[x1,y0,x1,y1],[x1,y1,x0,y1],[x0,y1,x0,y0]];
-        if(edges.some(ed=> distToSeg(px,py,ed[0],ed[1],ed[2],ed[3]) <= tol)) return s;
-        continue;
-      }
-      if(s.tool === 'ellipse' && pts.length>=2){
+      if((s.tool === 'rect' || s.tool === 'ellipse') && pts.length>=2){
         const cx = (X(pts[0])+X(pts[1]))/2, cy = (Y(pts[0])+Y(pts[1]))/2;
-        const rx = Math.max(1, Math.abs(X(pts[1])-X(pts[0]))/2), ry = Math.max(1, Math.abs(Y(pts[1])-Y(pts[0]))/2);
-        const k = Math.hypot((px-cx)/rx, (py-cy)/ry);
-        if(Math.abs(k-1) * Math.min(rx,ry) <= tol) return s;
+        // 돌아간 도형은 판정할 점을 도형의 축으로 되돌린 뒤, 축에 나란한 기존 판정을 그대로 쓴다.
+        const q = s.angle ? rotateAroundPt(px, py, cx, cy, -(s.angle||0)) : { x:px, y:py };
+        if(s.tool === 'rect'){
+          const x0 = Math.min(X(pts[0]),X(pts[1])), x1 = Math.max(X(pts[0]),X(pts[1]));
+          const y0 = Math.min(Y(pts[0]),Y(pts[1])), y1 = Math.max(Y(pts[0]),Y(pts[1]));
+          const edges = [[x0,y0,x1,y0],[x1,y0,x1,y1],[x1,y1,x0,y1],[x0,y1,x0,y0]];
+          if(edges.some(ed=> distToSeg(q.x,q.y,ed[0],ed[1],ed[2],ed[3]) <= tol)) return s;
+        } else {
+          const rx = Math.max(1, Math.abs(X(pts[1])-X(pts[0]))/2), ry = Math.max(1, Math.abs(Y(pts[1])-Y(pts[0]))/2);
+          const k = Math.hypot((q.x-cx)/rx, (q.y-cy)/ry);
+          if(Math.abs(k-1) * Math.min(rx,ry) <= tol) return s;
+        }
         continue;
       }
       for(let j=0; j<pts.length-1; j++){
@@ -3747,7 +3775,18 @@
         if(pts[pts.length-1]) cands.push(pts[pts.length-1]);
       } else if((s.tool==='rect' || s.tool==='ellipse') && pts.length>=2){
         const a = pts[0], b = pts[1];
-        cands.push({x:a.x,y:a.y},{x:b.x,y:a.y},{x:b.x,y:b.y},{x:a.x,y:b.y});
+        const corners = [{x:a.x,y:a.y},{x:b.x,y:a.y},{x:b.x,y:b.y},{x:a.x,y:b.y}];
+        if(s.angle){
+          // 돌아간 도형은 "화면에 보이는" 코너에 붙어야 한다 — 저장된 코너 좌표를 그대로 쓰면
+          // 눈에 보이지 않는 자리에 선이 달라붙는다. 회전은 원본 px 공간에서 해야 정확하다.
+          const cN = { x:(a.x+b.x)/2/100*d.naturalW, y:(a.y+b.y)/2/100*d.naturalH };
+          corners.forEach(c=>{
+            const r = rotateAroundPt(c.x/100*d.naturalW, c.y/100*d.naturalH, cN.x, cN.y, s.angle);
+            cands.push({ x: r.x/d.naturalW*100, y: r.y/d.naturalH*100 });
+          });
+        } else {
+          corners.forEach(c=> cands.push(c));
+        }
       }
       cands.forEach(c=>{
         const dist = Math.hypot(px - c.x/100*d.naturalW, py - c.y/100*d.naturalH);
@@ -3797,6 +3836,12 @@
         st.fontSize = (isFinite(s.fontSize) && Number(s.fontSize)>0) ? clamp(Number(s.fontSize), 0.4, 20) : 2.4;
         st.angle = isFinite(s.angle) ? ((Number(s.angle)%360)+360)%360 : 0;
       }
+      // 사각형·원도 자기 중심을 축으로 눕힐 수 있다(여러 개를 묶어 돌릴 때 필요하다). 글자와 같은
+      // angle 필드를 쓰므로 화이트리스트에도 같이 넣는다 — 여기 빠뜨리면 프로젝트를 다시 열었을 때
+      // 눕혀둔 도형이 조용히 반듯하게 돌아온다.
+      if(s.tool === 'rect' || s.tool === 'ellipse'){
+        st.angle = isFinite(s.angle) ? ((Number(s.angle)%360)+360)%360 : 0;
+      }
       out.push(st);
     });
     return out;
@@ -3830,7 +3875,12 @@
         return { x: r.x*100, y: r.y*100 };
       });
       const st = Object.assign({}, s, { pts });
-      if(s.tool==='text') st.angle = (((s.angle||0) + deltaDeg) % 360 + 360) % 360;
+      // angle을 가진 획(글자 · 사각형/원)은 좌표뿐 아니라 자기 회전각도 도면과 함께 돌아야 한다.
+      // 사각형·원은 90° 회전에서 "축에 나란한 대각 코너"가 다시 대각 코너로 옮겨가므로 pts는
+      // 위에서 이미 올바르게 매핑됐고, 여기서는 각도만 더해주면 된다.
+      if(s.tool==='text' || s.tool==='rect' || s.tool==='ellipse'){
+        st.angle = (((s.angle||0) + deltaDeg) % 360 + 360) % 360;
+      }
       return st;
     });
   }
@@ -3894,97 +3944,161 @@
     return { x0: b.x0-half, y0: b.y0-half, x1: b.x1+half, y1: b.y1+half };
   }
 
-  // 고른 획에 붙는 조절점. 도구마다 "무엇을 잡아 고치는가"가 다르다:
-  //   직선·화살표 → 양 끝점(그 끝만 옮긴다)
-  //   사각형·원   → 네 모서리(마주 보는 모서리를 고정한 채 크기를 바꾼다)
-  //   자유선      → 외곽 사각형의 네 모서리(획 전체를 비율대로 늘이고 줄인다 — 점이 수십 개라
-  //                 점마다 조절점을 달면 화면이 점으로 뒤덮이고 하나도 못 잡는다)
-  //   글자        → 회전 손잡이 하나(angle 값은 원래부터 있었는데 화면에서 만질 방법이 없었다)
-  // 좌표는 캔버스 px로 돌려준다(히트테스트와 그리기가 모두 캔버스 px를 쓴다).
-  function sketchHandles(d, s, w, h){
+  // ── 선택 틀(프레임)과 조절점 ────────────────────────────────────────────────
+  // 조작 감각을 하나로 통일했다: 고른 것이 하나든 여럿이든 바깥에 점선 틀이 생기고, 그 네 모서리로
+  // 크기를 바꾸고 위쪽 손잡이로 돌린다(그림 도구의 bounding box와 같은 약속). 하나만 골랐을 때는
+  // 그 위에 도형 자신의 점이 작은 원으로 더 붙어서, 틀로는 할 수 없는 "한 점만 옮기기"가 된다:
+  //   직선·화살표 → 양 끝점 · 사각형·원 → 네 모서리(도형이 눕어 있으면 그 축을 따라)
+  //   자유선      → 각 점(점이 60개를 넘으면 화면이 점으로 덮이므로 틀로만 다룬다)
+  //   글자        → 없음(기준점 하나뿐이라 틀의 회전 손잡이로 눕힌다)
+  // 좌표는 전부 캔버스 px다. 캔버스는 도면 이미지를 가로·세로 같은 비율로 줄여 그리므로(SX==SY),
+  // 캔버스 px 위에서 회전을 계산해도 도면 원본 px에서 계산한 것과 결과가 같다.
+  const SKETCH_FRAME_PAD = 18;   // 틀을 내용에서 띄우는 거리 — 도형 자신의 점과 겹치지 않을 만큼
+  const SKETCH_ROTATE_ARM = 24;  // 틀 위쪽 회전 손잡이까지의 거리
+
+  // 회전이 있는 획의 회전축(도면 원본 px). 사각형·원은 자기 중심, 글자는 기준점이 축이다.
+  function strokePivotNatural(d, s){
+    const pts = s.pts || [];
+    if(pts.length === 0) return null;
+    if(s.tool === 'text') return { x: pts[0].x/100*d.naturalW, y: pts[0].y/100*d.naturalH };
+    if((s.tool === 'rect' || s.tool === 'ellipse') && pts.length >= 2){
+      return { x: (pts[0].x+pts[1].x)/2/100*d.naturalW, y: (pts[0].y+pts[1].y)/2/100*d.naturalH };
+    }
+    return null;
+  }
+  // 회전을 반영한 "화면에 실제로 차지하는" 사각형(축 정렬, 도면 원본 px).
+  // 범위 선택 판정과 선택 틀은 눈에 보이는 자리를 기준으로 해야 하므로 이 값을 쓴다.
+  function strokeWorldBoundsNatural(d, s){
+    const b = strokeBoundsNatural(d, s);
+    if(!b) return null;
+    const piv = strokePivotNatural(d, s);
+    if(!s.angle || !piv) return b;
+    const corners = [[b.x0,b.y0],[b.x1,b.y0],[b.x0,b.y1],[b.x1,b.y1]]
+      .map(([x,y])=> rotateAroundPt(x, y, piv.x, piv.y, s.angle));
+    const xs = corners.map(c=>c.x), ys = corners.map(c=>c.y);
+    return { x0: Math.min(...xs), y0: Math.min(...ys), x1: Math.max(...xs), y1: Math.max(...ys) };
+  }
+  // 고른 획들을 모두 감싸는 틀(캔버스 px, 여백 포함). 하나만 골랐을 때도 같은 틀이 나온다.
+  function selectionFrameCanvas(d, list, w, h){
+    if(!list || list.length === 0) return null;
+    const sx = w/d.naturalW, sy = h/d.naturalH;
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    list.forEach(s=>{
+      const b = strokeWorldBoundsNatural(d, s);
+      if(!b) return;
+      x0 = Math.min(x0, b.x0*sx); y0 = Math.min(y0, b.y0*sy);
+      x1 = Math.max(x1, b.x1*sx); y1 = Math.max(y1, b.y1*sy);
+    });
+    if(!isFinite(x0)) return null;
+    return { x0: x0-SKETCH_FRAME_PAD, y0: y0-SKETCH_FRAME_PAD, x1: x1+SKETCH_FRAME_PAD, y1: y1+SKETCH_FRAME_PAD };
+  }
+  function sketchFrameHandles(d, list, w, h){
+    const f = selectionFrameCanvas(d, list, w, h);
+    if(!f) return [];
+    return [
+      { kind:'gcorner', c:'00', x:f.x0, y:f.y0 },
+      { kind:'gcorner', c:'10', x:f.x1, y:f.y0 },
+      { kind:'gcorner', c:'01', x:f.x0, y:f.y1 },
+      { kind:'gcorner', c:'11', x:f.x1, y:f.y1 },
+      { kind:'grotate', x:(f.x0+f.x1)/2, y:f.y0 - SKETCH_ROTATE_ARM },
+    ];
+  }
+  // 도형 자신의 점(하나만 골랐을 때만).
+  function sketchPointHandles(d, s, w, h){
     const pts = s.pts || [];
     if(pts.length === 0) return [];
     const P = p=> ({ x: p.x/100*w, y: p.y/100*h });
     if(s.tool === 'line' || s.tool === 'arrow'){
       const last = pts.length-1;
       const a = P(pts[0]), b = P(pts[last]);
-      return [ {kind:'pt', i:0, x:a.x, y:a.y}, {kind:'pt', i:last, x:b.x, y:b.y} ];
+      return [ { kind:'pt', i:0, x:a.x, y:a.y }, { kind:'pt', i:last, x:b.x, y:b.y } ];
     }
     if((s.tool === 'rect' || s.tool === 'ellipse') && pts.length >= 2){
       const a = P(pts[0]), b = P(pts[1]);
-      return [
-        {kind:'corner', c:'00', x:a.x, y:a.y}, {kind:'corner', c:'10', x:b.x, y:a.y},
-        {kind:'corner', c:'01', x:a.x, y:b.y}, {kind:'corner', c:'11', x:b.x, y:b.y},
-      ];
+      const x0 = Math.min(a.x,b.x), x1 = Math.max(a.x,b.x);
+      const y0 = Math.min(a.y,b.y), y1 = Math.max(a.y,b.y);
+      const cx = (x0+x1)/2, cy = (y0+y1)/2, ang = s.angle || 0;
+      const mk = (c, x, y)=>{ const r = rotateAroundPt(x, y, cx, cy, ang); return { kind:'corner', c, x:r.x, y:r.y }; };
+      return [ mk('00',x0,y0), mk('10',x1,y0), mk('01',x0,y1), mk('11',x1,y1) ];
     }
-    const bn = strokePointBoundsNatural(d, s);
-    if(!bn) return [];
-    const sx = w/d.naturalW, sy = h/d.naturalH;
-    if(s.tool === 'text'){
-      // 글자를 기준점 축으로 돌리므로, 손잡이도 그 축에서 글상자 폭만큼 떨어진 자리에 함께 돈다.
-      const ax = pts[0].x/100*w, ay = pts[0].y/100*h;
-      const rad = (s.angle||0)*Math.PI/180;
-      const armN = (bn.x1-bn.x0) + sketchFontNatural(d, s)*0.5;
-      const arm = armN * sx;
-      return [ {kind:'rotate', x: ax + Math.cos(rad)*arm, y: ay + Math.sin(rad)*arm} ];
+    if(s.tool === 'pen'){
+      if(pts.length > 60) return []; // 점이 너무 많으면 오히려 아무것도 못 잡는다 — 틀로만 다룬다
+      return pts.map((p,i)=>{ const c = P(p); return { kind:'vertex', i, x:c.x, y:c.y }; });
     }
-    return [
-      {kind:'box', c:'00', x:bn.x0*sx, y:bn.y0*sy}, {kind:'box', c:'10', x:bn.x1*sx, y:bn.y0*sy},
-      {kind:'box', c:'01', x:bn.x0*sx, y:bn.y1*sy}, {kind:'box', c:'11', x:bn.x1*sx, y:bn.y1*sy},
-    ];
+    return [];
   }
-  // 조절점은 "하나만 골랐을 때"만 나온다 — 여러 개를 골랐을 때는 함께 옮기는 것이 목적이고,
-  // 획마다 네 개씩 붙으면 화면이 점으로 덮여 정작 아무것도 못 잡는다.
+  // 지금 화면에 떠 있는 조절점 전부. 도형 자신의 점이 앞에 오므로 히트테스트에서 먼저 잡힌다
+  // (틀 모서리는 내용에서 18px 밖에 있어 웬만해선 겹치지 않지만, 겹치면 안쪽을 잡는 편이 맞다).
+  function sketchAllHandles(d, list, w, h){
+    const out = [];
+    if(list.length === 1) sketchPointHandles(d, list[0], w, h).forEach(hd=> out.push(hd));
+    sketchFrameHandles(d, list, w, h).forEach(hd=> out.push(hd));
+    return out;
+  }
   function sketchHandleHitTest(d, x, y, isTouch){
-    if(selectedSketchIds.size !== 1) return null;
-    const s = selectedSketchStrokes(d)[0];
-    if(!s) return null;
+    if(selectedSketchIds.size === 0) return null;
+    const list = selectedSketchStrokes(d);
+    if(list.length === 0) return null;
     const cv = document.getElementById('mainCanvas');
     const hitR = isTouch ? 22 : 12;
-    const list = sketchHandles(d, s, cv.width, cv.height);
-    for(const hd of list){
-      if(Math.hypot(x-hd.x, y-hd.y) <= hitR) return { stroke: s, handle: hd };
+    for(const hd of sketchAllHandles(d, list, cv.width, cv.height)){
+      if(Math.hypot(x-hd.x, y-hd.y) <= hitR){
+        return { stroke: (hd.kind==='gcorner' || hd.kind==='grotate') ? null : list[0], handle: hd };
+      }
     }
     return null;
   }
 
-  // 고른 표시(점선 사각형 + 조절점)와 범위 선택 밴드. 마커 레이어(도면 위에 겹친 캔버스)에 그린다 —
-  // 그린 선 자체는 #mainCanvas에 그려지지만, 이 표시는 저장물에 절대 나가면 안 되는 조작용이다.
+  // 고른 표시(점선 사각형 + 틀 + 조절점)와 범위 선택 밴드. 마커 레이어(도면 위에 겹친 캔버스)에
+  // 그린다 — 그린 선 자체는 #mainCanvas에 그려지지만, 이 표시는 저장물에 나가면 안 되는 조작용이다.
   function drawSketchSelectionOverlay(ctx, d, w, h){
     if(!sketchTool) return;
     const sx = w/d.naturalW, sy = h/d.naturalH;
     const list = selectedSketchStrokes(d);
     ctx.save();
+    // ① 획마다 딱 맞는 점선 사각형 — 눕어 있으면 함께 눕는다(무엇을 골랐는지가 정확히 보인다).
     list.forEach(s=>{
       const bn = strokeBoundsNatural(d, s);
       if(!bn) return;
-      const pad = 4;
+      const piv = strokePivotNatural(d, s);
+      const pad = 3;
       ctx.save();
-      // 눕은 글자는 점선 사각형도 함께 눕혀야 "무엇을 골랐는지"가 맞아떨어진다(기준점이 회전축).
-      if(s.tool === 'text' && s.angle){
-        const ax = (s.pts[0].x/100)*w, ay = (s.pts[0].y/100)*h;
-        ctx.translate(ax, ay);
+      if(s.angle && piv){
+        ctx.translate(piv.x*sx, piv.y*sy);
         ctx.rotate((s.angle||0)*Math.PI/180);
-        ctx.translate(-ax, -ay);
+        ctx.translate(-piv.x*sx, -piv.y*sy);
       }
-      ctx.strokeStyle = 'rgba(42,120,214,0.95)';
-      ctx.lineWidth = 1.4;
-      ctx.setLineDash([5,4]);
+      ctx.strokeStyle = 'rgba(42,120,214,0.75)';
+      ctx.lineWidth = 1.2;
+      ctx.setLineDash([4,3]);
       ctx.strokeRect(bn.x0*sx - pad, bn.y0*sy - pad, (bn.x1-bn.x0)*sx + pad*2, (bn.y1-bn.y0)*sy + pad*2);
       ctx.setLineDash([]);
       ctx.restore();
     });
-    if(list.length === 1){
-      sketchHandles(d, list[0], w, h).forEach(hd=>{
-        ctx.beginPath();
-        if(hd.kind === 'rotate') ctx.arc(hd.x, hd.y, 6, 0, Math.PI*2);
-        else ctx.rect(hd.x-5, hd.y-5, 10, 10);
-        ctx.fillStyle = '#ffffff';
-        ctx.strokeStyle = '#2a78d6';
-        ctx.lineWidth = 1.8;
-        ctx.fill(); ctx.stroke();
-      });
+    // ② 크기·회전을 다루는 바깥 틀 + 조절점
+    const frame = selectionFrameCanvas(d, list, w, h);
+    if(frame){
+      ctx.strokeStyle = 'rgba(42,120,214,0.95)';
+      ctx.lineWidth = 1.4;
+      ctx.setLineDash([6,4]);
+      ctx.strokeRect(frame.x0, frame.y0, frame.x1-frame.x0, frame.y1-frame.y0);
+      ctx.setLineDash([]);
+      // 회전 손잡이까지 이어지는 짧은 선 — 손잡이가 허공에 뜬 점처럼 보이지 않게 한다.
+      ctx.beginPath();
+      ctx.moveTo((frame.x0+frame.x1)/2, frame.y0);
+      ctx.lineTo((frame.x0+frame.x1)/2, frame.y0 - SKETCH_ROTATE_ARM);
+      ctx.stroke();
     }
+    sketchAllHandles(d, list, w, h).forEach(hd=>{
+      ctx.beginPath();
+      if(hd.kind === 'grotate') ctx.arc(hd.x, hd.y, 6.5, 0, Math.PI*2);
+      else if(hd.kind === 'gcorner') ctx.rect(hd.x-5, hd.y-5, 10, 10);
+      else ctx.arc(hd.x, hd.y, 4.5, 0, Math.PI*2); // 도형 자신의 점은 작은 원
+      ctx.fillStyle = '#ffffff';
+      ctx.strokeStyle = '#2a78d6';
+      ctx.lineWidth = 1.8;
+      ctx.fill(); ctx.stroke();
+    });
     if(pendingAction && pendingAction.mode === 'sketchBand' && pendingAction.moved){
       const x0 = Math.min(pendingAction.startPct.x, pendingAction.curPct.x)/100*w;
       const x1 = Math.max(pendingAction.startPct.x, pendingAction.curPct.x)/100*w;
@@ -3998,6 +4112,49 @@
       ctx.setLineDash([]);
     }
     ctx.restore();
+    drawSketchMeasureLabel(ctx, d, w, h);
+  }
+
+  // ── 획 하나를 통째로 돌리기 / 늘이기 ────────────────────────────────────────
+  // 여러 개를 묶어 돌릴 때는 "각 획을 공통 축(pivot) 둘레로 돌린다"가 전부이고, 도구마다 무엇을
+  // 돌리는지만 다르다. 계산은 전부 도면 원본 px에서 한다 — %좌표는 가로·세로 기준이 서로 달라
+  // (x는 폭, y는 높이 대비) 그 위에서 각도를 다루면 도형이 찌그러진다.
+  function rotateStrokeAround(d, s, orig, pivN, deltaDeg){
+    const toN = p=> ({ x: p.x/100*d.naturalW, y: p.y/100*d.naturalH });
+    const toP = p=> ({ x: p.x/d.naturalW*100, y: p.y/d.naturalH*100 });
+    const rot = p=> rotateAroundPt(p.x, p.y, pivN.x, pivN.y, deltaDeg);
+    const nextAngle = (((orig.angle||0) + deltaDeg) % 360 + 360) % 360;
+    if((s.tool === 'rect' || s.tool === 'ellipse') && orig.pts.length >= 2){
+      // 사각형·원의 pts는 "돌리기 전"의 대각 코너다. 두 점을 그대로 돌리면 축에 나란한 상자가
+      // 깨지므로, 중심만 돌리고 크기는 유지한 뒤 도형 자신의 각도에 회전량을 더한다.
+      const a = toN(orig.pts[0]), b = toN(orig.pts[1]);
+      const c = rot({ x:(a.x+b.x)/2, y:(a.y+b.y)/2 });
+      const hw = (b.x-a.x)/2, hh = (b.y-a.y)/2;
+      s.pts = [ toP({ x:c.x-hw, y:c.y-hh }), toP({ x:c.x+hw, y:c.y+hh }) ];
+      s.angle = nextAngle;
+      return;
+    }
+    if(s.tool === 'text'){
+      s.pts = [ toP(rot(toN(orig.pts[0]))) ];
+      s.angle = nextAngle;
+      return;
+    }
+    s.pts = orig.pts.map(p=> toP(rot(toN(p))));
+  }
+  function scaleStrokeAround(d, s, orig, fixN, kx, ky){
+    const toN = p=> ({ x: p.x/100*d.naturalW, y: p.y/100*d.naturalH });
+    const toP = p=> ({ x: p.x/d.naturalW*100, y: p.y/d.naturalH*100 });
+    s.pts = orig.pts.map(p=>{
+      const n = toN(p);
+      return toP({ x: fixN.x + (n.x-fixN.x)*kx, y: fixN.y + (n.y-fixN.y)*ky });
+    });
+    // 글자는 좌표만 옮기면 글씨 크기가 그대로라 틀 안에서 혼자 커지지 않은 것처럼 보인다 —
+    // 가로·세로 배율의 기하평균만큼 함께 키운다. 선 굵기는 일부러 건드리지 않는다(도면 관례상
+    // 벽을 길게 늘였다고 선이 굵어지면 안 된다).
+    if(s.tool === 'text'){
+      const k = Math.sqrt(Math.abs(kx*ky)) || 1;
+      s.fontSize = clamp((orig.fontSize || 2.4) * k, 0.4, 20);
+    }
   }
 
   // 그린 선은 정적 레이어(#mainCanvas)에 그려지므로, 선을 끌어 옮기는 동안에는 도면 이미지까지
@@ -4041,6 +4198,18 @@
     if(typeof s.color === 'string') sketchColor = s.color;
     if(isFinite(s.width) && s.width > 0) sketchWidthMult = s.width;
     renderSketchToolbar();
+  }
+  // 그린 것끼리의 앞뒤 순서는 d.sketch 배열 순서(=그린 순서)가 그대로다. 순서를 바꾸는 것은
+  // 배열에서 뽑아 맨 앞 또는 맨 뒤로 옮기는 것이 전부이며, 고른 것들끼리의 앞뒤는 그대로 유지한다.
+  function reorderSelectedSketch(toFront){
+    const d = getActiveDrawing();
+    const list = selectedSketchStrokes(d);
+    if(list.length === 0){ showToast('먼저 「선택」(V)으로 그린 것을 고르세요.'); return; }
+    pushUndo();
+    const ids = new Set(list.map(s=>s.id));
+    const rest = (d.sketch||[]).filter(s=> !ids.has(s.id));
+    d.sketch = toFront ? rest.concat(list) : list.concat(rest);
+    renderCanvas();
   }
   function deleteSelectedSketch(){
     const d = getActiveDrawing();
@@ -4164,10 +4333,17 @@
     const hh = sketchHandleHitTest(d, p.x, p.y, touch);
     if(hh){
       pushUndo();
-      pendingAction = { mode:'sketchHandle', id: hh.stroke.id, handle: hh.handle, moved:false,
-        origPts: (hh.stroke.pts||[]).map(q=>({x:q.x, y:q.y})),
-        origAngle: hh.stroke.angle||0,
-        origBounds: strokePointBoundsNatural(d, hh.stroke) };
+      // 틀 조작은 고른 것 전부를 함께 바꾸므로, 시작 시점의 원본을 고른 획 모두에 대해 챙겨둔다
+      // (도형 하나만 다루는 조절점도 같은 표에서 자기 것을 꺼내 쓴다 — 두 벌로 두면 어긋난다).
+      const sel = selectedSketchStrokes(d);
+      const orig = {};
+      sel.forEach(s=>{
+        orig[s.id] = { pts: (s.pts||[]).map(q=>({x:q.x, y:q.y})), angle: s.angle||0, fontSize: s.fontSize };
+      });
+      const cv = document.getElementById('mainCanvas');
+      pendingAction = { mode:'sketchHandle', id: hh.stroke ? hh.stroke.id : null, handle: hh.handle, moved:false,
+        orig, origAngle: hh.stroke ? (hh.stroke.angle||0) : 0,
+        frame0: selectionFrameCanvas(d, sel, cv.width, cv.height) };
       return;
     }
     const hit = sketchHitTest(d, pct.x, pct.y, sketchPickTolNatural(d));
@@ -4203,73 +4379,196 @@
     pendingAction = { mode:'sketchBand', startPct: pct, curPct: pct, moved:false, additive: !!(e && e.shiftKey) };
   }
 
-  // 조절점 하나를 끄는 동안의 좌표 변환. 시작 시점의 원본 점(origPts)에서 매번 다시 계산하므로
+  // 조절점 하나를 끄는 동안의 좌표 변환. 시작 시점의 원본 좌표(pa.orig)에서 매번 다시 계산하므로
   // 드래그를 오래 끌어도 오차가 쌓이지 않는다.
-  function applySketchHandleDrag(d, s, pa, pct, e){
+  function applySketchHandleDrag(d, pa, pct, e){
     const hd = pa.handle;
-    if(hd.kind === 'pt'){
-      // 끝점 하나만 옮긴다. 새로 그을 때와 같은 보조(Shift 각도 고정 · 다른 선 끝점 스냅 · 격자)를
-      // 그대로 쓴다 — 고칠 때만 규칙이 다르면 같은 손동작에서 결과가 달라져 헷갈린다.
-      const other = pa.origPts[hd.i === 0 ? pa.origPts.length-1 : 0];
+    const cv = document.getElementById('mainCanvas');
+    const w = cv.width, h = cv.height;
+    const list = selectedSketchStrokes(d);
+
+    // ── 틀(프레임) 조작: 고른 것 전부를 함께 늘이거나 돌린다 ──
+    if(hd.kind === 'gcorner' || hd.kind === 'grotate'){
+      const f = pa.frame0;
+      if(!f) return;
+      const p = { x: pct.x/100*w, y: pct.y/100*h };
+      if(hd.kind === 'grotate'){
+        const cx = (f.x0+f.x1)/2, cy = (f.y0+f.y1)/2;
+        // 회전 손잡이는 틀 위쪽(=화면 기준 -90°)에 있으므로 +90°를 더해, 손잡이를 잡은 그 순간의
+        // 각도가 0이 되도록 맞춘다 — 안 그러면 잡자마자 도형이 90° 튄다.
+        let deg = Math.atan2(p.y-cy, p.x-cx)*180/Math.PI + 90;
+        if(e && e.shiftKey) deg = Math.round(deg/15)*15; // 15° 단위로 딱딱 떨어지게
+        const pivN = { x: cx/w*d.naturalW, y: cy/h*d.naturalH };
+        list.forEach(s=>{ if(pa.orig[s.id]) rotateStrokeAround(d, s, pa.orig[s.id], pivN, deg); });
+        return;
+      }
+      // 잡은 모서리의 대각을 고정점으로 삼고, 거기서 커서까지의 거리 비율만큼 전체를 늘인다.
+      const fixX = (hd.c === '00' || hd.c === '01') ? f.x1 : f.x0;
+      const fixY = (hd.c === '00' || hd.c === '10') ? f.y1 : f.y0;
+      const oldX = (hd.c === '00' || hd.c === '01') ? f.x0 : f.x1;
+      const oldY = (hd.c === '00' || hd.c === '10') ? f.y0 : f.y1;
+      let kx = Math.abs(oldX-fixX) > 1e-6 ? (p.x-fixX)/(oldX-fixX) : 1;
+      let ky = Math.abs(oldY-fixY) > 1e-6 ? (p.y-fixY)/(oldY-fixY) : 1;
+      // 0으로 눌리거나 뒤집히는 것은 대개 실수다(되돌릴 방법이 없어 보인다). 배율에 상·하한을 둔다.
+      kx = clamp(kx, 0.05, 20); ky = clamp(ky, 0.05, 20);
+      if(e && e.shiftKey){ const k = Math.min(kx, ky); kx = k; ky = k; } // 가로세로 비율 유지
+      const fixN = { x: fixX/w*d.naturalW, y: fixY/h*d.naturalH };
+      list.forEach(s=>{ if(pa.orig[s.id]) scaleStrokeAround(d, s, pa.orig[s.id], fixN, kx, ky); });
+      return;
+    }
+
+    // ── 도형 자신의 점 조작: 하나만 골랐을 때만 나온다 ──
+    const s = (d.sketch||[]).find(x=> x.id === pa.id);
+    if(!s) return;
+    const origPts = (pa.orig[pa.id] && pa.orig[pa.id].pts) || [];
+    if(origPts.length === 0) return;
+
+    if(hd.kind === 'pt' || hd.kind === 'vertex'){
+      // 새로 그을 때와 같은 보조(Shift 각도 고정 · 다른 선 끝점 스냅 · 격자)를 그대로 쓴다 —
+      // 고칠 때만 규칙이 다르면 같은 손동작에서 결과가 달라져 헷갈린다.
+      const isEnd = (hd.i === 0 || hd.i === origPts.length-1);
       let target;
-      if(e && e.shiftKey){
+      if(hd.kind === 'pt' && e && e.shiftKey){
+        const other = origPts[hd.i === 0 ? origPts.length-1 : 0];
         target = constrainLinePct(d, other.x, other.y, pct.x, pct.y);
-      } else {
+      } else if(isEnd){
         // 자기 자신은 스냅 대상에서 뺀다 — 안 그러면 반대쪽 끝에 붙어 선이 한 점으로 접힌다.
         target = sketchSnapPoint(d, pct.x, pct.y, sketchSnapTolNatural(d), s.id) || applyGridSnap(d, pct, e);
+      } else {
+        target = applyGridSnap(d, pct, e);
       }
-      const pts = pa.origPts.map(q=>({x:q.x, y:q.y}));
+      const pts = origPts.map(q=>({ x:q.x, y:q.y }));
       pts[hd.i] = { x: target.x, y: target.y };
       s.pts = pts;
       return;
     }
+
     if(hd.kind === 'corner'){
-      // 사각형·원은 pts[0]/pts[1]이 마주 보는 두 코너다. 잡은 코너만 옮기고 반대쪽은 고정한다.
-      const a = pa.origPts[0], b = pa.origPts[1];
+      // 사각형·원: 잡은 모서리의 대각을 화면상 제자리에 붙들어 둔 채 크기를 바꾼다. 도형이 눕어
+      // 있으면(s.angle) 커서를 도형의 축으로 되돌려 재고, 새 중심을 역산해 고정 모서리가 실제로
+      // 움직이지 않게 한다(회전축이 도형 중심이라 크기가 바뀌면 중심도 함께 옮겨야 한다).
+      const ang = pa.origAngle || 0;
+      const A = { x: origPts[0].x/100*w, y: origPts[0].y/100*h };
+      const B = { x: origPts[1].x/100*w, y: origPts[1].y/100*h };
+      const x0 = Math.min(A.x,B.x), x1 = Math.max(A.x,B.x);
+      const y0 = Math.min(A.y,B.y), y1 = Math.max(A.y,B.y);
+      const c0 = { x:(x0+x1)/2, y:(y0+y1)/2 };
+      const fixLocal = { x: (hd.c === '00' || hd.c === '01') ? x1 : x0,
+                         y: (hd.c === '00' || hd.c === '10') ? y1 : y0 };
+      const fixW = rotateAroundPt(fixLocal.x, fixLocal.y, c0.x, c0.y, ang);
       const target = applyGridSnap(d, pct, e);
-      let x0 = a.x, y0 = a.y, x1 = b.x, y1 = b.y;
-      const movesFirstX = (hd.c === '00' || hd.c === '01');
-      const movesFirstY = (hd.c === '00' || hd.c === '10');
-      let nx = target.x, ny = target.y;
-      if(e && e.shiftKey){
-        const fixed = { x: movesFirstX ? b.x : a.x, y: movesFirstY ? b.y : a.y };
-        const sq = squareEndPct(d, fixed, target);
-        nx = sq.x; ny = sq.y;
+      const p = { x: target.x/100*w, y: target.y/100*h };
+      const v = rotateAroundPt(p.x, p.y, fixW.x, fixW.y, -ang); // 커서를 도형의 축으로 되돌린다
+      let vw = v.x - fixW.x, vh = v.y - fixW.y;
+      let nw = Math.max(1, Math.abs(vw)), nh = Math.max(1, Math.abs(vh));
+      if(e && e.shiftKey){ const m = Math.max(nw, nh); nw = m; nh = m; } // 정사각·정원
+      const sgx = vw < 0 ? -1 : 1, sgy = vh < 0 ? -1 : 1;
+      const nc = rotateAroundPt(fixW.x + sgx*nw/2, fixW.y + sgy*nh/2, fixW.x, fixW.y, ang);
+      s.pts = [
+        { x: (nc.x - nw/2)/w*100, y: (nc.y - nh/2)/h*100 },
+        { x: (nc.x + nw/2)/w*100, y: (nc.y + nh/2)/h*100 },
+      ];
+    }
+  }
+
+  // ── 길이·각도 표시 ──────────────────────────────────────────────────────────
+  // 벽 치수를 눈으로 맞추기 위한 표시. 길이는 "도면 폭 대비 %"로 잰다 — 좌표가 x는 폭, y는 높이
+  // 대비 %로 저장되어 있어 그대로는 비스듬한 선의 길이를 잴 수 없기 때문에, 도면 원본 px로 실제
+  // 거리를 구한 뒤 폭으로 나눈다. 그래서 수평선의 길이 %는 그 선의 x 구간과 정확히 같은 값이고,
+  // 방향이 다른 선끼리도 같은 잣대로 길이를 비교할 수 있다.
+  // 모눈이 켜져 있으면 칸 수도 함께 보여준다 — 현장에서 "몇 칸짜리 벽"이 가장 쓰기 좋은 단위다.
+  function sketchLenPct(d, aPct, bPct){
+    const dx = (bPct.x-aPct.x)/100*d.naturalW, dy = (bPct.y-aPct.y)/100*d.naturalH;
+    return Math.hypot(dx, dy) / d.naturalW * 100;
+  }
+  function sketchGridCellText(d, lenPct){
+    if(!sketchGridOn) return '';
+    const step = sketchGridStepNatural(d);
+    if(!(step > 0)) return '';
+    return ' · ' + (lenPct/100*d.naturalW / step).toFixed(1) + '칸';
+  }
+  // 화면 각도(도) — 오른쪽이 0°, 위쪽이 90°. 화면 y는 아래로 증가하므로 부호를 뒤집어 잰다.
+  function sketchScreenAngle(d, aPct, bPct){
+    const dx = (bPct.x-aPct.x)/100*d.naturalW, dy = (bPct.y-aPct.y)/100*d.naturalH;
+    return ((Math.atan2(-dy, dx)*180/Math.PI) % 360 + 360) % 360;
+  }
+  // 획 하나를 재서 사람이 읽을 문장과 표시할 자리를 돌려준다. 잴 것이 없으면 null.
+  function measureStroke(d, s, w, h){
+    const pts = s.pts || [];
+    if(pts.length === 0) return null;
+    const at = p=> ({ x: p.x/100*w, y: p.y/100*h });
+    if((s.tool === 'line' || s.tool === 'arrow') && pts.length >= 2){
+      const a = pts[0], b = pts[pts.length-1];
+      const len = sketchLenPct(d, a, b);
+      let deg = sketchScreenAngle(d, a, b);
+      // 직선은 방향이 없으므로 0~180°로 접어 읽는다(화살표는 향하는 쪽이 뜻을 가지므로 그대로).
+      if(s.tool === 'line' && deg >= 180) deg -= 180;
+      const mid = { x:(a.x+b.x)/2, y:(a.y+b.y)/2 };
+      return { text: `길이 ${len.toFixed(1)}%${sketchGridCellText(d, len)} · ${deg.toFixed(1)}°`, at: at(mid) };
+    }
+    if((s.tool === 'rect' || s.tool === 'ellipse') && pts.length >= 2){
+      const a = pts[0], b = pts[1];
+      const wPct = sketchLenPct(d, a, { x:b.x, y:a.y });
+      const hPct = sketchLenPct(d, a, { x:a.x, y:b.y });
+      const tilt = s.angle ? ` · ${(s.angle||0).toFixed(0)}° 기울임` : '';
+      const cells = sketchGridOn
+        ? ` · ${(wPct/100*d.naturalW/sketchGridStepNatural(d)).toFixed(1)}×${(hPct/100*d.naturalW/sketchGridStepNatural(d)).toFixed(1)}칸`
+        : '';
+      return { text: `${wPct.toFixed(1)}% × ${hPct.toFixed(1)}%${cells}${tilt}`,
+               at: at({ x:(a.x+b.x)/2, y:Math.min(a.y,b.y) }) };
+    }
+    if(s.tool === 'pen' && pts.length >= 2){
+      let total = 0;
+      for(let i=0;i<pts.length-1;i++) total += sketchLenPct(d, pts[i], pts[i+1]);
+      const mid = pts[Math.floor(pts.length/2)];
+      return { text: `총연장 ${total.toFixed(1)}%${sketchGridCellText(d, total)}`, at: at(mid) };
+    }
+    if(s.tool === 'text' && s.angle){
+      return { text: `${(s.angle||0).toFixed(0)}° 기울임`, at: at(pts[0]) };
+    }
+    return null;
+  }
+  // 지금 재서 보여줄 것: ① 그리는 중인 획(가장 쓸모 있는 순간) ② 고른 획이 딱 하나일 때.
+  function drawSketchMeasureLabel(ctx, d, w, h){
+    let m = null;
+    let frame = null;
+    if(pendingAction && pendingAction.mode === 'sketch' && pendingAction.moved){
+      const preview = buildSketchStrokeFromAction(d, pendingAction);
+      if(preview) m = measureStroke(d, preview, w, h);
+    } else {
+      const list = selectedSketchStrokes(d);
+      if(list.length === 1){
+        m = measureStroke(d, list[0], w, h);
+        frame = selectionFrameCanvas(d, list, w, h);
       }
-      if(movesFirstX) x0 = nx; else x1 = nx;
-      if(movesFirstY) y0 = ny; else y1 = ny;
-      s.pts = [ {x:x0, y:y0}, {x:x1, y:y1} ];
-      return;
     }
-    if(hd.kind === 'box'){
-      // 자유선: 잡은 모서리의 대각 모서리를 고정점으로 삼아 획 전체를 비율대로 늘이고 줄인다.
-      const bn = pa.origBounds;
-      if(!bn) return;
-      const toNX = v=> v/100*d.naturalW, toNY = v=> v/100*d.naturalH;
-      const fx = (hd.c === '00' || hd.c === '01') ? bn.x1 : bn.x0; // 고정할 모서리
-      const fy = (hd.c === '00' || hd.c === '10') ? bn.y1 : bn.y0;
-      const ox = (hd.c === '00' || hd.c === '01') ? bn.x0 : bn.x1; // 잡은 모서리의 원래 자리
-      const oy = (hd.c === '00' || hd.c === '10') ? bn.y0 : bn.y1;
-      const dx = ox - fx, dy = oy - fy;
-      let kx = Math.abs(dx) > 1e-6 ? (toNX(pct.x) - fx)/dx : 1;
-      let ky = Math.abs(dy) > 1e-6 ? (toNY(pct.y) - fy)/dy : 1;
-      // 0으로 눌리거나 뒤집히는 것은 대개 실수다(되돌릴 방법이 없어 보이므로). 배율에 상·하한을 둔다.
-      kx = clamp(kx, 0.05, 20); ky = clamp(ky, 0.05, 20);
-      if(e && e.shiftKey){ const k = Math.min(kx, ky); kx = k; ky = k; } // 가로세로 비율 유지
-      s.pts = pa.origPts.map(q=>({
-        x: (fx + (toNX(q.x) - fx)*kx) / d.naturalW * 100,
-        y: (fy + (toNY(q.y) - fy)*ky) / d.naturalH * 100,
-      }));
-      return;
+    if(!m) return;
+    ctx.save();
+    ctx.font = '600 12px system-ui, -apple-system, "Malgun Gothic", sans-serif';
+    const padX = 7, padY = 4;
+    const tw = ctx.measureText(m.text).width;
+    const bw = tw + padX*2, bh = 20;
+    // 고른 획에는 선택 틀이 함께 떠 있으므로 라벨을 틀 "아래"에 붙인다 — 위에 두면 틀 윗변과
+    // 회전 손잡이를 가린다. 그리는 중에는 틀이 없으니 예전처럼 획 위쪽에 띄운다.
+    // 어느 경우든 캔버스 밖으로 나가면 안쪽으로 되돌린다(잘려서 안 읽히는 것을 막는다).
+    let bx, by;
+    if(frame){
+      bx = clamp((frame.x0+frame.x1)/2 - bw/2, 2, Math.max(2, w - bw - 2));
+      by = frame.y1 + 6;
+      if(by + bh > h - 2) by = Math.max(2, frame.y0 - bh - 6);
+    } else {
+      bx = clamp(m.at.x - bw/2, 2, Math.max(2, w - bw - 2));
+      by = m.at.y - bh - 12;
+      if(by < 2) by = Math.min(h - bh - 2, m.at.y + 14);
     }
-    if(hd.kind === 'rotate'){
-      // 글자는 기준점(pts[0])을 축으로 돈다 — 손잡이를 끄는 방향이 그대로 글자가 눕는 방향이다.
-      const a = pa.origPts[0];
-      const ax = a.x/100*d.naturalW, ay = a.y/100*d.naturalH;
-      let deg = Math.atan2(pct.y/100*d.naturalH - ay, pct.x/100*d.naturalW - ax) * 180/Math.PI;
-      if(e && e.shiftKey) deg = Math.round(deg/15)*15; // 15° 단위로 딱딱 떨어지게
-      s.angle = ((deg % 360) + 360) % 360;
-    }
+    by = clamp(by, 2, Math.max(2, h - bh - 2));
+    roundedRectXYWH(ctx, bx, by, bw, bh, 5);
+    ctx.fillStyle = 'rgba(17,17,17,0.86)';
+    ctx.fill();
+    ctx.fillStyle = '#ffffff';
+    ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    ctx.fillText(m.text, bx + padX, by + bh/2 + 0.5);
+    ctx.restore();
   }
 
   function handleSketchPointerDown(d, p, e){
@@ -4323,13 +4622,10 @@
       return;
     }
     if(pendingAction.mode === 'sketchHandle'){
-      const s = (d.sketch||[]).find(x=> x.id === pendingAction.id);
-      if(s){
-        pendingAction.moved = true;
-        applySketchHandleDrag(d, s, pendingAction, pct, e);
-        markDirty();
-        scheduleCanvasRender();
-      }
+      pendingAction.moved = true;
+      applySketchHandleDrag(d, pendingAction, pct, e);
+      markDirty();
+      scheduleCanvasRender();
       return;
     }
     if(pendingAction.mode === 'sketchBand'){
@@ -4390,7 +4686,9 @@
         // 마커 러버밴드와 같은 기준 — 획 전체가 범위 안에 완전히 들어와야 잡힌다. 걸친 것까지
         // 잡으면 촘촘한 도면에서 원하지 않은 벽선까지 딸려 온다.
         const matched = (d.sketch||[]).filter(s=>{
-          const b = strokePointBoundsNatural(d, s);
+          // 눕은 도형은 저장된 좌표가 아니라 "화면에 실제로 차지하는" 사각형으로 재야, 눈에 보이는
+          // 대로 범위 안에 들어왔는지가 판정된다.
+          const b = strokeWorldBoundsNatural(d, s);
           if(!b) return false;
           return b.x0/d.naturalW*100 >= x0 && b.x1/d.naturalW*100 <= x1
               && b.y0/d.naturalH*100 >= y0 && b.y1/d.naturalH*100 <= y1;
@@ -5344,7 +5642,9 @@
   function pushMultiUndo(targetDrawings){
     if(!targetDrawings || targetDrawings.length===0) return;
     markDirty();
-    undoStack.push({ type:'multiMarkers', entries: targetDrawings.map(d=>({ drawingId:d.id, markers: cloneMarkersForUndo(d.markers) })) });
+    // 「마킹 전체 복사」는 그린 선도 함께 옮길 수 있으므로 스케치까지 같은 항목에 싣는다 —
+    // 안 그러면 실행취소가 마커만 되돌리고 복제된 선은 남아버린다.
+    undoStack.push({ type:'multiMarkers', entries: targetDrawings.map(d=>({ drawingId:d.id, markers: cloneMarkersForUndo(d.markers), sketch: cloneSketchForUndo(d.sketch) })) });
     if(undoStack.length>60) undoStack.shift();
     redoStack = [];
   }
@@ -5399,8 +5699,9 @@
       const redoEntries = [];
       last.entries.forEach(en=>{
         const d2 = drawings.find(x=>x.id===en.drawingId); if(!d2) return;
-        redoEntries.push({ drawingId:d2.id, markers: cloneMarkersForUndo(d2.markers) });
+        redoEntries.push({ drawingId:d2.id, markers: cloneMarkersForUndo(d2.markers), sketch: cloneSketchForUndo(d2.sketch) });
         d2.markers = en.markers;
+        if(en.sketch) d2.sketch = en.sketch;
       });
       if(redoEntries.length>0){
         redoStack.push({ type:'multiMarkers', entries: redoEntries });
@@ -5452,8 +5753,9 @@
       const undoEntries = [];
       next.entries.forEach(en=>{
         const d2 = drawings.find(x=>x.id===en.drawingId); if(!d2) return;
-        undoEntries.push({ drawingId:d2.id, markers: cloneMarkersForUndo(d2.markers) });
+        undoEntries.push({ drawingId:d2.id, markers: cloneMarkersForUndo(d2.markers), sketch: cloneSketchForUndo(d2.sketch) });
         d2.markers = en.markers;
+        if(en.sketch) d2.sketch = en.sketch;
       });
       if(undoEntries.length>0){
         undoStack.push({ type:'multiMarkers', entries: undoEntries });
@@ -6705,8 +7007,8 @@
       // 몇 개를 골랐는지 · 지금 무엇을 할 수 있는지를 안내 줄이 그때그때 말해준다. 하나만 골랐을
       // 때만 조절점이 나오므로, 그 차이를 문구로도 드러낸다.
       const pickedMsg = picked === 1
-        ? ' · <b>1개 선택됨</b> — 파란 조절점을 끌어 모양을 고치고, 색·굵기 단추로 바로 바꿉니다'
-        : picked > 1 ? ' · <b>' + picked + '개 선택됨</b> — 함께 옮기거나 색·굵기를 한 번에 바꿉니다' : '';
+        ? ' · <b>1개 선택됨</b> — 도형 위 <b>둥근 점</b>으로 한 점만 고치고, 바깥 <b>네모 틀</b>로 크기·회전(위쪽 손잡이, Shift: 15°씩)'
+        : picked > 1 ? ' · <b>' + picked + '개 선택됨</b> — 함께 옮기고, 바깥 틀로 <b>한꺼번에 크기·회전</b>(Shift: 비율 유지)' : '';
       hint.innerHTML = '<b>그리기 모드</b> (단축키 w) · 지금 도구: <b>' + escapeHTML(sketchToolLabel(sketchTool)) + '</b> — ' + guide
         + pickedMsg
         + (sketchGridOn ? ' · <b>모눈 ' + sketchGridDiv + '칸</b>(Alt: 이번 획만 눈금 무시)' : '');
@@ -6842,6 +7144,9 @@
       const b = document.getElementById(id);
       if(b) b.classList.toggle('active', sketchGridOn);
     });
+    // 앞뒤 순서 단추는 「선택」 도구에서만 뜻이 있다(고를 수 있는 도구가 그것뿐이라서).
+    const orderGroup = document.getElementById('sketchOrderGroup');
+    if(orderGroup) orderGroup.style.display = (sketchTool === 'pick') ? '' : 'none';
   }
 
   function isSketchGridStored(){
@@ -8459,12 +8764,24 @@
   function openDuplicateModal(){
     const d = getActiveDrawing();
     if(!d){ showToast('먼저 도면을 추가하고 선택해주세요.'); return; }
-    if(d.markers.length===0){ showToast('현재 도면에 복제할 마킹이 없습니다.'); return; }
+    const sketchN = (d.sketch||[]).length;
+    // 마킹이 없어도 그린 선만 복제하고 싶을 수 있다(백지에 평면만 그려둔 도면).
+    if(d.markers.length===0 && sketchN===0){ showToast('현재 도면에 복제할 마킹도, 그린 선도 없습니다.'); return; }
     duplicateSourceId = d.id;
     duplicateSelectedIds = new Set();
     duplicateLastClickedIdx = null;
     document.getElementById('duplicateSourceName').textContent = d.name;
     document.getElementById('duplicateSourceCount').textContent = d.markers.length;
+    const sketchRow = document.getElementById('duplicateSketchRow');
+    const sketchCb = document.getElementById('duplicateIncludeSketch');
+    const sketchLabel = document.getElementById('duplicateSketchLabel');
+    if(sketchRow && sketchCb && sketchLabel){
+      sketchRow.style.display = sketchN>0 ? '' : 'none';
+      // 그린 선이 있는 도면이면 기본으로 켜 둔다 — 화면에 보이는 스위치이므로 원치 않으면 바로 끌 수
+      // 있고, 손으로 그린 평면을 빼고 마킹만 옮기는 경우가 오히려 드물다.
+      sketchCb.checked = sketchN>0;
+      sketchLabel.textContent = `그린 선 ${sketchN}개도 함께 복사`;
+    }
     renderDuplicateList();
     updateDuplicateFootNote();
     document.getElementById('duplicateBackdrop').style.display = 'flex';
@@ -8476,7 +8793,10 @@
     if(!source){ closeDuplicateModal(); return; }
     const targets = otherDrawings().filter(d=> duplicateSelectedIds.has(d.id));
     if(targets.length===0){ showToast('대상 도면을 1개 이상 선택하세요.'); return; }
-    if(mode==='overwrite' && !confirm(`선택한 ${targets.length}개 도면의 기존 마킹을 전부 지우고 "${source.name}"의 마킹으로 덮어쓸까요?\n이 작업은 도면마다 있던 기존 마킹을 모두 지웁니다(실행취소로 되돌릴 수 있습니다).`)) return;
+    const sketchCb = document.getElementById('duplicateIncludeSketch');
+    const includeSketch = !!(sketchCb && sketchCb.checked) && (source.sketch||[]).length>0;
+    const what = includeSketch ? '마킹과 그린 선' : '마킹';
+    if(mode==='overwrite' && !confirm(`선택한 ${targets.length}개 도면의 기존 ${what}을 전부 지우고 "${source.name}"의 것으로 덮어쓸까요?\n이 작업은 도면마다 있던 기존 ${what}을 모두 지웁니다(실행취소로 되돌릴 수 있습니다).`)) return;
     pushMultiUndo(targets);
     targets.forEach(target=>{
       // %좌표·각도·인출선 길이·계열(typeKey)·보고서 라벨은 그대로 옮기고, uid/id만 새로 발급(원본과
@@ -8489,11 +8809,18 @@
         return { ...rest, ...newMarkerIdPair() };
       });
       target.markers = (mode==='overwrite') ? cloned : target.markers.concat(cloned);
+      if(includeSketch){
+        // 그린 선도 좌표 기준(도면 대비 %)이 마커와 완전히 같으므로 그대로 옮기면 된다.
+        // id만 새로 발급한다 — 원본과 겹치면 「선택」에서 두 도면의 획이 같은 것으로 취급된다.
+        const clonedSketch = (source.sketch||[]).map(s=>
+          Object.assign({}, s, { id: newSketchId(), pts: (s.pts||[]).map(p=>({x:p.x, y:p.y})) }));
+        target.sketch = (mode==='overwrite') ? clonedSketch : (target.sketch||[]).concat(clonedSketch);
+      }
     });
     renumberAllDrawings({silent:true});
     renderCanvas(); renderTable(); renderDrawingTabs();
     closeDuplicateModal();
-    showToast(`"${source.name}"의 마킹을 ${targets.length}개 도면에 복제했습니다(${mode==='overwrite'?'덮어쓰기':'뒤에 추가'}).`);
+    showToast(`"${source.name}"의 ${what}을 ${targets.length}개 도면에 복제했습니다(${mode==='overwrite'?'덮어쓰기':'뒤에 추가'}).`);
   }
   document.getElementById('btnDuplicateOpen').addEventListener('click', openDuplicateModal);
   document.getElementById('btnDuplicateClose').addEventListener('click', closeDuplicateModal);
@@ -9426,6 +9753,8 @@
     btn.addEventListener('click', ()=> applyLeaderShape(btn.getAttribute('data-leader-shape')));
   });
   renderLeaderShapeToolbar();
+  document.getElementById('btnSketchToBack').addEventListener('click', ()=> reorderSelectedSketch(false));
+  document.getElementById('btnSketchToFront').addEventListener('click', ()=> reorderSelectedSketch(true));
   document.getElementById('btnSketchGrid').addEventListener('click', toggleSketchGrid);
   document.getElementById('btnFloatSketchGrid').addEventListener('click', toggleSketchGrid);
   document.getElementById('sketchGridDivSlider').addEventListener('input', (e)=> setSketchGridDiv(parseInt(e.target.value, 10)));
