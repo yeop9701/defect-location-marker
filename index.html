@@ -830,6 +830,40 @@
   #tableInputPreviewCanvas{display:block;width:240px;height:180px;border-radius:8px;border:1px solid var(--gridline);
     background:var(--surface-2);cursor:crosshair;}
   .ti-preview-hint{font-size:10.5px;color:var(--muted);margin-top:6px;line-height:1.5;}
+  /* ── 엑셀식 칸 조작 ────────────────────────────────────────
+     「편집 모드」 — 글자 사이로 커서를 옮기는 동안(F2 · 칸을 두 번 누르기).
+     여느 때에는 방향키가 곧 칸 이동이므로 지금 어느 쪽인지 눈에 보여야 한다. */
+  .marker-card input.editing:focus,
+  table.input-table input.editing:focus{ outline:2px dashed #16a34a;outline-offset:-1px;border-color:#16a34a; }
+  /* 목록이 딸린 칸. 브라우저의 datalist 는 칸을 누르기만 해도 목록이 튀어나오고
+     값을 넣고 칸을 옮긴 뒤에도 아래에 한 번 더 뜨는 일이 있어 쓰지 않는다.
+     select 도 쓰지 않는다 — ↑↓ 가 칸 이동이 아니라 값 고르기가 되어 버린다.
+     대신 오른쪽 ▼ 를 눌렀을 때에만 열리는 목록을 우리가 만들어 붙인다. */
+  .cwrap{display:flex;align-items:stretch;min-width:0;}
+  .cwrap > input{flex:1;min-width:0;border-top-right-radius:0 !important;border-bottom-right-radius:0 !important;border-right:none !important;}
+  .cwrap > .cbtn{
+    flex:0 0 17px;width:17px;padding:0;cursor:pointer;font-size:8px;line-height:1;
+    border:1px solid var(--gridline);border-left:none;border-top-right-radius:var(--r-sm);border-bottom-right-radius:var(--r-sm);
+    background:var(--surface-2);color:var(--text-secondary);
+  }
+  .cwrap > .cbtn:hover{background:var(--surface-hover);color:var(--text-primary);}
+  body.layout-tablet .cwrap > .cbtn{flex:0 0 26px;width:26px;font-size:10px;}
+  table.input-table td.combo{padding:2px 3px;}
+  /* 목록은 body 에 붙여 띄운다 — 표 안에 두면 가로로 밀리는 상자에 잘려 안 보인다 */
+  .cell-menu{
+    position:fixed;z-index:3000;background:var(--surface-1);border:1px solid var(--gridline);
+    border-radius:var(--r-md);box-shadow:var(--shadow-2);padding:4px;
+    max-height:min(320px,52vh);overflow:auto;min-width:120px;
+  }
+  .cell-menu button{
+    display:block;width:100%;text-align:left;border:none;background:transparent;color:var(--text-primary);
+    padding:8px 10px;border-radius:var(--r-sm);cursor:pointer;font-size:12.5px;white-space:nowrap;
+  }
+  .cell-menu button:hover{background:var(--surface-hover);}
+  .cell-menu button.on{background:var(--accent);color:#fff;}
+  .cell-menu button.none{color:var(--muted);font-style:italic;}
+  @media print{ .cell-menu{display:none !important;} }
+
   table.input-table{border-collapse:collapse;font-size:12px;width:100%;}
   table.input-table th{text-align:left;color:var(--text-secondary);font-weight:600;font-size:10.5px;text-transform:uppercase;
     letter-spacing:.02em;padding:4px 5px;border-bottom:1px solid var(--gridline);position:sticky;top:0;background:var(--surface-1);}
@@ -1067,6 +1101,16 @@
               <li><span class="kbd-hint">Delete</span><span class="kbd-hint">Esc</span>선택 삭제 · 선택/모드 해제</li>
               <li><span class="kbd-hint">Ctrl+Z</span><span class="kbd-hint">Ctrl+Shift+Z</span>실행취소 · 다시실행</li>
               <li><span class="kbd-hint">Ctrl+A</span><span class="kbd-hint">Ctrl+S</span><span class="kbd-hint">Ctrl+D</span>전체선택 · 프로젝트 저장 · 현재 도면 저장</li>
+            </ul>
+          </div>
+          <div class="help-sec">
+            <h5>결함 목록 · 「표로 입력」의 칸 조작 (엑셀과 같습니다)</h5>
+            <ul class="kbd-list">
+              <li><span class="kbd-hint">Enter</span><span class="kbd-hint">↑↓</span>위아래 칸 · <span class="kbd-hint">Tab</span><span class="kbd-hint">←→</span>좌우 칸 — 칸에 값이 있든 없든 <b>늘 한 번에</b> 넘어갑니다</li>
+              <li><span class="kbd-hint">F2</span>또는 칸을 <b>두 번 누르기</b> — 편집 모드(테두리가 초록 점선). 그 동안에만 <span class="kbd-hint">←→</span>가 글자 사이를 오갑니다. <span class="kbd-hint">Esc</span>나 다른 칸으로 옮기면 풀립니다</li>
+              <li><span class="kbd-hint">Ctrl+D</span>바로 위 칸의 값 가져오기 — 같은 부재·자재가 줄줄이 이어질 때</li>
+              <li><span class="kbd-hint">Ctrl+V</span>엑셀에서 복사한 범위를 「표로 입력」에 그대로 붙여넣기 (모자란 행은 저절로 늘어납니다)</li>
+              <li><b>▼</b>부재·자재·결함·유형 칸의 목록 — 이 단추를 눌렀을 때에만 열립니다(방향키는 칸 이동에 쓰므로). 새로 친 값은 곧바로 목록에 오릅니다</li>
             </ul>
           </div>
           <div class="help-sec">
@@ -1395,7 +1439,7 @@
           <option value="a3p">A3 세로</option>
           </select>
         <div class="sidebar-btn-grid" style="margin-top:6px;">
-          <button class="strong" style="width:100%;" id="btnExportPNG" title="현재 도면을 이미지로 저장 (단축키 Ctrl+D)"><svg class="icon"><use href="#i-image"/></svg> 현재 도면 저장</button>
+          <button class="strong" style="width:100%;" id="btnExportPNG" title="현재 도면을 이미지로 저장 (단축키 Ctrl+D — 입력칸에 커서가 있을 때는 「위 칸 값 가져오기」입니다)"><svg class="icon"><use href="#i-image"/></svg> 현재 도면 저장</button>
           <button id="btnExportAll" class="strong" style="width:100%;" title="현재 형식(PNG/PDF)으로 모든 도면을 한 번에 저장합니다. PDF는 도면 수만큼 페이지가 있는 파일 1개로, PNG는 도면별로 순서대로 저장됩니다."><svg class="icon"><use href="#i-archive"/></svg> 전체 도면 저장</button>
         </div>
       </div>
@@ -6037,21 +6081,23 @@
   // 좁아지는 문제가 있었다. datalist는 입력칸 하나로 목록 선택과 자유 입력을 모두 처리하므로 그
   // 문제가 구조적으로 사라지고, 타이핑으로 목록이 바로 필터링돼 결함이 많을 때 입력 속도도 빨라진다.
   function buildReportFieldHTML(fieldKey, value, label){
-    return `<span class="mc-cell" data-label="${escapeAttr(label)}">
-        <input type="text" list="dl-${fieldKey}" data-role="${fieldKey}"
+    return `<span class="mc-cell combo cwrap" data-label="${escapeAttr(label)}">
+        <input type="text" data-role="${fieldKey}"
                placeholder="${escapeAttr(label)}" title="${escapeAttr(label)}"
                value="${escapeAttr(value||'')}" autocomplete="off"/>
+        <button type="button" class="cbtn" tabindex="-1" data-drop="${fieldKey}" title="목록 열기">▼</button>
       </span>`;
   }
   // datalist 본체는 카드마다 만들면 400개가 중복되므로 문서에 3개만 두고 재사용한다 — 선택지 목록이
   // 바뀌는 시점(앱 초기화, "목록수정" 모달 저장 직후)에만 다시 채우면 된다.
   function renderReportFieldDatalists(){
+    /* 예전에는 여기서 <datalist> 세 개를 만들어 두고 카드마다 참조했다. datalist 는 칸을
+       누르기만 해도 열리고 값을 넣고 칸을 옮긴 뒤에도 아래에 한 번 더 뜨는 일이 있어,
+       방향키로 칸을 옮기는 이 표와 맞지 않아 걷어냈다(cell-menu 참고).
+       선택지는 comboOptsFor() 가 reportFieldOptions 에서 그때그때 읽어 간다. */
     const host = document.getElementById('reportFieldDatalists');
-    if(!host) return;
-    host.innerHTML = ['rptType','rptMember','rptDefect'].map(k=>
-      `<datalist id="dl-${k}">${(reportFieldOptions[k]||[])
-        .map(o=>`<option value="${escapeAttr(o)}"></option>`).join('')}</datalist>`
-    ).join('');
+    if(host) host.innerHTML = '';
+    closeCellMenu();
   }
   // 카드의 유형/부재명/결함명/사진번호 값이 바뀔 때마다 검색 색인(card.dataset.search)도 함께
   // 갱신한다 — renderTable()이 다시 호출되지 않는 필드 편집에서도 검색이 최신 값을 바로 반영하도록.
@@ -6659,19 +6705,150 @@
     return Array.from(document.querySelectorAll('#markerTable .marker-card'))
       .filter(c=> c.style.display !== 'none');
   }
+  /* ═══ 목록 상자 ══════════════════════════════════════════════
+     브라우저의 <datalist> 는 칸을 누르기만 해도 열리고, 값을 넣고 칸을 옮긴 뒤에도
+     아래에 한 번 더 뜨는 일이 있어 쓰지 않는다. <select> 도 쓰지 않는다 — ↑↓ 가
+     칸 이동이 아니라 값 고르기가 되어 버리기 때문이다. 여기서는 칸 오른쪽 ▼ 를
+     눌렀을 때에만 열고, 고르는 것도 마우스·손가락으로만 한다.
+     다른 현장조사 앱(외관조사·연도변·압축강도·기울기)과 같은 방식이다. */
+  function comboOptsFor(field){
+    if(field === 'type') return DEFECT_TYPES.map(t => t.label);
+    const set = new Set(reportFieldOptions[field] || []);
+    /* 새로 친 값도 곧바로 목록에 오른다 */
+    const d = getActiveDrawing();
+    if(d) d.markers.forEach(m => { const v = String(m[field]||'').trim(); if(v) set.add(v); });
+    document.querySelectorAll('#inputTableBody [data-col="' + field + '"]')
+      .forEach(i => { const v = String(i.value||'').trim(); if(v) set.add(v); });
+    return Array.from(set);
+  }
+  let cellMenu = null;
+  function closeCellMenu(){
+    if(cellMenu){ cellMenu.remove(); cellMenu = null; }
+  }
+  function openCellMenu(btn){
+    closeCellMenu();
+    const input = btn.parentElement && btn.parentElement.querySelector('input');
+    if(!input) return;
+    const menu = document.createElement('div');
+    menu.className = 'cell-menu';
+    menu.__for = btn;
+    menu.innerHTML = '<button type="button" class="none" data-v="">(비움)</button>' +
+      comboOptsFor(btn.dataset.drop).map(v => '<button type="button" data-v="' + escapeAttr(v) + '"' +
+        (String(input.value) === String(v) ? ' class="on"' : '') + '>' + escapeHTML(v) + '</button>').join('');
+    menu.addEventListener('mousedown', e => e.preventDefault());   // 칸에서 초점이 달아나지 않게
+    menu.addEventListener('click', e => {
+      const b = e.target.closest('button[data-v]');
+      if(!b) return;
+      input.value = b.dataset.v;
+      input.dispatchEvent(new Event('input', {bubbles:true}));
+      input.dispatchEvent(new Event('change', {bubbles:true}));
+      closeCellMenu();
+      input.focus();
+      try{ input.select(); }catch(err){}
+    });
+    document.body.appendChild(menu);
+    cellMenu = menu;
+    /* 칸에 들어설 때 표가 밀리면 스크롤 이벤트가 다음 프레임에 온다. 그 남은 스크롤에
+       방금 연 목록이 곧바로 닫히지 않도록, 한 프레임 뒤부터 스크롤에 반응한다. */
+    menu.__armed = false;
+    requestAnimationFrame(() => { if (cellMenu === menu) menu.__armed = true; });
+    /* 입력표는 가로로 밀리는 상자 안에 있다. 목록을 그 안에 두면 잘려서 안 보이므로
+       body 에 붙이고 화면 자리(fixed)로 띄운다. */
+    const r = (input.closest('td') || input.closest('.mc-cell') || btn).getBoundingClientRect();
+    const mw = menu.offsetWidth, mh = menu.offsetHeight;
+    let top = r.bottom + 2;
+    if(top + mh > window.innerHeight - 8) top = Math.max(8, r.top - mh - 2);
+    menu.style.left = Math.max(8, Math.min(r.left, window.innerWidth - mw - 8)) + 'px';
+    menu.style.top = top + 'px';
+  }
+  document.addEventListener('mousedown', e => {
+    if(!cellMenu) return;
+    if(e.target.closest && (e.target.closest('.cell-menu') || e.target.closest('.cbtn'))) return;
+    closeCellMenu();
+  });
+  window.addEventListener('resize', closeCellMenu);
+  /* 화면이나 표가 밀리면 목록이 엉뚱한 자리에 남는다. 목록 자신을 굴릴 때는 놔둔다. */
+  window.addEventListener('scroll', e => {
+    const t = e.target;
+    if (!cellMenu || !cellMenu.__armed) return;                 // 칸에 들어서며 생긴 스크롤은 넘긴다
+    if(t && t.closest && t.closest('.cell-menu')) return;
+    closeCellMenu();
+  }, true);
+  /* 목록은 ▼ 를 눌렀을 때에만 열린다. 한 번 더 누르면 닫힌다. */
+  document.addEventListener('click', e => {
+    const drop = e.target.closest && e.target.closest('button[data-drop]');
+    if(!drop) return;
+    e.preventDefault();
+    const same = cellMenu && cellMenu.__for === drop;
+    closeCellMenu();
+    if(!same) openCellMenu(drop);
+  });
+  /* ▼ 를 누를 때 칸이 초점을 잃지 않게 한다(눌러 고른 값을 곧바로 이어 칠 수 있게) */
+  document.addEventListener('mousedown', e => {
+    if(e.target.closest && e.target.closest('.cbtn')) e.preventDefault();
+  }, true);
+
+  /* ═══ 엑셀식 칸 조작 ═════════════════════════════════════════
+     방향키는 칸에 값이 있든 없든, 커서가 어디에 있든 늘 한 번에 옆 칸으로 넘어간다.
+     예전에는 커서가 글의 맨 앞·맨 끝에 닿았을 때만 넘어갔는데, 칸에 들어설 때 글자가
+     통째로 골라져 있어 방향키를 두 번 눌러야 옆 칸에 닿았다.
+     글자 사이로 커서를 옮겨야 할 때에는 F2(또는 칸을 두 번 누르기)로 「편집 모드」에
+     들어간다 — 그 동안에만 ←→ 가 글자 사이를 오간다(테두리가 초록 점선으로 바뀐다). */
+  let editCell = null;
+  function setEdit(elm, on){
+    if(editCell && editCell !== elm) editCell.classList.remove('editing');
+    editCell = on ? elm : null;
+    if(elm) elm.classList.toggle('editing', !!on);
+  }
+  function enterCell(elm){
+    if(!elm) return false;
+    setEdit(elm, false);
+    elm.focus();
+    if(elm.select) try{ elm.select(); }catch(err){}
+    return true;
+  }
+  /* F2 · Esc · 칸을 두 번 누르기는 두 표(결함 목록·표 입력)가 함께 쓴다 */
+  function handleEditKeys(e, elm){
+    if(e.key === 'F2'){
+      e.preventDefault();
+      const on = editCell !== elm;
+      setEdit(elm, on);
+      if(on){ const n = elm.value.length; try{ elm.setSelectionRange(n, n); }catch(err){} }
+      return true;
+    }
+    if(e.key === 'Escape'){
+      const had = !!cellMenu || editCell === elm;
+      closeCellMenu();
+      if(editCell === elm){ setEdit(elm, false); try{ elm.select(); }catch(err){} }
+      /* 목록을 닫거나 편집을 푼 Esc 는 여기서 멈춘다. 그러지 않으면 위쪽(window)의
+         Esc 처리가 이어서 「표로 입력」 창까지 닫아 버린다.
+         닫을 것이 없었으면 그대로 흘려보내 예전처럼 창이 닫히게 둔다. */
+      if(had) e.stopPropagation();
+      return had;
+    }
+    return false;
+  }
+  document.addEventListener('dblclick', e => {
+    const i = e.target.closest && e.target.closest('#markerTable input, #inputTableBody input');
+    if(i) setEdit(i, true);
+  });
+  document.addEventListener('focusout', e => { if(e.target === editCell) setEdit(e.target, false); }, true);
+
   function moveTableFocus(fromEl, rowDelta, colDelta){
     const card = fromEl.closest('.marker-card'); if(!card) return false;
     const cards = markerTableCells();
     const rowIdx = cards.indexOf(card);
     if(rowIdx < 0) return false;
-    const fieldsIn = c=> Array.from(c.querySelectorAll('input:not([tabindex="-1"]), select'))
+    /* 마킹 유형(select)은 도면의 색·모양을 고르는 단추라 tabindex="-1" 로 키보드 흐름
+       바깥에 둔다. 방향키가 그 위에 서면 칸 이동 대신 값이 바뀌어 버리므로 여기서도 뺀다. */
+    const fieldsIn = c=> Array.from(c.querySelectorAll('input:not([tabindex="-1"]), select:not([tabindex="-1"])'))
       .filter(el=> !el.disabled && el.type !== 'hidden');
     if(colDelta){
       const fields = fieldsIn(card);
       const i = fields.indexOf(fromEl);
       const next = fields[i + colDelta];
       if(!next) return false;
-      next.focus(); if(next.select) try{ next.select(); }catch(err){ /* select 요소는 select()가 없다 */ }
+      enterCell(next);
       return true;
     }
     const myFields = fieldsIn(card);
@@ -6682,27 +6859,48 @@
     const targetFields = fieldsIn(targetCard);
     const target = targetFields[colIdx] || targetFields[targetFields.length-1];
     if(!target) return false;
-    target.focus(); if(target.select) try{ target.select(); }catch(err){ /* 위와 같음 */ }
+    enterCell(target);
     return true;
+  }
+  /* 바로 위 결함의 같은 칸 값을 이 칸에 넣는다(엑셀의 Ctrl+D · 아래로 채우기).
+     같은 부재·같은 자재가 줄줄이 이어지는 목록에서 가장 손이 덜 간다. */
+  function fillDownCard(el){
+    const card = el.closest('.marker-card');
+    const cards = markerTableCells();
+    const at = cards.indexOf(card);
+    if(at <= 0){ showToast('위에 가져올 결함이 없습니다.'); return; }
+    const fieldsIn = c => Array.from(c.querySelectorAll('input:not([tabindex="-1"]), select:not([tabindex="-1"])'))
+      .filter(x => !x.disabled && x.type !== 'hidden');
+    const from = fieldsIn(cards[at-1])[fieldsIn(card).indexOf(el)];
+    if(!from) return;
+    el.value = from.value;
+    el.dispatchEvent(new Event('input', {bubbles:true}));
+    el.dispatchEvent(new Event('change', {bubbles:true}));
+    try{ el.select(); }catch(err){}
   }
   document.getElementById('markerTable').addEventListener('keydown', e=>{
     const el = e.target;
     if(!el.matches || !el.matches('input, select')) return;
     const isSelect = el.tagName === 'SELECT';
+    if((e.ctrlKey || e.metaKey) && !e.altKey && (e.key==='d' || e.key==='D')){
+      if(isSelect) return;
+      e.preventDefault(); fillDownCard(el); return;
+    }
+    if(e.ctrlKey || e.metaKey || e.altKey) return;
+    if(!isSelect && handleEditKeys(e, el)) return;
     if(e.key==='Enter'){
+      setEdit(el, false);
       if(moveTableFocus(el, 1, 0)) e.preventDefault();
       return;
     }
     if(!isSelect && (e.key==='ArrowDown' || e.key==='ArrowUp')){
+      if(editCell === el) return;
       if(moveTableFocus(el, e.key==='ArrowDown' ? 1 : -1, 0)) e.preventDefault();
       return;
     }
     if(!isSelect && (e.key==='ArrowLeft' || e.key==='ArrowRight')){
-      // 글자 사이를 오가는 중이면 그대로 둔다. 칸의 끝에 닿았을 때만 옆 칸으로 넘긴다.
-      const atStart = el.selectionStart===0 && el.selectionEnd===0;
-      const atEnd = el.selectionStart===el.value.length && el.selectionEnd===el.value.length;
-      if(e.key==='ArrowLeft' && atStart && moveTableFocus(el, 0, -1)) e.preventDefault();
-      if(e.key==='ArrowRight' && atEnd && moveTableFocus(el, 0, 1)) e.preventDefault();
+      if(editCell === el) return;          // 편집 모드에서는 글자 사이를 오간다
+      if(moveTableFocus(el, 0, e.key==='ArrowLeft' ? -1 : 1)) e.preventDefault();
     }
   });
 
@@ -8650,8 +8848,16 @@
     });
   }
   // 행의 유형(화살표류/범위류)에 따라 X/Y 칸의 placeholder를 바꿔서 그 칸이 지금 무엇을 의미하는지 보여준다.
+  /* 유형 칸은 목록 칸(글자)이라 「이름」을 담는다. 실제 유형 키는 이름에서 찾아 쓴다
+     — 붙여넣기가 예전부터 쓰던 matchTypeKeyByLabel 과 같은 길이다. */
+  function rowTypeKey(tr){
+    return matchTypeKeyByLabel(tr.querySelector('[data-col="type"]').value);
+  }
+  function setRowTypeKey(tr, key){
+    tr.querySelector('[data-col="type"]').value = getType(key).label;
+  }
   function updateRowXYMode(tr){
-    const typeKey = tr.querySelector('[data-col="type"]').value;
+    const typeKey = rowTypeKey(tr);
     const isRect = getType(typeKey).endStyle==='rect';
     const xInput = tr.querySelector('[data-col="x"]');
     const yInput = tr.querySelector('[data-col="y"]');
@@ -8666,17 +8872,26 @@
   function buildInputRow(rowNum, markerId){
     const tr = document.createElement('tr');
     if(markerId) tr.dataset.markerId = markerId;
-    const typeOptions = typeOptionsHTML();
     tr.innerHTML = `
       <td style="color:var(--muted);text-align:center;">${rowNum}</td>
-      <td><select data-col="type">${typeOptions}</select></td>
+      <td class="combo"><span class="cwrap">
+        <input type="text" data-col="type" autocomplete="off" placeholder="유형" title="마킹 유형"
+               value="${escapeAttr(getType(DEFECT_TYPES[0].key).label)}"/>
+        <button type="button" class="cbtn" tabindex="-1" data-drop="type" title="목록 열기">▼</button>
+      </span></td>
       <td><input type="text" data-col="x" placeholder="화살표 끝 X"/></td>
       <td><input type="text" data-col="y" placeholder="화살표 끝 Y"/></td>
       <td><input type="text" inputmode="decimal" data-col="angle" placeholder="0"/></td>
       <td><input type="text" inputmode="decimal" data-col="len" placeholder="1.0"/></td>
-      <td><input type="text" data-col="rptType" placeholder="부재" list="dl-rptType" autocomplete="off"/></td>
-      <td><input type="text" data-col="rptMember" placeholder="자재" list="dl-rptMember" autocomplete="off"/></td>
-      <td><input type="text" data-col="rptDefect" placeholder="결함" list="dl-rptDefect" autocomplete="off"/></td>
+      <td class="combo"><span class="cwrap">
+        <input type="text" data-col="rptType" placeholder="부재" autocomplete="off"/>
+        <button type="button" class="cbtn" tabindex="-1" data-drop="rptType" title="목록 열기">▼</button></span></td>
+      <td class="combo"><span class="cwrap">
+        <input type="text" data-col="rptMember" placeholder="자재" autocomplete="off"/>
+        <button type="button" class="cbtn" tabindex="-1" data-drop="rptMember" title="목록 열기">▼</button></span></td>
+      <td class="combo"><span class="cwrap">
+        <input type="text" data-col="rptDefect" placeholder="결함" autocomplete="off"/>
+        <button type="button" class="cbtn" tabindex="-1" data-drop="rptDefect" title="목록 열기">▼</button></span></td>
       <td><input type="text" data-col="note" placeholder="비고"/></td>
       <td><button type="button" class="row-del" title="행 삭제"><svg class="icon"><use href="#i-close"/></svg></button></td>
     `;
@@ -8684,7 +8899,7 @@
       if(tableInputFocusedRow===tr) tableInputFocusedRow = null;
       tr.remove(); renumberInputTable(); renderTableInputPreview();
     });
-    tr.querySelector('[data-col="type"]').addEventListener('change', ()=> updateRowXYMode(tr));
+    tr.querySelector('[data-col="type"]').addEventListener('change', ()=> { updateRowXYMode(tr); renderTableInputPreview(); });
     updateRowXYMode(tr);
     return tr;
   }
@@ -8863,7 +9078,7 @@
       const tr = buildInputRow(i+1, m.id);
       tableInputLoadedIds.add(m.id);
       const type = getType(m.typeKey);
-      tr.querySelector('[data-col="type"]').value = m.typeKey;
+      setRowTypeKey(tr, m.typeKey);
       if(type.endStyle==='rect'){
         // 범위 마커는 X/Y칸에 "시작~끝" 범위를 채운다(번호 배지 위치는 표에서 다루지 않고 그대로 유지).
         const rx = m.rectXPct||0, ry = m.rectYPct||0, rw = m.rectWPct||0, rh = m.rectHPct||0;
@@ -8904,6 +9119,60 @@
   }
   // 입력칸에 포커스가 가면 그 행을 미리보기 지도의 "포커스된 행"으로 강조하고, X/Y를 고치면
   // (직접 입력이든 지도를 클릭해서든) 점 위치를 바로 다시 그린다.
+  /* ── 표 입력의 칸 사이 이동 ──────────────────────────────────
+       Enter / ↓        아래 칸        Shift+Enter / ↑   위 칸
+       Tab / →          오른쪽 칸      Shift+Tab / ←     왼쪽 칸
+     결함 목록과 같은 규칙이다. 마지막 줄에서 Enter 를 누르면 줄이 하나 늘어난다. */
+  function tiCells(tr){
+    return Array.from(tr.querySelectorAll('input[data-col]')).filter(x => !x.disabled);
+  }
+  function tiMoveRow(el, d){
+    const tbody = document.getElementById('inputTableBody');
+    const rows = Array.from(tbody.children);
+    const tr = el.closest('tr');
+    const ci = tiCells(tr).indexOf(el);
+    let next = rows[rows.indexOf(tr) + d];
+    if(!next && d > 0){                       // 마지막 줄 아래로 가면 한 줄 늘린다
+      addInputRow();
+      next = tbody.lastElementChild;
+    }
+    if(!next) return false;
+    return enterCell(tiCells(next)[ci]);
+  }
+  function tiMoveCol(el, d){
+    const list = Array.from(document.querySelectorAll('#inputTableBody input[data-col]'));
+    const k = list.indexOf(el);
+    return k >= 0 ? enterCell(list[k + d]) : false;
+  }
+  /* 바로 위 줄의 같은 칸 값을 이 칸에 넣는다(엑셀의 Ctrl+D · 아래로 채우기) */
+  function tiFillDown(el){
+    const tr = el.closest('tr'), prev = tr && tr.previousElementSibling;
+    if(!prev){ showToast('위에 가져올 행이 없습니다.'); return; }
+    const from = tiCells(prev)[tiCells(tr).indexOf(el)];
+    if(!from) return;
+    el.value = from.value;
+    el.dispatchEvent(new Event('input', {bubbles:true}));
+    el.dispatchEvent(new Event('change', {bubbles:true}));
+    try{ el.select(); }catch(err){}
+  }
+  document.getElementById('inputTableBody').addEventListener('keydown', e=>{
+    const el = e.target;
+    if(!el.matches || !el.matches('input[data-col]')) return;
+    if((e.ctrlKey || e.metaKey) && !e.altKey && (e.key==='d' || e.key==='D')){
+      e.preventDefault(); tiFillDown(el); return;
+    }
+    if(e.ctrlKey || e.metaKey || e.altKey) return;
+    if(handleEditKeys(e, el)) return;
+    if(e.key==='Enter'){ e.preventDefault(); tiMoveRow(el, e.shiftKey ? -1 : 1); return; }
+    if(e.key==='ArrowDown' || e.key==='ArrowUp'){
+      if(editCell === el) return;
+      e.preventDefault(); tiMoveRow(el, e.key==='ArrowDown' ? 1 : -1); return;
+    }
+    if(e.key==='ArrowLeft' || e.key==='ArrowRight'){
+      if(editCell === el) return;          // 편집 모드에서는 글자 사이를 오간다
+      e.preventDefault(); tiMoveCol(el, e.key==='ArrowLeft' ? -1 : 1);
+    }
+  });
   document.getElementById('inputTableBody').addEventListener('focusin', e=>{
     const tr = e.target.closest('tr');
     if(tr){ tableInputFocusedRow = tr; renderTableInputPreview(); }
@@ -8931,7 +9200,7 @@
     let tr = tableInputFocusedRow;
     if(!tr || !tbody.contains(tr)){ tr = tbody.firstElementChild; tableInputFocusedRow = tr; }
     if(!tr) return;
-    const typeKey = tr.querySelector('[data-col="type"]').value;
+    const typeKey = rowTypeKey(tr);
     const isRect = getType(typeKey).endStyle==='rect';
     const xInput = tr.querySelector('[data-col="x"]'), yInput = tr.querySelector('[data-col="y"]');
     if(isRect){
@@ -8966,8 +9235,10 @@
         if(!colKey) return;
         const el = tr.querySelector(`[data-col="${colKey}"]`);
         if(!el) return;
-        if(el.tagName==='SELECT'){ el.value = matchTypeKeyByLabel(cellText.trim()); }
-        else { el.value = cellText.trim(); }
+        /* 유형 칸도 이제 목록 칸(글자)이라 여느 칸과 똑같이 붙여넣는다.
+           엑셀에서 온 이름은 읽을 때 matchTypeKeyByLabel 이 키로 옮긴다. */
+        el.value = cellText.trim();
+        if(colKey === 'type') updateRowXYMode(tr);
       });
     });
     renumberInputTable();
@@ -8991,7 +9262,7 @@
         if(markerId) keepIds.add(markerId); // 좌표를 비워둔 기존 행은 건드리지 않고 그대로 둔다
         return;
       }
-      const typeKey = tr.querySelector('[data-col="type"]').value || DEFECT_TYPES[0].key;
+      const typeKey = rowTypeKey(tr);
       const angleVal = parseFloat(get('angle'));
       const lenVal = parseFloat(get('len'));
       const note = get('note');
@@ -9975,7 +10246,7 @@
     if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='y' && !isEditing){ e.preventDefault(); redo(); return; }
     if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='z' && !isEditing){ e.preventDefault(); undo(); return; }
     if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='s'){ e.preventDefault(); saveProject(); return; }
-    if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='d'){ e.preventDefault(); exportPNG(); return; }
+    if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='d' && !isEditing){ e.preventDefault(); exportPNG(); return; }
     if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='a' && !isEditing){
       e.preventDefault();
       const d = getActiveDrawing();
