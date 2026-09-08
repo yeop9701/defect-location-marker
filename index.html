@@ -556,6 +556,14 @@
   .sketch-text-input{position:absolute;z-index:8;padding:3px 6px;border:2px solid var(--mode-sketch);
     border-radius:5px;background:var(--surface-1);color:var(--text-primary);font-weight:600;
     box-shadow:var(--shadow-2);min-width:90px;outline:none;}
+  /* 글상자 테두리 색 고르기 — 색 스와치 6개로 묶기에는 "도면에 맞춰 조금 연하게"처럼 미세한
+     요구가 많은 값이라, 브라우저 색 고르개를 그대로 쓴다. */
+  /* 테두리 넣기/빼기는 화면 모드가 아니라 "다음에 쓸 글자의 성질"이라, 굵기 단추와 같은 표시를 쓴다. */
+  #btnSketchTextBorder.active{background:var(--text-primary);border-color:var(--text-primary);color:var(--surface-1);}
+  .sketch-text-color{display:inline-flex;align-items:center;padding:0 2px;}
+  .sketch-text-color input[type=color]{width:28px;height:26px;padding:0;border:1px solid var(--gridline);
+    border-radius:6px;background:none;cursor:pointer;}
+  body.layout-tablet .sketch-text-color input[type=color]{width:40px;height:40px;}
 
   /* ────────────────────────────────────────────────────────────────────────────
      결함 목록 머리줄 — 값 이어받기 토글과 여러 건 일괄 채우기 줄. */
@@ -820,8 +828,44 @@
   .modal-header button{cursor:pointer;}
   .modal-title{font-size:15px;font-weight:700;}
   .modal-sub{font-size:11.5px;color:var(--text-secondary);margin-top:4px;line-height:1.5;max-width:820px;}
-  .modal-body{padding:14px 18px;overflow:auto;flex:1;}
+  /* min-height:0 이 없으면 flex 항목의 기본 최소 높이(auto)가 "내용 전체"라, 패널이 max-height에
+     걸려도 본문이 줄어들지 않고 모달이 화면 밖으로 자란다. */
+  .modal-body{padding:14px 18px;overflow:auto;flex:1 1 auto;min-height:0;}
   .modal-footer{display:flex;align-items:center;gap:8px;padding:12px 18px;border-top:1px solid var(--gridline);}
+  .modal-header{flex:0 0 auto;}
+  /* 인쇄 미리보기는 "한 장이 통째로 보이는 것"이 목적이라 아래줄이 아무리 길어져도 그림 자리를
+     먼저 확보한다 — 「도면틀 조절」처럼 긴 판을 펼치면 아래줄 자신이 스크롤된다. */
+  #tbPreviewBackdrop .modal-footer{flex:0 1 auto;overflow:auto;max-height:52vh;padding:10px 16px;}
+  /* 「표제란 내용 고치기」와 「도면틀 조절」은 기본값이 width:100%라 각자 한 줄을 통째로 차지했다.
+     둘을 나란히 놓아 한 줄을 아낀다 — 아낀 한 줄이 그대로 그림 높이가 된다.
+     (펼쳐지는 판은 둘 다 그 아래에 전폭으로 놓이므로 순서가 헷갈리지 않는다.) */
+  #tbPreviewBackdrop .modal-footer > .help-toggle{width:auto;flex:1 1 240px;min-height:32px;padding:6px 11px;}
+  /* 인쇄 미리보기 안의 「도면틀 조절」 — 여백·상단표 높이·글자 크기·선 굵기를 저장 결과를 보면서
+     바로 맞춘다. 손잡이를 우측 패널이 아니라 미리보기 안에 둔 것은, 이 값들이 "지금 보고 있는
+     그림"을 직접 바꾸는 값이라 눈으로 확인하며 맞추는 편이 훨씬 빠르기 때문이다. */
+  .frame-tune{width:100%;display:flex;flex-wrap:wrap;gap:10px 20px;padding:10px 2px 2px;}
+  .frame-tune .ft-sec{flex:1 1 250px;min-width:230px;}
+  .frame-tune h5{margin:0 0 5px;font-size:10.5px;font-weight:700;color:var(--text-secondary);
+    text-transform:uppercase;letter-spacing:.03em;}
+  .frame-tune .ft-grid{display:grid;grid-template-columns:auto 1fr auto;gap:5px 8px;align-items:center;}
+  .frame-tune .ft-grid > label{font-size:11.5px;color:var(--text-secondary);white-space:nowrap;}
+  .frame-tune input[type=range]{width:100%;min-width:70px;accent-color:var(--accent);}
+  .frame-tune .ft-val{font-size:11px;color:var(--muted);min-width:32px;text-align:right;
+    font-variant-numeric:tabular-nums;}
+  .frame-tune .ft-foot{flex:1 1 100%;display:flex;align-items:center;gap:10px;
+    font-size:11px;color:var(--text-secondary);padding-top:2px;}
+  .frame-tune .ft-foot button{margin-left:auto;}
+  /* 미리보기 안에서 표제란 내용을 바로 고치는 칸들 */
+  .frame-tune .ft-fields{flex:1 1 100%;display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px 14px;}
+  .frame-tune .ft-fields label{display:flex;flex-direction:column;gap:3px;
+    font-size:11px;color:var(--text-secondary);}
+  .frame-tune .ft-fields input[type=text]{font:inherit;font-size:12px;padding:6px 8px;
+    border-radius:7px;border:1px solid var(--border);background:var(--surface);color:var(--text);}
+  .frame-tune .ft-fields input[type=text]:focus{outline:2px solid var(--accent);outline-offset:-2px;}
+  /* 미리보기 아래줄의 작은 고르기 상자(범례 배경 등) */
+  .modal-footer select.mini{font:inherit;font-size:11px;padding:3px 6px;border-radius:6px;
+    border:1px solid var(--border);background:var(--surface);color:var(--text);}
   .table-input-layout{display:flex;gap:16px;align-items:flex-start;}
   .table-input-main{flex:1;min-width:0;}
   .ti-preview{flex:0 0 240px;position:sticky;top:0;}
@@ -1129,6 +1173,12 @@
               <li><b>프로젝트 저장</b>(Ctrl+S, 상단): 도면 이미지·마킹·사진까지 작업 전체를 파일 하나로 보관 — 이어서 하려면 이것으로 저장하세요</li>
               <li>그 밖의 내보내기는 전부 도구줄 오른쪽 <b>「내보내기」</b> 창 안에 있습니다 — CSV·엑셀, 도면 이미지(PNG·PDF), 사진 일괄저장, 통계</li>
               <li>같은 창의 「저장 모양」에서 도면틀(A4 도곽+표제란)과 범례를 켜고 끕니다 — 작업 화면은 바뀌지 않습니다</li>
+              <li><b>도면틀 모양은 「미리보기」 창 안에서 맞춥니다</b> — 아래쪽 <b>「도면틀 조절」</b>을 펼치면 테두리 여백(위·아래·좌·우), 표·도면과 테두리 사이 간격, 상단표 높이, 글자 크기, 선 굵기를 저장 결과를 보면서 바로 바꿀 수 있습니다(1.0이 기본값, 「기본값으로」로 되돌리기)</li>
+              <li><b>도면 제목</b>은 도곽 아랫줄의 <b>가운데</b>가 기본 자리이고, 미리보기 위에서 <b>끌어</b> 원하는 자리로 옮길 수 있습니다(범례와 같은 방식). 여백을 바꿔도 잡아둔 자리가 따라옵니다</li>
+              <li><b>글자</b>(T)는 <b>흰 바탕에 회색 테두리</b>가 둘린 이름표로 그려지고, 글자는 그 테두리의 한가운데에 놓입니다 — 도면 위에 그대로 얹으면 벽선과 겹쳐 읽기 어렵기 때문입니다. 테두리는 도구줄의 <b>ㅁ 단추</b>로 빼거나 넣고, 옆의 <b>색칸</b>으로 색을 바꿉니다(「선택」으로 이미 쓴 글자를 골라 두면 그 글자들에 바로 적용됩니다)</li>
+              <li><b>이미지 크기</b>도 미리보기 아래줄에서 도면마다 따로 맞춥니다(100%가 기본, 100%를 넘기면 넘치는 만큼 잘립니다) — 도면틀이 있든 없든 똑같이 적용됩니다</li>
+              <li><b>범례(NOTE)의 자리는 도면이 아니라 틀 기준</b>입니다 — 여백·상단표 높이·이미지 크기를 조절해도 잡아둔 자리에 그대로 남습니다. 상자의 <b>배경(반투명·흰색·없음)과 테두리</b>도 미리보기 아래줄에서 고릅니다</li>
+              <li>표제란 값은 미리보기를 닫지 않고 <b>「표제란 내용 고치기」</b>에서 바로 고칠 수 있고, <b>「템플릿」</b>에는 표제란 값과 함께 <b>도면틀 치수·제목 자리·범례 설정</b>이 통째로 담깁니다 — 현장이 바뀌면 하나만 골라 적용하면 됩니다</li>
             </ul>
           </div>
           <div class="help-note">모든 처리는 브라우저 안에서만 이루어지며 인터넷 연결 없이도 사용할 수 있습니다.</div>
@@ -1246,6 +1296,14 @@
             <button type="button" class="tool sketch-width-btn" data-sketch-width="0.6" title="가는 선"><i style="height:1px;"></i></button>
             <button type="button" class="tool sketch-width-btn" data-sketch-width="1" title="보통 굵기"><i style="height:2.5px;"></i></button>
             <button type="button" class="tool sketch-width-btn" data-sketch-width="1.8" title="굵은 선"><i style="height:4.5px;"></i></button>
+          </div>
+          <!-- 글자 도구를 들었을 때(또는 이미 쓴 글자를 골랐을 때)만 나타나는 글상자 손잡이.
+               선·사각형에는 뜻이 없는 값이라 늘 띄워 두면 도구줄만 복잡해진다. -->
+          <div class="btn-group" id="sketchTextGroup" style="display:none;">
+            <button type="button" class="tool" id="btnSketchTextBorder" title="글자 상자의 테두리 (기본: 회색 테두리 있음) — 글자 뒤 바탕은 언제나 흰색이라, 테두리를 빼면 도면 위에 흰 바탕만 깔린 글자가 됩니다. 이미 쓴 글자를 「선택」으로 골라 둔 상태에서 누르면 그 글자들에도 바로 적용됩니다"><svg class="icon"><use href="#i-sk-rect"/></svg></button>
+            <label class="sketch-text-color" title="글자 상자 테두리의 색입니다(기본: 회색). 골라 둔 글자가 있으면 그 글자들에도 바로 적용됩니다">
+              <input type="color" id="sketchTextBorderColor" value="#8a8a8a" />
+            </label>
           </div>
           <button type="button" class="tool sketch-tool-btn" id="btnSketchGrid" title="모눈 보기 · 격자 스냅 (Shift+G) — 그리는 점이 눈금에 맞춰져 손으로 그려도 반듯한 도면이 됩니다. 모눈은 화면에만 보이고 저장물에는 나오지 않습니다. Alt를 누른 채 그리면 그 획만 격자를 무시합니다. 칸 수는 아래 안내 줄의 「모눈 칸」 또는 [ / ] 키로 조절합니다"><svg class="icon"><use href="#i-sk-grid"/></svg></button>
           <button type="button" class="tool" id="btnSketchClear" title="이 도면에 그린 선을 모두 지웁니다(실행취소로 되돌릴 수 있습니다)"><svg class="icon"><use href="#i-trash"/></svg></button>
@@ -1481,11 +1539,11 @@
         <button class="help-toggle" id="tbFieldsToggle" style="margin-top:10px;">표제란 입력 (도면틀에 들어갈 내용)</button>
         <div id="tbFieldsPanel" style="display:none;margin-top:8px;">
         <div class="tb-template-row">
-          <select id="tbTemplateSelect" title="자주 쓰는 표제란 값을 템플릿으로 저장해뒀다가 바로 불러올 수 있습니다">
+          <select id="tbTemplateSelect" title="자주 쓰는 표제란 값과 도면틀 치수·범례 설정을 템플릿으로 저장해뒀다가 바로 불러올 수 있습니다">
             <option value="">템플릿 불러오기…</option>
           </select>
           <button type="button" class="tool" id="btnApplyTemplate" title="선택한 템플릿 값 적용">적용</button>
-          <button type="button" class="tool" id="btnSaveTemplate" title="현재 용역명·구분·구조형식·도면제목을 새 템플릿으로 저장"><svg class="icon"><use href="#i-save"/></svg></button>
+          <button type="button" class="tool" id="btnSaveTemplate" title="현재 용역명·구분·구조형식·도면제목에 더해 도면틀 치수(여백·표 높이·글자·선)와 도면 제목 자리, 범례 설정(크기·배경·테두리·표시 여부)까지 새 템플릿으로 저장"><svg class="icon"><use href="#i-save"/></svg></button>
           <button type="button" class="tool" id="btnDeleteTemplate" title="선택한 템플릿 삭제"><svg class="icon"><use href="#i-trash"/></svg></button>
         </div>
         <div class="titleblock-fields">
@@ -1735,11 +1793,13 @@
 <!-- 인쇄 미리보기(도면틀·범례) — "미리보기" 버튼을 누르면 실제 PNG/PDF 저장 결과와 같은 모습을 미리 보여준다.
      "도면틀"이 꺼져 있어도 "범례"만 켜져 있으면 열 수 있다(updateTbPreviewButtonVisibility 참고). -->
 <div class="modal-backdrop" id="tbPreviewBackdrop" style="display:none;">
-  <div class="modal-panel" style="width:min(1100px, 96vw);">
+  <!-- 넓게 잡는 이유는 그림을 크게 보여주기 위해서가 아니라(그림 크기는 세로가 정한다) 아래줄의
+       손잡이들이 적은 줄 수로 접히게 하기 위해서다 — 아래줄이 한 줄 줄면 그만큼 그림이 커진다. -->
+  <div class="modal-panel" style="width:min(1400px, 96vw);">
     <div class="modal-header">
       <div>
         <div class="modal-title">인쇄 미리보기</div>
-        <div class="modal-sub">PNG/PDF로 저장했을 때의 실제 모습입니다. 입력값을 바꾸면 자동으로 갱신됩니다.</div>
+        <div class="modal-sub">PNG/PDF로 저장했을 때의 실제 모습입니다. 범례와 도면 제목은 여기서 바로 <b>끌어</b> 옮기고, 아래줄의 손잡이로 크기·모양을 맞춥니다.</div>
       </div>
       <button type="button" id="btnTbPreviewClose" class="icon-btn"><svg class="icon icon-lg"><use href="#i-close"/></svg></button>
     </div>
@@ -1766,8 +1826,41 @@
         범례(NOTE) 크기 <span id="tbPreviewLegendScaleLabel">1.5</span>배
         <input type="range" id="tbPreviewLegendScaleSlider" min="1" max="12" step="0.5" value="1.5" style="width:140px;" />
       </label>
-      <div style="font-size:11px;color:var(--text-secondary);flex:1;">범례(NOTE)는 <b>이 미리보기 위에서 바로 끌어</b> 원하는 자리로 옮길 수 있습니다. 이 창을 닫아도 "도면틀"·"범례" 설정은 유지되어 저장 시 계속 포함됩니다.</div>
+      <!-- 이미지 크기: 도면마다 따로 저장되는 값(d.imgScale). 100%가 지금까지의 배치이고,
+           100%를 넘기면 도면틀(도곽이 없으면 종이) 밖으로 나가는 만큼 잘린다. -->
+      <label style="display:flex;align-items:center;gap:8px;font-size:11px;color:var(--text-secondary);" title="이 도면 이미지의 크기입니다(도면마다 따로 저장됩니다). 100%가 지금까지의 배치이고, 100%를 넘기면 도면틀(도곽이 없으면 종이) 밖으로 나가는 만큼 잘립니다. 도곽이 있든 없든 똑같이 적용됩니다.">
+        이미지 크기 <span id="tbPreviewImgScaleLabel">100</span>%
+        <input type="range" id="tbPreviewImgScaleSlider" min="0.2" max="2" step="0.05" value="1" style="width:140px;" />
+        <button type="button" class="stepper-btn" id="btnPvImgScaleReset" title="이미지 크기를 100%로 되돌리기">↺</button>
+      </label>
+      <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-secondary);" title="범례(NOTE) 상자의 배경입니다. 도면이 어두우면 「흰색」이 글자가 또렷하고, 도면이 비어 있는 자리에 두었다면 「없음」이 깔끔합니다.">
+        범례 배경
+        <select id="legendBgSelect" class="mini">
+          <option value="soft">반투명 흰색</option>
+          <option value="solid">흰색</option>
+          <option value="none">없음</option>
+        </select>
+      </label>
+      <label style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text-secondary);" title="범례(NOTE) 상자의 테두리를 그릴지 정합니다.">
+        <input type="checkbox" id="legendBorderToggle" checked /> 범례 테두리
+      </label>
+      <div style="font-size:11px;color:var(--text-secondary);flex:1;min-width:120px;">여기서 맞춘 설정은 창을 닫아도 유지되어 저장할 때 그대로 따라갑니다.</div>
       <button type="button" id="btnTbPreviewCloseFooter">닫기</button>
+      <button type="button" class="help-toggle" id="tbPvFieldsToggle">표제란 내용 고치기</button>
+      <button type="button" class="help-toggle" id="tbFrameToggle">도면틀 조절 — 여백 · 상단표 높이 · 글자 크기</button>
+      <!-- 표제란 값을 고치러 이 창을 닫고 「저장」 창으로 갔다 오는 왕복을 없앤다. 여기 칸들은
+           저장 창의 진짜 입력칸에 값을 옮겨 적고 input 이벤트를 흘려보내는 거울이라, 자동저장·
+           미리보기 갱신 같은 기존 동작이 그대로 따라온다. -->
+      <div class="frame-tune" id="tbPvFieldsPanel" style="display:none;">
+        <div class="ft-fields">
+          <label>용역명 <input type="text" id="pvProjectName" data-mirror="projectNameInput" placeholder="예: 2026년 정밀안전점검" /></label>
+          <label>구분 <input type="text" id="pvSiteName" data-mirror="siteNameInput" placeholder="예: OO아파트 1동" /></label>
+          <label>조사위치 (이 도면) <input type="text" id="pvSurveyLocation" data-mirror="surveyLocationInput" placeholder="예: 2층 계단실" /></label>
+          <label>구조형식 <input type="text" id="pvStructureType" data-mirror="structureTypeInput" placeholder="예: 철근콘크리트 벽식구조" /></label>
+          <label>도면 제목 (비워두면 자동) <input type="text" id="pvDocTitle" data-mirror="docTitleInput" placeholder="예: 외관조사망도" /></label>
+        </div>
+      </div>
+      <div class="frame-tune" id="tbFramePanel" style="display:none;"></div>
     </div>
   </div>
 </div>
@@ -2227,6 +2320,86 @@
   let zoom = 1;
   let iconSizeMult = 1;
   let leaderLenMult = 1;
+  // ---------- 도면틀(도곽) 치수 ----------
+  // 예전에는 여백·간격·글자 크기가 buildExportCanvasTitleBlock() 안에 숫자로 박혀 있어, 조금
+  // 고치려면 코드를 열어야 했다. 그 숫자들을 "1배"의 기준자로 옮기고, 실제 값은 여기 배수로
+  // 둔다 — 미리보기 창의 「도면틀 조절」이 이 값만 바꾸면 저장 결과가 그대로 따라온다.
+  // 「1.0 = 지금 쓰는 도면틀」이다. 각 항목의 1배 크기를 여기 한 곳에 적어 두고, 사용자가
+  // 만지는 값(frameLayout)은 그 배수로만 둔다. 예전에는 여백 기준자 하나(108·32)에 0.8·0.9
+  // 같은 배수를 곱해 두어, 슬라이더의 1.0이 "지금 모습"이 아니라 "옛 모습"을 가리켜 헷갈렸다.
+  const FRAME_BASE = {
+    marginTop: 91.8, marginBottom: 75.6, marginLeft: 75.6, marginRight: 75.6, // 용지 가장자리 ↔ 테두리
+    gapTop: 16, gapBottom: 32, gapLeft: 9.6, gapRight: 9.6,                   // 테두리 ↔ 표제란·도면
+    titleBarScale: 0.8, // 상단 표제란 높이 — 자동으로 잡은 기본 높이에 곱한다
+    fontScale: 0.75,    // 표제란 글자·도면 제목 크기
+    lineScale: 0.6,     // 테두리·표 선 굵기 (외곽 3 / 표 2.2 / 배지 1.6 / 구분선 1.4 px 에 곱한다)
+  };
+  // v4까지의 프로젝트 파일에 담긴 배수는 기준자가 달랐다(여백 108, 간격 32, 나머지 1). 그 파일을
+  // 열었을 때 도면틀이 저장 당시와 똑같이 나오도록, 절대 크기를 유지한 채 새 기준자로 환산해 받는다.
+  const FRAME_BASE_LEGACY = {
+    marginTop:108, marginBottom:108, marginLeft:108, marginRight:108,
+    gapTop:32, gapBottom:32, gapLeft:32, gapRight:32,
+    titleBarScale:1, fontScale:1, lineScale:1,
+  };
+  const FRAME_LAYOUT_DEFAULT = {
+    marginTop: 1, marginBottom: 1, marginLeft: 1, marginRight: 1,
+    gapTop: 1, gapBottom: 1, gapLeft: 1, gapRight: 1,
+    titleBarScale: 1, fontScale: 1, lineScale: 1,
+  };
+  // 각 값이 오갈 수 있는 범위. 미리보기의 슬라이더와 불러온 값 검사에서 함께 쓴다.
+  const FRAME_LAYOUT_RANGE = {
+    marginTop:[0.1,2.5], marginBottom:[0.1,2.5], marginLeft:[0.1,2.5], marginRight:[0.1,2.5],
+    gapTop:[0,4], gapBottom:[0,4], gapLeft:[0,4], gapRight:[0,4],
+    titleBarScale:[0.4,2], fontScale:[0.4,2], lineScale:[0.2,3],
+  };
+  // 도면틀 치수 하나를 실제 크기(px, 또는 배율)로 바꾼다 — 그리는 쪽은 이 함수만 쓴다.
+  function frameAbs(key){ return FRAME_BASE[key] * frameLayout[key]; }
+  let frameLayout = Object.assign({}, FRAME_LAYOUT_DEFAULT);
+  // 도면 제목의 자리 — 도곽(외곽 테두리) 안쪽을 기준으로 한 %. null이면 "아랫줄의 가운데"라는
+  // 기본 자리에 그린다. 여백을 바꿔도 자리가 함께 움직이도록 절대 좌표가 아니라 %로 둔다.
+  let docTitlePct = null;
+  // _v2 : 기준자가 바뀌었으므로(위 FRAME_BASE) 예전 키에 남은 배수를 그대로 읽으면 도면틀이
+  // 엉뚱하게 작아진다. 키를 새로 두어 예전 값은 조용히 버리고 새 기본값으로 시작한다.
+  const FRAME_LAYOUT_STORE_KEY = 'defectMarkerFrameLayout_v2';
+  function sanitizeFrameLayout(o){
+    const out = Object.assign({}, FRAME_LAYOUT_DEFAULT);
+    if(!o || typeof o !== 'object') return out;
+    Object.keys(FRAME_LAYOUT_DEFAULT).forEach(k=>{
+      const v = Number(o[k]);
+      if(Number.isFinite(v)) out[k] = clamp(v, FRAME_LAYOUT_RANGE[k][0], FRAME_LAYOUT_RANGE[k][1]);
+    });
+    return out;
+  }
+  // 예전 기준자로 저장된 배수를 지금 기준자의 배수로 환산한다(절대 크기를 그대로 유지).
+  function convertLegacyFrameLayout(o){
+    if(!o || typeof o !== 'object') return null;
+    const out = {};
+    Object.keys(FRAME_LAYOUT_DEFAULT).forEach(k=>{
+      const v = Number(o[k]);
+      if(Number.isFinite(v)) out[k] = v * FRAME_BASE_LEGACY[k] / FRAME_BASE[k];
+    });
+    return out;
+  }
+  function sanitizeDocTitlePct(o){
+    if(!o || typeof o !== 'object') return null;
+    const x = Number(o.x), y = Number(o.y);
+    if(!Number.isFinite(x) || !Number.isFinite(y)) return null;
+    return { x: clamp(x, 0, 100), y: clamp(y, 0, 100) };
+  }
+  function loadFrameLayout(){
+    try{
+      const raw = localStorage.getItem(FRAME_LAYOUT_STORE_KEY);
+      if(!raw) return;
+      const o = JSON.parse(raw);
+      frameLayout = sanitizeFrameLayout(o && o.layout);
+      docTitlePct = sanitizeDocTitlePct(o && o.docTitlePct);
+    }catch(err){ /* 저장값이 깨져 있어도 기본값으로 그냥 연다 */ }
+  }
+  function saveFrameLayout(){
+    try{ localStorage.setItem(FRAME_LAYOUT_STORE_KEY,
+      JSON.stringify({ layout: frameLayout, docTitlePct })); }catch(err){ /* 저장 실패해도 화면은 그대로 동작 */ }
+  }
+  loadFrameLayout();
   // 통합 실행취소 기록: 마커만 바뀌는 작업과 도면 이미지 자체가 바뀌는 작업(자르기/회전/지우개브러시)을
   // 하나의 스택에 시간 순서대로 함께 기록해 "실행취소" 버튼 하나로 되돌릴 수 있게 한다.
   // 항목은 {type:'markers', drawingId, markers} 또는 {type:'image', drawingId, imgSrc, naturalW, naturalH, baseW, baseH, markers} 형태.
@@ -2237,7 +2410,12 @@
   // 파일) applyProjectData()가 경고 후 계속할지 확인한다.
   // v3: 도면에 그린 선(d.sketch, 벡터 스케치)과 빈 도면 표시(d.isBlank)가 추가됨. 구버전 도구로
   // 이 파일을 열면 스케치가 무시되므로(경고 후 열림), 그 사실이 드러나도록 버전을 올린다.
-  const PROJECT_FILE_VERSION = 3;
+  // v4: 도면틀 치수(frameLayout)와 도면 제목 자리(docTitlePct)가 추가됨. 구버전 도구로 열면
+  // 이 값들이 무시돼 도면틀이 예전 모습으로 나오므로, 마찬가지로 버전을 올려 알린다.
+  // v5: 도면틀 배수의 기준자가 바뀌었고(FRAME_BASE — 1.0이 곧 지금 모습), 범례 자리를 도곽
+  // 기준으로 잡는 legendFramePct·이미지 크기 d.imgScale·범례 상자 모양(legendBoxStyle)이
+  // 추가됨. v4 이하 파일은 열 때 convertLegacyFrameLayout()으로 환산해 받는다.
+  const PROJECT_FILE_VERSION = 5;
   // 빌드 도구 없이 파일 하나로 배포하는 프로젝트라 커밋 해시를 자동으로 넣을 수 없으므로,
   // 배포용으로 이 파일을 고칠 때 날짜를 함께 갱신한다. 하단 "Ver 2.1" 표기 옆에 표시된다.
   const APP_BUILD_DATE = '2026-09-07';
@@ -2271,6 +2449,10 @@
   let defaultLeaderShape = 'straight';
   let sketchColor = '#0b0b0b';
   let sketchWidthMult = 1;
+  // 다음에 쓸 글자의 글상자 설정. 색·굵기와 같은 약속으로, 골라 둔 글자가 있으면 그 글자들에도
+  // 곧바로 적용된다. 지난번에 맞춰 둔 값은 다음 방문에도 그대로 이어진다.
+  let sketchTextBorder = true;
+  let sketchTextBorderColor = '#8a8a8a';
   // 모눈(격자) 보기 + 격자 스냅. 손으로 그린 평면이 "도면"처럼 보이게 하는 것은 사실상 이 기능이다.
   // 켜고 끈 상태는 다음 방문에도 유지한다(펜슬 전용 옵션과 같은 방식).
   let sketchGridOn = false;
@@ -2617,6 +2799,48 @@
   // 범례를 작업 화면(도면 위)에도 그릴지. 기본은 끔 — 마커를 찍는 동안에는 도면이 가려지지 않는 편이
   // 낫기 때문이다. 범례 자리를 잡을 때 켜서 도면 위에서 바로 끌어 옮기라고 만든 스위치이며,
   // 켜고 끈 상태는 다음 방문에도 유지된다(펜슬 전용·모눈 옵션과 같은 방식).
+  // 도면별 「이미지 크기」 — 100%(=1)가 지금까지의 배치다. 도곽 안에서는 "도곽에 맞춘 크기"에,
+  // 도곽 없이 저장할 때는 원본 크기에 이 배율을 곱한다. 100%를 넘기면 넘치는 만큼 잘린다.
+  const IMG_SCALE_RANGE = [0.2, 2];
+  function imgScaleFor(d){
+    const v = d && d.imgScale;
+    return (typeof v==='number' && isFinite(v) && v>0) ? clamp(v, IMG_SCALE_RANGE[0], IMG_SCALE_RANGE[1]) : 1;
+  }
+  // 도곽 안에서 범례가 앉을 자리(도면 배치 영역 대비 %). 도면이 아니라 틀 기준이라, 여백·상단표
+  // 높이·이미지 크기를 조절해도 범례가 페이지 위에서 움직이지 않는다.
+  function legendFramePctFor(d, area, geo){
+    const p = d && d.legendFramePct;
+    if(p && typeof p.x==='number' && typeof p.y==='number') return p;
+    // 도면 기준으로만 자리를 잡아 둔 예전 파일은, 지금 그려질 자리를 그대로 옮겨 온다 —
+    // 파일을 열자마자 범례가 딴 데로 튀지 않게 하기 위함이다.
+    const old = d && d.legendPct, a = d && d.__tbDrawArea;
+    if(old && typeof old.x==='number' && typeof old.y==='number' && a && a.w>0 && a.h>0){
+      return { x: (a.x + old.x/100*a.w - area.x)/area.w*100,
+               y: (a.y + old.y/100*a.h - area.y)/area.h*100 };
+    }
+    return { x: (area.w - geo.boxW - 12*geo.scale)/area.w*100, y: 12*geo.scale/area.h*100 };
+  }
+  // 범례 상자의 모양 — 배경(반투명 흰색·불투명 흰색·없음)과 테두리(있음·없음). 도면이 어두우면
+  // 반투명 배경으로는 NOTE 글자가 묻히고, 반대로 도면이 비어 있는 자리에서는 테두리가 거슬린다.
+  // 회사마다 관행이 다르므로 골라 쓰게 하고, 고른 값은 표제란 템플릿에도 함께 담긴다.
+  const LEGEND_BOX_STYLE_STORE_KEY = 'defectMarkerLegendBoxStyle_v1';
+  const LEGEND_BOX_STYLE_DEFAULT = { bg:'soft', border:true };
+  let legendBoxStyle = Object.assign({}, LEGEND_BOX_STYLE_DEFAULT);
+  function sanitizeLegendBoxStyle(o){
+    const out = Object.assign({}, LEGEND_BOX_STYLE_DEFAULT);
+    if(!o || typeof o !== 'object') return out;
+    if(o.bg==='soft' || o.bg==='solid' || o.bg==='none') out.bg = o.bg;
+    out.border = o.border !== false;
+    return out;
+  }
+  function saveLegendBoxStyle(){
+    try{ localStorage.setItem(LEGEND_BOX_STYLE_STORE_KEY, JSON.stringify(legendBoxStyle)); }
+    catch(err){ /* 저장 실패해도 화면은 그대로 동작 */ }
+  }
+  try{
+    const rawLbs = localStorage.getItem(LEGEND_BOX_STYLE_STORE_KEY);
+    if(rawLbs) legendBoxStyle = sanitizeLegendBoxStyle(JSON.parse(rawLbs));
+  }catch(err){ /* 저장값이 깨져 있어도 기본 모양으로 연다 */ }
   const LEGEND_ON_CANVAS_STORE_KEY = 'defectMarkerLegendOnCanvas_v1';
   function isLegendOnCanvas(){
     const el = document.getElementById('legendOnCanvasToggle');
@@ -2690,11 +2914,18 @@
       y = (pos && typeof pos.y==='number') ? pos.y/100*h : 12*scale;
     }
     ctx.save();
-    ctx.fillStyle = 'rgba(255,255,255,0.92)';
-    ctx.strokeStyle = opts.selected ? '#2a78d6' : 'rgba(11,11,11,0.55)';
-    ctx.lineWidth = opts.selected ? Math.max(1.6, 2*scale) : Math.max(1, 1.2*scale);
+    // 상자의 배경·테두리는 사용자가 고른 모양(legendBoxStyle)을 따른다. 다만 작업 화면에서
+    // 범례를 집어 든 상태(selected)에서는 어떤 모양이든 파란 테두리를 그려 지금 잡고 있음을 보인다.
     roundedRectXYWH(ctx, x, y, boxW, boxH, Math.max(3, 4*scale));
-    ctx.fill(); ctx.stroke();
+    if(legendBoxStyle.bg !== 'none'){
+      ctx.fillStyle = legendBoxStyle.bg === 'solid' ? '#ffffff' : 'rgba(255,255,255,0.92)';
+      ctx.fill();
+    }
+    if(legendBoxStyle.border || opts.selected){
+      ctx.strokeStyle = opts.selected ? '#2a78d6' : 'rgba(11,11,11,0.55)';
+      ctx.lineWidth = opts.selected ? Math.max(1.6, 2*scale) : Math.max(1, 1.2*scale);
+      ctx.stroke();
+    }
     ctx.textBaseline = 'middle';
     ctx.font = titleFont;
     ctx.fillStyle = '#1f1f1d';
@@ -3178,9 +3409,136 @@
       const iv = document.getElementById('tbPreviewIconSizeVal');
       if(iv) iv.textContent = Math.round(iconSizeMult*100)+'%';
     }
+    // 이미지 크기도 도면별 값이라 도면을 바꿀 때마다 그 도면 기준으로 다시 맞춘다.
+    const imgSlider = document.getElementById('tbPreviewImgScaleSlider');
+    if(imgSlider){
+      const iv = imgScaleFor(d);
+      imgSlider.value = String(iv);
+      const lab = document.getElementById('tbPreviewImgScaleLabel');
+      if(lab) lab.textContent = Math.round(iv*100);
+    }
+    syncLegendBoxStyleUI();
+    syncPvFields();
+    syncFrameTuneUI();
     drawTbPreviewCanvas(d);
+    fitTbPreviewCanvas();
   }
+  // 미리보기를 열자마자 도면 한 장이 통째로 보여야 한다 — 스크롤을 내려야 아래쪽이 보이면
+  // "저장하면 어떻게 나오는지 한눈에 본다"는 이 창의 목적이 반쯤 무너진다. A4 가로(297:210)를
+  // 패널 폭에 맞추면 세로가 750px 남짓이라, 노트북 화면에서는 늘 아래가 잘렸다.
+  // 캔버스의 CSS 크기만 눌러 준다 — 캔버스의 실제 픽셀 수(width/height 속성)는 그대로이므로
+  // 저장물과 미리보기의 정확도는 달라지지 않고, 끌어 옮기기도 getBoundingClientRect를 기준으로
+  // 하므로 함께 맞춰진다.
+  function fitTbPreviewCanvas(){
+    const backdrop = document.getElementById('tbPreviewBackdrop');
+    const cv = document.getElementById('tbPreviewCanvas');
+    if(!backdrop || !cv || backdrop.style.display === 'none') return; // 닫혀 있으면 높이가 0이라 잴 수 없다
+    const header = backdrop.querySelector('.modal-header');
+    const footer = backdrop.querySelector('.modal-footer');
+    const body = backdrop.querySelector('.modal-body');
+    if(!body) return;
+    const cs = getComputedStyle(body);
+    const pad = (parseFloat(cs.paddingTop) || 0) + (parseFloat(cs.paddingBottom) || 0);
+    // 패널이 자랄 수 있는 최대 높이(.modal-panel의 max-height와 같은 88vh)에서 머리줄·아래줄과
+    // 안쪽 여백을 뺀 나머지가 그림에 쓸 수 있는 세로 공간이다.
+    const avail = window.innerHeight*0.88
+      - (header ? header.offsetHeight : 0) - (footer ? footer.offsetHeight : 0) - pad - 4;
+    const next = Math.max(140, Math.floor(avail)) + 'px';
+    if(cv.style.maxHeight !== next) cv.style.maxHeight = next; // 값이 같으면 쓰지 않는다(관찰자 되먹임 방지)
+  }
+  // 아래줄의 「도면틀 조절」·「표제란 내용 고치기」를 펼치고 접으면 남는 세로 공간이 크게 달라진다.
+  // 단추마다 따로 연결하는 대신 아래줄의 크기 변화를 지켜보다가 다시 맞춘다.
+  (function watchTbPreviewSize(){
+    window.addEventListener('resize', fitTbPreviewCanvas);
+    if(typeof ResizeObserver !== 'function') return;
+    const el = document.querySelector('#tbPreviewBackdrop .modal-footer');
+    if(el) new ResizeObserver(()=> fitTbPreviewCanvas()).observe(el);
+  })();
   function refreshTbPreviewIfOpen(){ if(isTbPreviewOpen()) renderTbPreview(); }
+  // 범례 상자 모양 손잡이 ↔ legendBoxStyle
+  function syncLegendBoxStyleUI(){
+    const bg = document.getElementById('legendBgSelect');
+    const bd = document.getElementById('legendBorderToggle');
+    if(bg) bg.value = legendBoxStyle.bg;
+    if(bd) bd.checked = !!legendBoxStyle.border;
+  }
+  // 미리보기 안의 표제란 칸 ↔ 「저장」 창의 진짜 입력칸. 지금 글을 치고 있는 칸은 건드리지
+  // 않는다 — 값을 다시 넣으면 커서가 맨 뒤로 튀기 때문이다.
+  function syncPvFields(){
+    document.querySelectorAll('#tbPvFieldsPanel input[data-mirror]').forEach(inp=>{
+      if(document.activeElement === inp) return;
+      const src = document.getElementById(inp.dataset.mirror);
+      if(src) inp.value = src.value;
+    });
+  }
+
+  // ---------- 미리보기 안의 「도면틀 조절」 ----------
+  // 여백·상단 표 높이·글자 크기·선 굵기는 눈으로 보면서 맞추는 값이라 손잡이를 미리보기 창 안에 둔다.
+  // 값은 frameLayout 하나에만 모여 있고(=저장 결과의 유일한 근거), 바뀔 때마다 localStorage 에
+  // 남아 다음에 열어도 그대로다. 화면에 보이는 수치는 전부 "배수"이며 1.0이 예전 도면틀의 값이다.
+  const FRAME_TUNE_SECTIONS = [
+    { title:'테두리 ↔ 용지 가장자리', fields:[
+      ['marginTop','위'], ['marginBottom','아래'], ['marginLeft','왼쪽'], ['marginRight','오른쪽'] ] },
+    { title:'표·도면 ↔ 테두리', fields:[
+      ['gapTop','위'], ['gapBottom','아래'], ['gapLeft','왼쪽'], ['gapRight','오른쪽'] ] },
+    { title:'크기', fields:[
+      ['titleBarScale','상단표 높이'], ['fontScale','글자 크기'], ['lineScale','선 굵기'] ] },
+  ];
+  function buildFrameTunePanel(){
+    const panel = document.getElementById('tbFramePanel');
+    if(!panel || panel.dataset.built) return;
+    panel.dataset.built = '1';
+    panel.innerHTML = FRAME_TUNE_SECTIONS.map(sec=>
+      '<div class="ft-sec"><h5>' + escapeHTML(sec.title) + '</h5><div class="ft-grid">' +
+      sec.fields.map(([key,label])=>{
+        const r = FRAME_LAYOUT_RANGE[key];
+        return '<label for="ft-'+key+'">' + escapeHTML(label) + '</label>' +
+          '<input type="range" id="ft-'+key+'" data-fl="'+key+'" min="'+r[0]+'" max="'+r[1]+'" step="0.05">' +
+          '<span class="ft-val" id="ftv-'+key+'"></span>';
+      }).join('') + '</div></div>').join('') +
+      '<div class="ft-foot"><span>수치는 <b>배수</b>이고 <b>1.0이 기본 도면틀</b>입니다. ' +
+      '범례와 도면 제목은 미리보기 위에서 <b>끌어</b> 옮깁니다.</span>' +
+      '<button type="button" id="btnFrameTitleReset">제목 자리 되돌리기</button>' +
+      '<button type="button" id="btnFrameReset">기본값으로</button></div>';
+    panel.addEventListener('input', e=>{
+      const key = e.target.dataset && e.target.dataset.fl;
+      if(!key) return;
+      const r = FRAME_LAYOUT_RANGE[key];
+      frameLayout[key] = clamp(parseFloat(e.target.value) || 0, r[0], r[1]);
+      saveFrameLayout();
+      markDirty();
+      syncFrameTuneValues();
+      if(isTbPreviewOpen()){ const d = getActiveDrawing(); if(d) drawTbPreviewCanvas(d); }
+    });
+    document.getElementById('btnFrameReset').addEventListener('click', ()=>{
+      frameLayout = Object.assign({}, FRAME_LAYOUT_DEFAULT);
+      docTitlePct = null;
+      saveFrameLayout(); markDirty();
+      syncFrameTuneUI(); refreshTbPreviewIfOpen();
+      showToast('도면틀을 기본값으로 되돌렸습니다.');
+    });
+    document.getElementById('btnFrameTitleReset').addEventListener('click', ()=>{
+      docTitlePct = null;
+      saveFrameLayout(); markDirty();
+      refreshTbPreviewIfOpen();
+      showToast('도면 제목을 아랫줄 가운데로 되돌렸습니다.');
+    });
+  }
+  // 슬라이더 옆 숫자만 갱신(슬라이더를 끄는 도중에 손잡이 위치를 건드리지 않기 위해 분리해 둔다)
+  function syncFrameTuneValues(){
+    Object.keys(FRAME_LAYOUT_DEFAULT).forEach(key=>{
+      const v = document.getElementById('ftv-'+key);
+      if(v) v.textContent = frameLayout[key].toFixed(2);
+    });
+  }
+  function syncFrameTuneUI(){
+    buildFrameTunePanel();
+    Object.keys(FRAME_LAYOUT_DEFAULT).forEach(key=>{
+      const s = document.getElementById('ft-'+key);
+      if(s) s.value = String(frameLayout[key]);
+    });
+    syncFrameTuneValues();
+  }
 
   // ---------- 인쇄 미리보기 안에서 범례(NOTE) 끌어 옮기기 ----------
   // 범례 자리는 "실제 저장되는 모습" 위에서 잡는 게 가장 확실하므로, 미리보기 캔버스에서 직접 끌 수
@@ -3209,50 +3567,82 @@
     }
     cv.addEventListener('pointerdown', e=>{
       const d = getActiveDrawing(); if(!d) return;
-      const box = d.__tbLegendBox, area = d.__tbDrawArea;
-      if(!box || !area || !(area.w>0) || !(area.h>0)) return;
       const p = toCanvasPt(e);
-      if(!insideBox(box, p)) return;
-      e.preventDefault();
-      try{ cv.setPointerCapture(e.pointerId); } catch(err){ /* 포인터 캡처를 못 잡아도 드래그 자체는 동작한다 */ }
-      // 한 번도 옮긴 적 없는(기본 위치) 범례를 끌기 시작하면, 지금 그려진 자리를 첫 좌표로 확정한다 —
-      // 기본 위치도 %로 저장해 두어야 드래그 델타를 더할 기준이 생긴다(작업 화면 쪽과 같은 처리).
-      if(!d.legendPct) d.legendPct = { x:(box.x-area.x)/area.w*100, y:(box.y-area.y)/area.h*100 };
-      drag = { startX:p.x, startY:p.y, startPct:{ x:d.legendPct.x, y:d.legendPct.y }, area };
-      cv.style.cursor = 'grabbing';
+      // 1) 범례(NOTE) — 좌표 기준과 어느 필드에 남길지는 그리는 쪽이 정해 넘긴다
+      //    (도곽이 있으면 도면 배치 영역 기준 legendFramePct, 없으면 종이 기준 legendPct).
+      const box = d.__tbLegendBox, anchor = d.__tbLegendAnchor;
+      const area = anchor && anchor.area;
+      if(box && area && area.w>0 && area.h>0 && insideBox(box, p)){
+        e.preventDefault();
+        try{ cv.setPointerCapture(e.pointerId); } catch(err){ /* 포인터 캡처를 못 잡아도 드래그 자체는 동작한다 */ }
+        // 한 번도 옮긴 적 없는(기본 위치) 범례를 끌기 시작하면, 지금 그려진 자리를 첫 좌표로 확정한다 —
+        // 기본 위치도 %로 저장해 두어야 드래그 델타를 더할 기준이 생긴다(작업 화면 쪽과 같은 처리).
+        if(!d[anchor.field]) d[anchor.field] = { x:(box.x-area.x)/area.w*100, y:(box.y-area.y)/area.h*100 };
+        drag = { kind:'legend', field:anchor.field, startX:p.x, startY:p.y,
+          startPct:{ x:d[anchor.field].x, y:d[anchor.field].y }, area };
+        cv.style.cursor = 'grabbing';
+        return;
+      }
+      // 2) 도면 제목 — 이쪽은 도곽(외곽 테두리) 안쪽(__tbFrameRect) 기준 %다. 제목은 도면이 아니라
+      //    틀에 딸린 글자라, 도면 크기가 달라져도 틀 안에서 같은 자리에 남아야 하기 때문이다.
+      const tbox = d.__tbTitleBox, frame = d.__tbFrameRect;
+      if(tbox && frame && frame.w>0 && frame.h>0 && insideBox(tbox, p)){
+        e.preventDefault();
+        try{ cv.setPointerCapture(e.pointerId); } catch(err){ /* 위와 같음 */ }
+        if(!docTitlePct) docTitlePct = {
+          x:(tbox.x+tbox.w/2-frame.x)/frame.w*100, y:(tbox.y+tbox.h/2-frame.y)/frame.h*100 };
+        drag = { kind:'title', startX:p.x, startY:p.y, startPct:{ x:docTitlePct.x, y:docTitlePct.y }, area:frame };
+        cv.style.cursor = 'grabbing';
+      }
     });
     cv.addEventListener('pointermove', e=>{
       const d = getActiveDrawing(); if(!d) return;
+      const p = toCanvasPt(e);
       if(!drag){
-        cv.style.cursor = insideBox(d.__tbLegendBox, toCanvasPt(e)) ? 'move' : 'default';
+        cv.style.cursor = (insideBox(d.__tbLegendBox, p) || insideBox(d.__tbTitleBox, p)) ? 'move' : 'default';
         return;
       }
-      const p = toCanvasPt(e);
-      d.legendPct = {
-        x: drag.startPct.x + (p.x-drag.startX)/drag.area.w*100,
-        y: drag.startPct.y + (p.y-drag.startY)/drag.area.h*100,
-      };
-      markDirty(); // legendPct는 가벼운 메타데이터라 이미지 자동저장은 건드리지 않는다
+      const nx = drag.startPct.x + (p.x-drag.startX)/drag.area.w*100;
+      const ny = drag.startPct.y + (p.y-drag.startY)/drag.area.h*100;
+      // 제목은 틀 밖으로 나가면 잘려서 안 보이므로 0~100% 안에 묶어 둔다. 범례는 예전처럼
+      // 도면 밖까지 자유롭게 둔다(그리는 쪽이 알아서 도면 크기 안으로 맞춘다).
+      if(drag.kind === 'title') docTitlePct = { x: clamp(nx, 0, 100), y: clamp(ny, 0, 100) };
+      else d[drag.field] = { x: nx, y: ny };
+      markDirty(); // legendPct·docTitlePct는 가벼운 메타데이터라 이미지 자동저장은 건드리지 않는다
       scheduleRedraw(d);
     });
     function endDrag(){
       if(!drag) return;
+      const wasTitle = drag.kind === 'title';
+      const field = drag.field;
       drag = null;
       cv.style.cursor = 'move';
+      if(wasTitle) saveFrameLayout(); // 제목 자리는 도면틀 설정과 함께 남긴다
+      // 도곽 기준으로 옮겼다면, 작업 화면과 "도곽 없이 저장"이 쓰는 도면 기준 좌표(legendPct)도
+      // 방금 잡은 자리로 맞춰 둔다 — 어디서 보든 같은 자리에 있어야 하기 때문이다.
+      const d0 = getActiveDrawing();
+      if(field === 'legendFramePct' && d0 && d0.__tbLegendBox && d0.__tbDrawArea && d0.__tbDrawArea.w>0){
+        const b = d0.__tbLegendBox, a = d0.__tbDrawArea;
+        d0.legendPct = { x:(b.x-a.x)/a.w*100, y:(b.y-a.y)/a.h*100 };
+      }
       renderCanvas(); // "작업 화면에도 표시"를 켜 뒀다면 그쪽 범례도 같은 자리로 맞춘다
     }
     cv.addEventListener('pointerup', endDrag);
     cv.addEventListener('pointercancel', endDrag);
   })();
   function openTbPreview(){
-    renderTbPreview();
+    // 창을 먼저 띄우고 나서 그린다 — 감춰져 있는 동안에는 머리줄·아래줄의 높이가 0이라
+    // 그림에 쓸 수 있는 세로 공간을 잴 수 없다.
     document.getElementById('tbPreviewBackdrop').style.display = 'flex';
+    renderTbPreview();
   }
   function closeTbPreview(){
     document.getElementById('tbPreviewBackdrop').style.display = 'none';
   }
 
-  // 표제란 템플릿 — 조사위치(도면마다 다른 값)를 뺀 나머지 3개 항목 + 도면 제목을 이름 붙여 저장/적용한다.
+  // 표제란 템플릿 — 조사위치(도면마다 다른 값)를 뺀 나머지 3개 항목 + 도면 제목에 더해,
+  // 도면틀 치수(frameLayout·docTitlePct)와 범례 설정까지 한 이름으로 묶어 저장/적용한다.
+  // 발주처마다 요구하는 틀 모양이 달라, 값만 되살리고 틀은 매번 다시 맞추는 것은 반쪽짜리였다.
   function renderTbTemplateSelect(){
     const sel = document.getElementById('tbTemplateSelect');
     const cur = sel.value;
@@ -3268,7 +3658,35 @@
     document.getElementById('siteNameInput').value = t.siteName || '';
     document.getElementById('structureTypeInput').value = t.structureType || '';
     document.getElementById('docTitleInput').value = t.docTitle || '';
+    // 아래 값들은 예전에 만든 템플릿에는 없다 — 없는 것을 "비어 있음"으로 받아 지금 설정을
+    // 지워 버리면 안 되므로, 담겨 있을 때에만 손댄다.
+    const extras = [];
+    if(t.frameLayout){
+      frameLayout = sanitizeFrameLayout(t.frameLayout);
+      docTitlePct = sanitizeDocTitlePct(t.docTitlePct);
+      saveFrameLayout();
+      syncFrameTuneUI();
+      extras.push('도면틀');
+    }
+    if(t.legend){
+      legendBoxStyle = sanitizeLegendBoxStyle(t.legend.boxStyle);
+      saveLegendBoxStyle();
+      const lt = document.getElementById('legendToggle');
+      if(lt && typeof t.legend.enabled === 'boolean') lt.checked = t.legend.enabled;
+      const lu = document.getElementById('legendUsedOnlyToggle');
+      if(lu && typeof t.legend.usedOnly === 'boolean') lu.checked = t.legend.usedOnly;
+      // 범례 크기는 도면별 값이지만, 템플릿은 "이 현장의 표준 모습"이라 모든 도면에 함께 맞춘다.
+      if(typeof t.legend.scale === 'number' && t.legend.scale > 0){
+        drawings.forEach(d=>{ d.legendScale = t.legend.scale; });
+      }
+      syncLegendBoxStyleUI();
+      updateTbPreviewButtonVisibility();
+      extras.push('범례');
+    }
+    markDirty();
+    renderCanvas();
     refreshTbPreviewIfOpen();
+    if(extras.length) showToast('표제란과 ' + extras.join('·') + ' 설정을 함께 적용했습니다.');
   }
   function saveTbTemplate(){
     const name = prompt('템플릿 이름을 입력하세요 (예: OO아파트 정밀안전점검)');
@@ -3279,6 +3697,14 @@
       siteName: document.getElementById('siteNameInput').value,
       structureType: document.getElementById('structureTypeInput').value,
       docTitle: document.getElementById('docTitleInput').value,
+      frameLayout: Object.assign({}, frameLayout),
+      docTitlePct: docTitlePct ? Object.assign({}, docTitlePct) : null,
+      legend: {
+        boxStyle: Object.assign({}, legendBoxStyle),
+        enabled: !!document.getElementById('legendToggle').checked,
+        usedOnly: isLegendUsedOnly(),
+        scale: legendScaleFor(getActiveDrawing()),
+      },
     });
     saveTbTemplates(tbTemplates);
     renderTbTemplateSelect();
@@ -3316,6 +3742,20 @@
   }
   function hideDrawingImportProgress(){
     if(drawingImportProgressEl){ drawingImportProgressEl.remove(); drawingImportProgressEl = null; }
+  }
+  // 일괄 저장 진행 알림 — 위 도면 불러오기 알림과 같은 모양이지만, 둘이 동시에 떠도 서로를
+  // 지우지 않도록 요소를 따로 둔다.
+  let exportProgressEl = null;
+  function setExportProgressText(text){
+    if(!exportProgressEl){
+      exportProgressEl = document.createElement('div');
+      exportProgressEl.className = 'import-progress-toast';
+      document.body.appendChild(exportProgressEl);
+    }
+    exportProgressEl.textContent = text;
+  }
+  function hideExportProgress(){
+    if(exportProgressEl){ exportProgressEl.remove(); exportProgressEl = null; }
   }
   // FileReader/Image 로딩은 비동기라 완료되는 순서가 파일을 고른 순서와 다를 수 있다(특히 파일
   // 크기가 서로 다르면 작은 파일이 먼저 끝남). 그래서 결과를 파일 순서 그대로의 슬롯 배열에 채워두고,
@@ -3533,6 +3973,24 @@
     { color:'#c46a00', label:'주황' },
     { color:'#7a8892', label:'회색' },
   ];
+  // ── 글자 도구의 글상자 ──────────────────────────────────────────────────────
+  // 도면 위에 글자만 얹으면 벽선·해치·치수선과 겹쳐 읽기 어려운 자리가 많다. 그래서 글자 뒤를
+  // 하얗게 비우고(바탕) 회색 테두리로 묶는 것을 기본 모양으로 삼는다 — 손으로 쓴 메모가 아니라
+  // 도면에 붙은 이름표처럼 보이게 하는 것이 목적이다. 테두리는 끌 수 있고(흰 바탕만 남는다)
+  // 색도 고를 수 있다. 바탕은 흰색 고정이다.
+  const SKETCH_TEXT_BG = '#ffffff';
+  const SKETCH_TEXT_BORDER_DEFAULT = '#8a8a8a';
+  const SKETCH_TEXT_BORDER_STORE_KEY = 'defectMarkerSketchTextBorder_v1';
+  // 예전에 그린 글자에는 아래 두 필드가 없다 — "없음"은 기본값(테두리 있음·회색)으로 읽는다.
+  // 그래야 이미 만들어 둔 도면도 새 기본 모양을 그대로 따라간다.
+  function textBorderOn(s){ return !(s && s.boxBorder === false); }
+  function textBorderColor(s){
+    const c = s && s.boxBorderColor;
+    return (typeof c === 'string' && /^#[0-9a-fA-F]{6}$/.test(c)) ? c : SKETCH_TEXT_BORDER_DEFAULT;
+  }
+  function sketchTextFont(px){
+    return '600 ' + px + 'px system-ui, -apple-system, "Malgun Gothic", sans-serif';
+  }
   function newSketchId(){ return 's'+Math.random().toString(36).slice(2,10)+Date.now().toString(36); }
 
   // ── 모눈(격자) ──────────────────────────────────────────────────────────────
@@ -3605,6 +4063,47 @@
   }
   function sketchFontNatural(d, s){
     return Math.max(6, (s.fontSize || 2.4)/100 * Math.min(d.naturalW, d.naturalH));
+  }
+  // 글자 폭은 화면에 없는 캔버스로 실제로 잰다 — 예전에는 "글자 수 × 0.62"로 어림잡아, 좁은 글자
+  // (숫자·영문)나 넓은 글자(한글)에서 잡히는 자리와 보이는 자리가 눈에 띄게 어긋났다. 폭은 글자
+  // 크기에 정비례하므로 100px 기준으로 한 번만 재서 배수로 늘린다(같은 글은 다시 재지 않는다).
+  let sketchTextMeasureCtx = null;
+  const sketchTextWidthCache = new Map();
+  function sketchTextWidth100(text){
+    const key = String(text == null ? '' : text);
+    if(sketchTextWidthCache.has(key)) return sketchTextWidthCache.get(key);
+    if(!sketchTextMeasureCtx){
+      try{ sketchTextMeasureCtx = document.createElement('canvas').getContext('2d'); }
+      catch(err){ return key.length * 62; } // 캔버스를 못 만드는 환경에서도 그리기는 멈추지 않게
+    }
+    sketchTextMeasureCtx.font = sketchTextFont(100);
+    const w = sketchTextMeasureCtx.measureText(key).width;
+    if(sketchTextWidthCache.size > 400) sketchTextWidthCache.clear();
+    sketchTextWidthCache.set(key, w);
+    return w;
+  }
+  // 글상자의 치수(도면 원본 px). 좌표는 기준점 pts[0]에서 잰 상대값이다.
+  // 기준점의 뜻은 예전 그대로 "글자의 왼쪽 가운데"라, 예전에 그린 글자도 자리가 움직이지 않는다 —
+  // 상자는 그 글자를 사방 같은 여백으로 둘러싸므로 글자는 언제나 테두리의 한가운데에 놓인다.
+  function sketchTextMetricsNatural(d, s){
+    const fontPx = sketchFontNatural(d, s);
+    const textW = sketchTextWidth100(s.text || '') * fontPx / 100;
+    const padX = fontPx * 0.34, padY = fontPx * 0.30;
+    return { fontPx, textW, padX, padY,
+      boxX: -padX, boxY: -(fontPx*0.5 + padY),
+      boxW: textW + padX*2, boxH: fontPx + padY*2 };
+  }
+  // 모서리를 둥글린 사각형 경로. ctx.roundRect가 없는 브라우저에서도 같은 모양이 나오게 한다.
+  function roundRectPath(ctx, x, y, w, h, r){
+    const rr = Math.max(0, Math.min(r, w/2, h/2));
+    ctx.beginPath();
+    if(typeof ctx.roundRect === 'function'){ ctx.roundRect(x, y, w, h, rr); return; }
+    ctx.moveTo(x+rr, y);
+    ctx.arcTo(x+w, y,   x+w, y+h, rr);
+    ctx.arcTo(x+w, y+h, x,   y+h, rr);
+    ctx.arcTo(x,   y+h, x,   y,   rr);
+    ctx.arcTo(x,   y,   x+w, y,   rr);
+    ctx.closePath();
   }
 
   // 점 하나와 선분 사이의 거리 — 선 지우개 히트 판정과 자유선 단순화(RDP)가 함께 쓴다.
@@ -3691,17 +4190,28 @@
     if(s.tool === 'text'){
       const a = P(0);
       const scale = (d && d.naturalW>0) ? (drawW / d.naturalW) : 1;
-      const fontPx = Math.max(6, sketchFontNatural(d, s) * scale);
+      const m = sketchTextMetricsNatural(d, s);
+      const fontPx = Math.max(6, m.fontPx * scale);
       ctx.translate(a.x, a.y);
       if(s.angle) ctx.rotate((s.angle||0)*Math.PI/180);
-      ctx.font = '600 ' + fontPx + 'px system-ui, -apple-system, "Malgun Gothic", sans-serif';
-      ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-      // 어두운 도면·사진 위에 놓여도 읽히도록 흰 테두리를 먼저 깐다(마커 번호 라벨과 같은 처리).
-      ctx.lineWidth = Math.max(2, fontPx*0.16);
-      ctx.strokeStyle = 'rgba(255,255,255,0.92)';
-      ctx.strokeText(s.text || '', 0, 0);
+      ctx.font = sketchTextFont(fontPx);
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      // 흰 바탕을 먼저 깔아 도면을 비워 준다. 예전에는 글자에 흰 외곽선만 둘렀는데, 벽선이 촘촘한
+      // 자리에서는 획 사이로 도면이 비쳐 여전히 읽기 어려웠다.
+      const bx = m.boxX*scale, by = m.boxY*scale, bw = m.boxW*scale, bh = m.boxH*scale;
+      roundRectPath(ctx, bx, by, bw, bh, bh*0.22);
+      ctx.fillStyle = SKETCH_TEXT_BG;
+      ctx.fill();
+      if(textBorderOn(s)){
+        ctx.lineWidth = Math.max(0.8, lw*0.7);
+        ctx.strokeStyle = textBorderColor(s);
+        ctx.stroke();
+      }
+      // 글자는 상자의 한가운데. 세로 가운데는 textBaseline:'middle'만으로는 한글이 위로 떠 보이므로
+      // 실제로 그려지는 잉크 범위를 재서 맞춘다(표제란 값과 같은 처리).
       ctx.fillStyle = color;
-      ctx.fillText(s.text || '', 0, 0);
+      ctx.fillText(s.text || '', bx + bw/2,
+        by + bh/2 + inkCenterShift(ctx, s.text || '', s.text || '', 0, fontPx));
       ctx.restore();
       return;
     }
@@ -3770,13 +4280,14 @@
       if(pts.length === 0) continue;
       const tol = tolNatural + sketchWidthNatural(d, s.width)/2;
       if(s.tool === 'text'){
-        const fontPx = sketchFontNatural(d, s);
-        const wApprox = Math.max(fontPx, (s.text||'').length * fontPx * 0.62);
+        const m = sketchTextMetricsNatural(d, s);
         const ax = X(pts[0]), ay = Y(pts[0]);
         // 글자는 기준점을 축으로 눕힐 수 있으므로(s.angle), 판정할 점을 글자의 축으로 되돌린 뒤
         // 눕지 않은 글상자로 잰다 — 눕은 글자를 화면에 보이는 자리에서 그대로 잡을 수 있어야 한다.
+        // 잡히는 범위는 눈에 보이는 글상자와 똑같다.
         const q = rotateAroundPt(px, py, ax, ay, -(s.angle||0));
-        if(q.x >= ax-tol && q.x <= ax+wApprox+tol && q.y >= ay-fontPx*0.7-tol && q.y <= ay+fontPx*0.7+tol) return s;
+        if(q.x >= ax+m.boxX-tol && q.x <= ax+m.boxX+m.boxW+tol &&
+           q.y >= ay+m.boxY-tol && q.y <= ay+m.boxY+m.boxH+tol) return s;
         continue;
       }
       if((s.tool === 'rect' || s.tool === 'ellipse') && pts.length>=2){
@@ -3879,6 +4390,10 @@
         if(!st.text) return;
         st.fontSize = (isFinite(s.fontSize) && Number(s.fontSize)>0) ? clamp(Number(s.fontSize), 0.4, 20) : 2.4;
         st.angle = isFinite(s.angle) ? ((Number(s.angle)%360)+360)%360 : 0;
+        // 글상자 — 없으면 기본값(테두리 있음·회색)이다. 예전 프로젝트 파일에는 없는 필드이므로
+        // "없음"을 "테두리 없음"으로 읽으면 안 된다.
+        st.boxBorder = textBorderOn(s);
+        st.boxBorderColor = textBorderColor(s);
       }
       // 사각형·원도 자기 중심을 축으로 눕힐 수 있다(여러 개를 묶어 돌릴 때 필요하다). 글자와 같은
       // angle 필드를 쓰므로 화이트리스트에도 같이 넣는다 — 여기 빠뜨리면 프로젝트를 다시 열었을 때
@@ -3964,12 +4479,11 @@
     if(pts.length === 0) return null;
     const X = p=> p.x/100*d.naturalW, Y = p=> p.y/100*d.naturalH;
     if(s.tool === 'text'){
-      // 글자는 점이 하나뿐이라 실제로 그려지는 글상자를 근사한다 — sketchHitTest의 글자 판정과
-      // 같은 식을 쓴다(두 벌로 두면 "보이는 것"과 "잡히는 것"이 어긋난다).
-      const fontPx = sketchFontNatural(d, s);
-      const wApprox = Math.max(fontPx, (s.text||'').length * fontPx * 0.62);
+      // 글자는 점이 하나뿐이라 실제로 그려지는 글상자를 그대로 쓴다 — sketchHitTest의 글자 판정도
+      // 같은 함수를 본다(두 벌로 두면 "보이는 것"과 "잡히는 것"이 어긋난다).
+      const m = sketchTextMetricsNatural(d, s);
       const ax = X(pts[0]), ay = Y(pts[0]);
-      return { x0: ax, y0: ay - fontPx*0.7, x1: ax + wApprox, y1: ay + fontPx*0.7 };
+      return { x0: ax+m.boxX, y0: ay+m.boxY, x1: ax+m.boxX+m.boxW, y1: ay+m.boxY+m.boxH };
     }
     let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
     pts.forEach(p=>{
@@ -4235,12 +4749,52 @@
     });
     renderSketchToolbar();
   }
+  // 글상자 테두리 — 색·굵기와 똑같이 "다음에 쓸 글자의 설정"이자 "지금 고른 글자"를 고치는 수단이다.
+  // 글자가 아닌 획에는 뜻이 없으므로 건드리지 않는다.
+  function saveSketchTextBoxPrefs(){
+    try{
+      localStorage.setItem(SKETCH_TEXT_BORDER_STORE_KEY,
+        JSON.stringify({ on: sketchTextBorder, color: sketchTextBorderColor }));
+    } catch(err){ /* 저장 실패해도 이번 세션 동작은 유지된다 */ }
+  }
+  function loadSketchTextBoxPrefs(){
+    try{
+      const o = JSON.parse(localStorage.getItem(SKETCH_TEXT_BORDER_STORE_KEY) || 'null');
+      if(o && typeof o === 'object'){
+        sketchTextBorder = o.on !== false;
+        if(typeof o.color === 'string' && /^#[0-9a-fA-F]{6}$/.test(o.color)) sketchTextBorderColor = o.color;
+      }
+    } catch(err){ /* 저장값이 깨졌으면 기본값(테두리 있음·회색)으로 시작한다 */ }
+  }
+  function setSketchTextBorder(on){
+    sketchTextBorder = !!on;
+    saveSketchTextBoxPrefs();
+    applyToSelectedSketch(s=>{ if(s.tool === 'text') s.boxBorder = sketchTextBorder; });
+    renderSketchToolbar();
+  }
+  function setSketchTextBorderColor(c){
+    if(typeof c !== 'string' || !/^#[0-9a-fA-F]{6}$/.test(c)) return;
+    sketchTextBorderColor = c.toLowerCase();
+    saveSketchTextBoxPrefs();
+    // 색을 골랐다는 것은 테두리를 보겠다는 뜻이다 — 꺼져 있으면 함께 켜 준다.
+    if(!sketchTextBorder){ sketchTextBorder = true; saveSketchTextBoxPrefs(); }
+    applyToSelectedSketch(s=>{
+      if(s.tool !== 'text') return;
+      s.boxBorderColor = sketchTextBorderColor;
+      s.boxBorder = true;
+    });
+    renderSketchToolbar();
+  }
   // 획 하나만 골랐을 때는 도구줄이 그 획의 색·굵기를 가리키게 한다 — 이어서 다른 획을 그리면
   // 방금 고친 것과 같은 모양으로 이어지고, "지금 고른 선이 무슨 색인지"도 한눈에 보인다.
   function syncSketchToolbarToStroke(s){
     if(!s) return;
     if(typeof s.color === 'string') sketchColor = s.color;
     if(isFinite(s.width) && s.width > 0) sketchWidthMult = s.width;
+    if(s.tool === 'text'){
+      sketchTextBorder = textBorderOn(s);
+      sketchTextBorderColor = textBorderColor(s);
+    }
     renderSketchToolbar();
   }
   // 그린 것끼리의 앞뒤 순서는 d.sketch 배열 순서(=그린 순서)가 그대로다. 순서를 바꾸는 것은
@@ -4800,10 +5354,18 @@
     input.maxLength = 200;
     input.placeholder = 'Enter로 확정';
     input.value = editing ? (editing.text || '') : '';
-    input.style.left = Math.round(pct.x/100 * cv.clientWidth) + 'px';
-    input.style.top = Math.round(pct.y/100 * cv.clientHeight - fontCss*0.95) + 'px';
+    // 입력칸도 확정 뒤에 그려질 글상자와 같은 모양·같은 자리로 띄운다 — 쓰는 동안 보이는 것과
+    // 그려지는 것이 어긋나면 글자 자리를 눈으로 맞출 수 없다. 여백 비율은 글상자와 같은 값이다.
+    const bdOn = editing ? textBorderOn(editing) : sketchTextBorder;
+    const bdCol = editing ? textBorderColor(editing) : sketchTextBorderColor;
+    const padX = fontCss*0.34, padY = fontCss*0.30, bw = 2; // bw = .sketch-text-input의 테두리 굵기
+    input.style.padding = Math.round(padY) + 'px ' + Math.round(padX) + 'px';
+    input.style.left = Math.round(pct.x/100 * cv.clientWidth - padX - bw) + 'px';
+    input.style.top = Math.round(pct.y/100 * cv.clientHeight - fontCss*0.5 - padY - bw) + 'px';
     input.style.fontSize = Math.round(fontCss) + 'px';
     input.style.color = color;
+    input.style.background = SKETCH_TEXT_BG;
+    input.style.borderColor = bdOn ? bdCol : 'rgba(11,11,11,0.18)';
     shell.appendChild(input);
     sketchTextEditor = { el: input, pct: { x:pct.x, y:pct.y }, editing: editing || null };
     // 고치는 동안에는 원본 글자를 감춘다 — 입력칸 뒤로 비쳐 두 겹으로 보이는 것을 막는다.
@@ -4854,6 +5416,7 @@
       getSketch(d).push({
         id: newSketchId(), tool:'text', color: sketchColor, width: sketchWidthMult,
         pts: [ { x:ed.pct.x, y:ed.pct.y } ], text, fontSize: sketchTextSizePct(), angle: 0,
+        boxBorder: sketchTextBorder, boxBorderColor: sketchTextBorderColor,
       });
       renderCanvas();
     }
@@ -7345,6 +7908,15 @@
     // 앞뒤 순서 단추는 「선택」 도구에서만 뜻이 있다(고를 수 있는 도구가 그것뿐이라서).
     const orderGroup = document.getElementById('sketchOrderGroup');
     if(orderGroup) orderGroup.style.display = (sketchTool === 'pick') ? '' : 'none';
+    // 글상자 손잡이는 글자를 쓰려 할 때와 이미 쓴 글자를 골랐을 때만 뜬다.
+    const dNow = getActiveDrawing();
+    const pickedText = !!dNow && selectedSketchStrokes(dNow).some(s=> s.tool === 'text');
+    const textGroup = document.getElementById('sketchTextGroup');
+    if(textGroup) textGroup.style.display = (sketchTool === 'text' || pickedText) ? '' : 'none';
+    const bdBtn = document.getElementById('btnSketchTextBorder');
+    if(bdBtn) bdBtn.classList.toggle('active', sketchTextBorder);
+    const bdCol = document.getElementById('sketchTextBorderColor');
+    if(bdCol && bdCol.value.toLowerCase() !== sketchTextBorderColor) bdCol.value = sketchTextBorderColor;
   }
 
   function isSketchGridStored(){
@@ -7782,6 +8354,31 @@
     parts.push(ymd);
     return parts.join('_');
   }
+  // 글자 덩어리의 "실제로 그려지는 높이"의 한가운데를 칸 한가운데에 맞추기 위한 보정값.
+  // textBaseline:'middle' 은 글꼴의 em 상자를 기준으로 잡는데, 한글은 그 안에서 조금 위쪽에
+  // 자리해 글자가 칸 위로 떠 보인다(값이 두 줄이 되면 특히 눈에 띈다). measureText 가 알려주는
+  // 실제 잉크 범위(actualBoundingBox…)로 그만큼을 되돌린다.
+  //   blockSpan : 첫 줄과 마지막 줄의 기준선 사이 거리(한 줄이면 0)
+  // 돌려주는 값을 "칸 중심"에 더하면 첫 줄을 그릴 y가 된다. ctx.font 은 미리 정해 두어야 한다.
+  function inkCenterShift(ctx, firstLine, lastLine, blockSpan, fallbackPx){
+    const m1 = ctx.measureText(firstLine == null ? '' : firstLine);
+    const m2 = (lastLine === firstLine) ? m1 : ctx.measureText(lastLine == null ? '' : lastLine);
+    const asc = Number.isFinite(m1.actualBoundingBoxAscent) ? m1.actualBoundingBoxAscent : fallbackPx*0.5;
+    const dsc = Number.isFinite(m2.actualBoundingBoxDescent) ? m2.actualBoundingBoxDescent : fallbackPx*0.5;
+    return -(blockSpan + dsc - asc)/2;
+  }
+
+  // 도면이 (dx,dy,dw,dh) 자리에 놓였을 때 그 위에 마커를 찍는다. 마커 좌표는 전부 "도면 대비 %"라,
+  // 그려진 자리만 옮겨 주면 화면·도곽 있는 저장·도곽 없는 저장이 모두 같은 그림이 된다.
+  function drawMarkersInRect(ctx, d, dx, dy, dw, dh, r){
+    ctx.save();
+    ctx.translate(dx, dy);
+    d.markers.forEach((m, idx)=>{
+      drawMarkerDispatch(ctx, d, m, formatMarkerLabel(m, idx, d), dw, dh, r, false);
+    });
+    ctx.restore();
+  }
+
   function wrapText(ctx, text, maxWidth){
     if(!text) return [];
     const words = String(text).split('');  // 한글은 글자 단위로 줄바꿈
@@ -7830,17 +8427,23 @@
     const ctx = off.getContext('2d');
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
-    ctx.drawImage(d.imgEl, 0, 0, w, h);
-    drawSketch(ctx, d, 0, 0, w, h); // 마커보다 먼저 — 그려둔 선이 결함 번호를 덮지 않게
-
-    const r = markerRadiusNatural(d);
-    d.markers.forEach((m, idx)=>{
-      drawMarkerDispatch(ctx, d, m, formatMarkerLabel(m, idx, d), w, h, r, false);
-    });
-    // 미리보기 창에서 범례를 끌어 옮길 수 있도록, 그려진 자리와 도면 영역을 함께 기억해 둔다
-    // (표제란 없이 저장하는 이 경로에서는 도면이 캔버스 전체를 차지한다).
+    // 「이미지 크기」를 100% 아래로 내리면 도면이 작아지고 둘레에 흰 여백이 남는다(100%가 지금까지의
+    // 모습 그대로). 100%를 넘기면 종이 밖으로 나가는 만큼 잘린다 — 도곽이 있을 때와 같은 규칙이다.
+    const s = imgScaleFor(d);
+    const dw = w*s, dh = h*s, dx = (w-dw)/2, dy = (h-dh)/2;
+    // 100%일 때는 도면이 캔버스를 꽉 채우므로 바탕을 칠하지 않는다 — 예전처럼 투명한 부분이
+    // 있는 도면(배경 없는 PNG)은 그대로 투명하게 저장된다. 줄였을 때만 둘레를 흰색으로 채운다.
+    if(s !== 1){ ctx.fillStyle = '#ffffff'; ctx.fillRect(0,0,w,h); }
+    ctx.drawImage(d.imgEl, dx, dy, dw, dh);
+    drawSketch(ctx, d, dx, dy, dw, dh); // 마커보다 먼저 — 그려둔 선이 결함 번호를 덮지 않게
+    drawMarkersInRect(ctx, d, dx, dy, dw, dh, markerRadiusNatural(d)*s);
+    // 범례는 도면이 아니라 "종이" 기준이다 — 이미지 크기를 바꿔도 자리가 그대로 남도록
+    // (도곽이 있을 때와 같은 규칙). 도곽이 없으므로 여기서는 종이 = 캔버스 전체다.
+    d.__tbDrawArea = { x:dx, y:dy, w:dw, h:dh };
     d.__tbLegendBox = isLegendEnabled() ? drawOverlayLegend(ctx, d, w, h) : null;
-    d.__tbDrawArea = { x:0, y:0, w, h };
+    d.__tbLegendAnchor = { area:{ x:0, y:0, w, h }, field:'legendPct' };
+    // 도곽이 없으면 도면 제목도 그리지 않는다 — 미리보기의 제목 끌기도 함께 꺼진다.
+    d.__tbTitleBox = null; d.__tbFrameRect = null;
 
     return off;
   }
@@ -7875,20 +8478,26 @@
     const siteName = document.getElementById('siteNameInput').value.trim() || '-';
     const structureType = document.getElementById('structureTypeInput').value.trim() || '-';
 
-    // ---- 외곽 굵은 테두리(도곽)와 용지 가장자리 사이 여백 — 비대칭: 위쪽은 기존(108px)의 1.5배인
-    // 162px, 좌·우·아래는 기존(54px)의 2배인 108px로 더 넉넉하게 둔다.
-    const FRAME_MARGIN_TOP = 162, FRAME_MARGIN_SIDE = 108, FRAME_MARGIN_BOTTOM = 108;
-    // 표제란·도면·범례(표) 바깥 테두리와 그 바깥의 굵은 외곽 틀 사이 여백. 8px→16px였던 간격을
-    // 다시 2배인 32px로 늘려 표가 외곽 틀에 붙어 보이지 않게 한다.
-    const FRAME_TO_CONTENT_GAP = 32;
-    const contentMarginTop = FRAME_MARGIN_TOP + FRAME_TO_CONTENT_GAP;
-    const contentMarginSide = FRAME_MARGIN_SIDE + FRAME_TO_CONTENT_GAP;
-    const contentMarginBottom = FRAME_MARGIN_BOTTOM + FRAME_TO_CONTENT_GAP;
+    // ---- 도곽 치수는 전부 frameLayout(미리보기 창의 「도면틀 조절」)에서 온다. 예전에 여기
+    // 박혀 있던 숫자(여백 162/108, 간격 32, 글자 1.43배, 선 굵기 3/2.2/1.6/1.4)는 그 "1배"의
+    // 기준자로만 남기고, 실제 값은 배수를 곱해 만든다.
+    const mTop    = frameAbs('marginTop');
+    const mBottom = frameAbs('marginBottom');
+    const mLeft   = frameAbs('marginLeft');
+    const mRight  = frameAbs('marginRight');
+    const gTop    = frameAbs('gapTop'),  gBottom = frameAbs('gapBottom');
+    const gLeft   = frameAbs('gapLeft'), gRight  = frameAbs('gapRight');
+    const contentMarginTop  = mTop + gTop,   contentMarginBottom = mBottom + gBottom;
+    const contentMarginLeft = mLeft + gLeft, contentMarginRight  = mRight + gRight;
+    const flFont = frameAbs('fontScale'), flLine = frameAbs('lineScale');
+    // 선 굵기 — 외곽 3 / 표 테두리 2.2 / 배지 1.6 / 가로 구분선 1.4 px 에 배율을 곱한다.
+    const lwFrame = 3*flLine, lwTb = 2.2*flLine;
+    const lwBadge = 1.6*flLine, lwDiv = 1.4*flLine;
 
     // ---- 페이지 전체 비율을 A4 가로(297:210)에 맞춘다 ----
     const A4_RATIO = 297/210;
     // 도면 폭을 기준으로 페이지 폭을 정하되, 너무 작은 도면도 인쇄용으로 충분한 크기가 되도록 최소값을 둔다.
-    const outerW = Math.max(w + contentMarginSide*2, 1400);
+    const outerW = Math.max(w + contentMarginLeft + contentMarginRight, 1400);
     const outerH = Math.round(outerW / A4_RATIO);
 
     const off = document.createElement('canvas');
@@ -7898,16 +8507,17 @@
     ctx.imageSmoothingQuality = 'high';
     ctx.fillStyle = '#ffffff'; ctx.fillRect(0,0,outerW,outerH);
 
-    const contentW = outerW - contentMarginSide*2;
+    const contentW = outerW - contentMarginLeft - contentMarginRight;
+    // 도곽(외곽 테두리) 사각형 — 도면 제목의 좌표 기준이라 미리 정해 둔다(그리기는 맨 마지막).
+    const frameRect = { x: mLeft, y: mTop, w: outerW - mLeft - mRight, h: outerH - mTop - mBottom };
 
     // ---- 상단 표제란: 실무 도면 표제란처럼 "라벨 배지 + 값" 2행×2열 구성
     // (①용역명·②구분 한 줄, ③조사위치·④구조형식 한 줄), 눕히지 않은 정방향 글씨.
-    // 글자 크기(titleFontScale=1.43)가 커진 만큼 라벨 배지·표제란 높이 상한도 함께 넉넉히 늘려
-    // 값이 배지 밖으로 넘치지 않게 한다.
-    // 표 자체의 높이는 기존(clamp 결과)의 0.8배로 줄이되, 배지·글자 크기는 "줄이기 전" 높이
-    // (titleBarHForFont/rowHForFont) 기준으로 그대로 계산해 글자 크기가 함께 작아지지 않게 한다.
+    // 표 높이(titleBarScale)와 글자 크기(fontScale)는 서로 따로 논다 — 표만 납작하게 줄여도
+    // 글자는 그대로 남도록, 배지·글자는 "줄이기 전" 높이(titleBarHForFont/rowHForFont) 기준으로
+    // 계산한다. 다만 표를 아주 납작하게 줄이면 배지가 칸 밖으로 삐져나오므로 그때만 함께 조인다.
     const titleBarHForFont = clamp(outerH*0.135, 142, 220);
-    const titleBarH = titleBarHForFont * 0.8;
+    const titleBarH = titleBarHForFont * frameAbs('titleBarScale');
     const rowHForFont = titleBarHForFont/2;
     const rowH = titleBarH/2, colW = contentW/2;
     const tbCells = [
@@ -7916,46 +8526,59 @@
       { r:1, c:0, label:'조사위치', value: d.surveyLocation||'' },
       { r:1, c:1, label:'구조형식', value: structureType },
     ];
-    const badgeW = clamp(colW*0.22, 102, 178);
-    // badgeH(및 이로부터 파생되는 라벨·값 글자 크기)는 표를 줄이기 전 높이(rowHForFont) 기준으로
-    // 고정한다 — 그래야 표 높이만 0.8배로 줄고 글자 크기는 그대로 유지된다.
-    const badgeH = clamp(rowHForFont*0.52, 35, 62);
     const badgeMarginX = clamp(colW*0.035, 9, 20);
-    const titleFontScale = 1.43; // 도곽 상단 표제란 글자 크기(라벨/값) — 1.1배였던 것을 다시 1.3배 키워 총 1.43배
-    const labelFont = `700 ${Math.round(clamp(badgeH*0.42,13,22)*titleFontScale)}px system-ui, -apple-system, "Segoe UI", sans-serif`;
-    const valueFont = `600 ${Math.round(clamp(badgeH*0.46,14,23)*titleFontScale)}px system-ui, -apple-system, "Segoe UI", sans-serif`;
+    // 배지 높이의 "1배" 기준은 표를 줄이기 전 높이(rowHForFont)에서 잡는다 — 그래야 표 높이만
+    // 줄이고 글자 크기는 그대로 두는 조절이 가능하다.
+    const badgeHBase = clamp(rowHForFont*0.52, 35, 62);
+    const TB_FONT_BASE_SCALE = 1.43; // 예전에 titleFontScale 로 박혀 있던 값 = 글자 크기 1배
+    // 표제(라벨)와 표 내용(값)은 같은 크기·같은 굵기다. 굵게 하지 않는다 — 테두리를 가늘게 한
+    // 만큼 글자도 함께 가늘어야 도면이 정갈해 보인다.
+    // 예전에는 여기에 배지 높이로 만든 상한(badgeH*0.62)이 있어서 「글자 크기」를 1.1 남짓 위로
+    // 올려도 글자가 더 커지지 않고 멈췄다. 상한을 없애고, 대신 글자에 맞춰 배지가 커지게 한다 —
+    // 슬라이더를 올린 만큼 글자가 실제로 커진다.
+    const tbFontPx = Math.max(9, Math.round(
+      clamp(badgeHBase*0.44, 13.5, 22.5) * TB_FONT_BASE_SCALE * flFont));
+    const tbFont = `400 ${tbFontPx}px system-ui, -apple-system, "Segoe UI", sans-serif`;
+    // 배지는 글자를 담는 그릇이라 글자가 커지면 함께 커진다. 다만 줄어든 칸(rowH) 밖으로는 나가지 않게 조인다.
+    const badgeH = Math.min(Math.max(badgeHBase, tbFontPx*1.55), rowH*0.86);
+    // 라벨(네 글자)이 배지 밖으로 삐져나오지 않도록 실제 글자 폭을 재서 폭도 함께 넓힌다.
+    const badgeW = (()=>{
+      ctx.save(); ctx.font = tbFont;
+      const labelW = tbCells.reduce((mx,c)=>Math.max(mx, ctx.measureText(c.label).width), 0);
+      ctx.restore();
+      return Math.min(Math.max(clamp(colW*0.22, 102, 178), labelW + tbFontPx*1.5), colW*0.5);
+    })();
 
     // 용역명·구분(1행) / 조사위치·구조형식(2행)을 나누던 세로 중앙선은 없앤다(가로 구분선만 유지) —
     // 각 행은 라벨 배지로 이미 항목이 구분되므로, 세로선까지 있으면 표가 불필요하게 촘촘해 보였다.
-    ctx.strokeStyle = '#000000'; ctx.lineWidth = 2.2;
-    ctx.strokeRect(contentMarginSide+1.1, contentMarginTop+1.1, contentW-2.2, titleBarH-2.2);
-    ctx.lineWidth = 1.4;
-    ctx.beginPath(); ctx.moveTo(contentMarginSide, contentMarginTop+rowH); ctx.lineTo(contentMarginSide+contentW, contentMarginTop+rowH); ctx.stroke();
+    ctx.strokeStyle = '#000000'; ctx.lineWidth = lwTb;
+    ctx.strokeRect(contentMarginLeft+lwTb/2, contentMarginTop+lwTb/2, contentW-lwTb, titleBarH-lwTb);
+    ctx.lineWidth = lwDiv;
+    ctx.beginPath(); ctx.moveTo(contentMarginLeft, contentMarginTop+rowH); ctx.lineTo(contentMarginLeft+contentW, contentMarginTop+rowH); ctx.stroke();
 
     tbCells.forEach(cell=>{
-      const cellX = contentMarginSide + cell.c*colW;
+      const cellX = contentMarginLeft + cell.c*colW;
       const cellY = contentMarginTop + cell.r*rowH;
       const badgeX = cellX + badgeMarginX;
       const badgeY = cellY + (rowH-badgeH)/2;
       roundedRectXYWH(ctx, badgeX, badgeY, badgeW, badgeH, 8);
       ctx.fillStyle = '#ffffff'; ctx.fill();
-      ctx.strokeStyle = '#000000'; ctx.lineWidth = 1.6; ctx.stroke();
-      ctx.fillStyle = '#0b0b0b'; ctx.font = labelFont;
+      ctx.strokeStyle = '#000000'; ctx.lineWidth = lwBadge; ctx.stroke();
+      ctx.fillStyle = '#0b0b0b'; ctx.font = tbFont;
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillText(cell.label, badgeX+badgeW/2, badgeY+badgeH/2+1);
+      ctx.fillText(cell.label, badgeX+badgeW/2, badgeY+badgeH/2 + inkCenterShift(ctx, cell.label, cell.label, 0, tbFontPx));
 
       const valueX0 = badgeX + badgeW + clamp(colW*0.03,10,22);
       const valueMaxW = Math.max(20, cellX+colW - valueX0 - badgeMarginX);
-      ctx.font = valueFont; ctx.fillStyle = '#0b0b0b';
+      ctx.font = tbFont; ctx.fillStyle = '#0b0b0b';
       ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
       const lines = wrapText(ctx, cell.value || '-', valueMaxW).slice(0,2);
-      if(lines.length<=1){
-        ctx.fillText(lines[0]||'-', valueX0, cellY+rowH/2);
-      } else {
-        const lh = Math.round(clamp(badgeH*0.52,20,34));
-        const startY = cellY+rowH/2 - lh*(lines.length-1)/2;
-        lines.forEach((ln,li)=> ctx.fillText(ln, valueX0, startY+li*lh));
-      }
+      if(lines.length===0) lines.push('-');
+      const lh = Math.round(tbFontPx*1.3);
+      // 한 줄이든 두 줄이든 "글자 덩어리의 한가운데"를 칸 한가운데에 맞춘다(inkCenterShift 설명 참고).
+      const startY = cellY + rowH/2
+        + inkCenterShift(ctx, lines[0], lines[lines.length-1], lh*(lines.length-1), tbFontPx);
+      lines.forEach((ln,li)=> ctx.fillText(ln, valueX0, startY+li*lh));
     });
 
     // ---- 도면을 놓을 영역. 범례(NOTE)는 이 영역 "위에 겹쳐" 그린다.
@@ -7972,63 +8595,77 @@
     const availH = Math.max(10, contentAreaH - imageMargin*2);
     // 페이지가 원본 도면보다 넓어도(작은 이미지를 인쇄용 최소 크기로 맞추는 경우 등) 원본 해상도 이상으로
     // 확대하지 않는다 — 화질이 흐려지거나 깨지는 것을 막기 위함. 원본보다 페이지가 크면 남는 공간은 여백이 된다.
-    const scale = Math.min(availW/w, availH/h, 1);
+    // 여기에 도면별 「이미지 크기」(d.imgScale, 미리보기의 슬라이더)를 곱한다 — 100%가 지금까지의 배치다.
+    const scale = Math.min(availW/w, availH/h, 1) * imgScaleFor(d);
     const drawW = w*scale, drawH = h*scale;
-    const drawX = contentMarginSide + imageMargin + (availW-drawW)/2;
-    const drawY = contentY0 + imageMargin + Math.max(0, (availH-drawH)/2);
+    const drawX = contentMarginLeft + imageMargin + (availW-drawW)/2;
+    const drawY = contentY0 + imageMargin + (availH-drawH)/2;
+    // 100%를 넘겨 키우면 도면이 배치 영역보다 커진다. 표제란이나 테두리를 침범하지 않도록 도면·
+    // 스케치·마커는 도면 배치 영역 안으로 잘라서 그린다(범례와 도면 제목은 잘리면 안 되므로 이 밖에서 그린다).
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(contentMarginLeft, contentY0, contentW, contentAreaH);
+    ctx.clip();
     ctx.drawImage(d.imgEl, drawX, drawY, drawW, drawH);
-    // 도곽 안에 축소 배치된 도면 위에 그려야 하므로 오프셋을 넘긴다(마커도 아래에서 같은 기준으로 그린다).
+    // 도곽 안에 축소 배치된 도면 위에 그려야 하므로 오프셋을 넘긴다(마커도 같은 기준으로 그린다).
     drawSketch(ctx, d, drawX, drawY, drawW, drawH);
-    const r = markerRadiusNatural(d) * scale;
-    d.markers.forEach((m, idx)=>{
-      // drawMarkerDispatch는 xPct/yPct·rectXPct 등 "도면 대비 %" 좌표를 그대로 쓰므로,
-      // 실제 도면이 그려진 (drawX,drawY,drawW,drawH) 영역 기준으로 좌표를 다시 매핑해 그린다.
-      const type = getType(m.typeKey);
-      if(type.endStyle === 'rect'){
-        const rect = markerRectPx(m, drawW, drawH);
-        drawAreaMarker(ctx, type, drawX+rect.x, drawY+rect.y, rect.w, rect.h,
-          drawX+m.xPct/100*drawW, drawY+m.yPct/100*drawH, r, formatMarkerLabel(m, idx, d), false, m.numRot||0, m.rectAngle||0);
-      } else {
-        const cx = drawX + m.xPct/100*drawW, cy = drawY + m.yPct/100*drawH;
-        drawMarkerWithLeader(ctx, type, cx, cy, r, m.angle||0, leaderLenForMarker(m,r), formatMarkerLabel(m, idx, d), false, m.numRot||0, m);
-      }
-    });
-    // ---- 범례(NOTE) — 도면이 실제로 놓인 영역(drawX/drawY/drawW/drawH) 위에 d.legendPct 좌표로
-    // 겹쳐 그린다. 좌표 기준이 작업 화면 캔버스와 완전히 같으므로, 화면에서 잡아둔 자리가 저장물에
-    // 그대로 나온다. 박스가 도면보다 커지지 않도록 상한만 도면 영역 크기로 준다.
+    drawMarkersInRect(ctx, d, drawX, drawY, drawW, drawH, markerRadiusNatural(d)*scale);
+    ctx.restore();
+    // ---- 범례(NOTE) — 자리도 크기도 "도면이 놓일 영역"(표제란 아래, 테두리 안쪽) 기준이다.
+    // 예전에는 도면이 실제로 그려진 사각형 기준이었는데, 그러면 여백·상단표 높이·이미지 크기를
+    // 조절할 때마다 도면이 커졌다 작아졌다 하면서 범례가 페이지 위에서 따라 움직였다. 범례는
+    // 도면에 붙은 것이 아니라 틀에 딸린 것이므로, 도면 제목과 같이 틀 기준으로 잡으면 도면틀을
+    // 손봐도 자리가 그대로 남는다. 자리는 d.legendFramePct(이 영역 대비 %)에 저장한다.
+    const legendArea = { x: contentMarginLeft, y: contentY0, w: contentW, h: contentAreaH };
+    d.__tbDrawArea = { x: drawX, y: drawY, w: drawW, h: drawH };
     if(isLegendEnabled()){
-      ctx.save();
-      ctx.translate(drawX, drawY);
-      const box = drawOverlayLegend(ctx, d, drawW, drawH, { refW: drawW, maxW: drawW*0.92, maxH: drawH*0.92 });
-      ctx.restore();
-      // 미리보기 창의 드래그가 쓰는 좌표는 페이지 전체 기준이므로 도면 영역 오프셋을 되돌려 더한다.
-      d.__tbLegendBox = box ? { x: box.x+drawX, y: box.y+drawY, w: box.w, h: box.h } : null;
+      const geo = overlayLegendGeometryCapped(ctx, d, legendArea.w, legendArea.w*0.92, legendArea.h*0.92);
+      if(geo){
+        const pct = legendFramePctFor(d, legendArea, geo);
+        const box = drawOverlayLegend(ctx, d, legendArea.w, legendArea.h, {
+          refW: legendArea.w, maxW: legendArea.w*0.92, maxH: legendArea.h*0.92,
+          anchor: 'fixed',
+          x: legendArea.x + pct.x/100*legendArea.w,
+          y: legendArea.y + pct.y/100*legendArea.h });
+        d.__tbLegendBox = box;
+      } else {
+        d.__tbLegendBox = null;
+      }
     } else {
       d.__tbLegendBox = null;
     }
-    d.__tbDrawArea = { x: drawX, y: drawY, w: drawW, h: drawH };
+    // 미리보기의 드래그가 쓰는 좌표 기준 — 어느 쪽 필드에 남길지까지 그리는 쪽이 정해 준다.
+    d.__tbLegendAnchor = { area: legendArea, field: 'legendFramePct' };
 
-    // ---- 5-4: 도곽 좌측 하단에 도면 제목. 도면 제목을 비워두면 defaultDocTitle()이 활성 프리셋
-    // 이름으로 채운다. (방위 심볼은 사용자 요청으로 제거함 — drawOrientationSymbol()은 더 이상
-    // 호출되지 않지만 함수 자체는 남겨뒀다, 필요해지면 다시 붙이면 됨.)
+    // ---- 도곽 아랫줄의 도면 제목. 비워두면 defaultDocTitle()이 활성 프리셋 이름으로 채운다.
+    // 기본 자리는 "아랫줄의 가운데"이고, 미리보기 창에서 끌어 옮기면 docTitlePct(도곽 안쪽 기준 %)에
+    // 남는다 — %라서 여백을 바꿔도 잡아둔 자리가 그대로 따라온다.
+    // (방위 심볼은 사용자 요청으로 제거함 — drawOrientationSymbol()은 더 이상 호출되지 않지만
+    // 함수 자체는 남겨뒀다, 필요해지면 다시 붙이면 됨.)
     {
       const titleText = document.getElementById('docTitleInput').value.trim() || defaultDocTitle();
-      const titleFontPx = clamp(contentAreaH*0.032, 16, 32);
-      ctx.font = `700 ${Math.round(titleFontPx)}px system-ui, -apple-system, "Segoe UI", sans-serif`;
+      const titleFontPx = clamp(contentAreaH*0.032, 16, 32) * flFont;
+      ctx.font = `400 ${Math.round(titleFontPx)}px system-ui, -apple-system, "Segoe UI", sans-serif`;
       ctx.fillStyle = '#000000';
-      ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-      ctx.fillText(titleText, contentMarginSide, outerH - contentMarginBottom - titleFontPx/2);
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      const defY = (outerH - contentMarginBottom - titleFontPx/2 - frameRect.y) / frameRect.h * 100;
+      const pct = docTitlePct || { x: 50, y: defY };
+      const tx = frameRect.x + clamp(pct.x, 0, 100)/100*frameRect.w;
+      const ty = frameRect.y + clamp(pct.y, 0, 100)/100*frameRect.h;
+      ctx.fillText(titleText, tx, ty);
+      // 미리보기에서 이 글자를 집어 끌 수 있도록, 그리는 쪽이 그려진 자리를 남겨 둔다
+      // (범례의 d.__tbLegendBox 와 같은 방식).
+      const tw = ctx.measureText(titleText).width;
+      d.__tbTitleBox = { x: tx-tw/2-8, y: ty-titleFontPx*0.85, w: tw+16, h: titleFontPx*1.7 };
+      d.__tbFrameRect = frameRect;
     }
 
-    // ---- 외곽 굵은 테두리(도곽) — 용지 가장자리에서 비대칭 여백(위 162px, 좌·우·아래 108px)만큼
-    // 떨어뜨려서 표제란·도면·범례 전체를 감싸는 굵은 사각형 하나. 안쪽 내용물과는 항상
-    // FRAME_TO_CONTENT_GAP(32px)만큼 떨어져 있어 표가 테두리에 붙어 보이지 않는다.
+    // ---- 외곽 테두리(도곽) — 용지 가장자리에서 frameLayout 의 여백만큼 떨어뜨려, 표제란·도면·
+    // 범례 전체를 감싸는 사각형 하나. 안쪽 내용물과는 gapTop/gapBottom/gapLeft/gapRight 만큼
+    // 떨어져 있어 표가 테두리에 붙어 보이지 않는다.
     ctx.strokeStyle = '#000000';
-    ctx.lineWidth = 3;
-    ctx.strokeRect(
-      FRAME_MARGIN_SIDE, FRAME_MARGIN_TOP,
-      outerW - FRAME_MARGIN_SIDE*2, outerH - FRAME_MARGIN_TOP - FRAME_MARGIN_BOTTOM
-    );
+    ctx.lineWidth = lwFrame;
+    ctx.strokeRect(frameRect.x, frameRect.y, frameRect.w, frameRect.h);
 
     return off;
   }
@@ -8167,20 +8804,45 @@
     renumberAllDrawings({silent:true});
     const useTitleBlock = document.getElementById('titleBlockToggle').checked;
     const format = document.getElementById('exportFormatSelect').value;
-    const canvasList = drawings.map(d => useTitleBlock ? buildExportCanvasTitleBlock(d) : buildExportCanvasSimple(d));
-    if(format === 'pdf'){
-      const pageSizeKey = document.getElementById('pdfPageSizeSelect').value;
-      triggerPdfDownloadMulti(canvasList, filenameBase() + '_전체도면.pdf', pageSizeKey);
-    } else {
-      let i = 0;
+    // 도면이 많으면 캔버스를 만드는 동안 화면이 통째로 멈춘 것처럼 보인다 — 고해상도 도면 한
+    // 장을 그리는 데만도 시간이 걸리고, 그 사이에는 브라우저가 아무것도 다시 그리지 못한다.
+    // 한 장 만들 때마다 진행 상황을 적고 setTimeout(0)으로 숨을 돌려, 지금 어디까지 됐는지 보이게 한다.
+    const total = drawings.length;
+    const canvasList = [];
+    let made = 0;
+    setExportProgressText(`도면 만드는 중... (0/${total})`);
+    const savePngs = ()=>{
+      let k = 0;
       const next = ()=>{
-        if(i >= drawings.length) return;
-        triggerPngDownload(canvasList[i], drawings[i]);
-        i++;
+        if(k >= total){
+          hideExportProgress();
+          showToast(`도면 ${total}장을 저장했습니다.`);
+          return;
+        }
+        setExportProgressText(`저장하는 중... (${k+1}/${total}) ${drawings[k].name}`);
+        triggerPngDownload(canvasList[k], drawings[k]);
+        k++;
         setTimeout(next, 400);
       };
       next();
-    }
+    };
+    const buildNext = ()=>{
+      canvasList.push(useTitleBlock ? buildExportCanvasTitleBlock(drawings[made]) : buildExportCanvasSimple(drawings[made]));
+      made++;
+      setExportProgressText(`도면 만드는 중... (${made}/${total})`);
+      if(made < total){ setTimeout(buildNext, 0); return; }
+      if(format === 'pdf'){
+        // PDF는 압축까지 끝나야 파일이 떨어진다 — 그동안에도 알림을 띄워 둔다.
+        setExportProgressText(`PDF로 묶는 중... (도면 ${total}장)`);
+        const pageSizeKey = document.getElementById('pdfPageSizeSelect').value;
+        Promise.resolve(triggerPdfDownloadMulti(canvasList, filenameBase() + '_전체도면.pdf', pageSizeKey))
+          .then(()=>{ hideExportProgress(); showToast(`도면 ${total}장을 PDF 한 파일로 저장했습니다.`); })
+          .catch(()=>{ hideExportProgress(); showToast('PDF를 만들지 못했습니다.'); });
+        return;
+      }
+      savePngs();
+    };
+    setTimeout(buildNext, 0);
   }
 
   // ---------- CSV 내보내기 / 불러오기 ----------
@@ -9770,6 +10432,21 @@
     document.getElementById('siteNameInput').value = data.siteName || '';
     document.getElementById('structureTypeInput').value = data.structureType || '';
     document.getElementById('docTitleInput').value = data.docTitle || '';
+    // 도면틀 치수는 협력업체가 보낸 파일에서 올 수도 있는 값이라 그대로 믿지 않고 범위 안으로
+    // 다듬어 받는다(sanitizeFrameLayout). 없는 예전 파일(v3 이하)은 지금 설정을 그대로 둔다.
+    if(data.frameLayout){
+      // v4 이하 파일의 배수는 기준자가 달랐다 — 저장 당시의 실제 크기를 유지하도록 환산해 받는다.
+      const raw = (Number(data.version) >= 5) ? data.frameLayout : convertLegacyFrameLayout(data.frameLayout);
+      frameLayout = sanitizeFrameLayout(raw);
+      docTitlePct = sanitizeDocTitlePct(data.docTitlePct);
+      saveFrameLayout();
+      syncFrameTuneUI();
+    }
+    if(data.legendBoxStyle){
+      legendBoxStyle = sanitizeLegendBoxStyle(data.legendBoxStyle);
+      saveLegendBoxStyle();
+      syncLegendBoxStyleUI();
+    }
     drawings = [];
     activeDrawingId = null;
     selectedIds = new Set();
@@ -9830,7 +10507,9 @@
         nd.sketch = sanitizeSketch(dd.sketch);
         nd.isBlank = !!dd.isBlank;
         nd.legendPct = (dd.legendPct && typeof dd.legendPct.x==='number' && typeof dd.legendPct.y==='number') ? dd.legendPct : null;
+        nd.legendFramePct = (dd.legendFramePct && typeof dd.legendFramePct.x==='number' && typeof dd.legendFramePct.y==='number') ? dd.legendFramePct : null;
         nd.legendScale = (typeof dd.legendScale==='number' && dd.legendScale>0) ? dd.legendScale : null;
+        nd.imgScale = (typeof dd.imgScale==='number' && dd.imgScale>0) ? clamp(dd.imgScale, IMG_SCALE_RANGE[0], IMG_SCALE_RANGE[1]) : null;
         nd.presetName = dd.presetName || nd.presetName; // 없으면 buildDrawingFromImage가 넣어둔 "지금 프리셋" 유지(구버전 파일 호환)
         drawings.push(nd);
         settled++; finishIfDone();
@@ -9852,9 +10531,14 @@
       siteName: document.getElementById('siteNameInput').value,
       structureType: document.getElementById('structureTypeInput').value,
       docTitle: document.getElementById('docTitleInput').value,
+      // 도면틀 치수·제목 자리도 함께 담는다 — 같은 프로젝트를 다른 컴퓨터에서 열어도 저장되는
+      // 도면 모습이 그대로여야 하기 때문이다(localStorage는 그 컴퓨터에만 남는다).
+      frameLayout: Object.assign({}, frameLayout),
+      docTitlePct: docTitlePct ? Object.assign({}, docTitlePct) : null,
+      legendBoxStyle: Object.assign({}, legendBoxStyle),
       seriesPresetName: activePresetName,
       seriesSnapshot: DEFECT_TYPES,
-      drawings: drawings.map(d=>({ id:d.id, name:d.name, surveyLocation:d.surveyLocation||'', imgSrc:d.imgSrc, markers:d.markers, sketch:d.sketch||[], isBlank:!!d.isBlank, legendPct:d.legendPct||null, legendScale:d.legendScale||null, presetName:d.presetName||null }))
+      drawings: drawings.map(d=>({ id:d.id, name:d.name, surveyLocation:d.surveyLocation||'', imgSrc:d.imgSrc, markers:d.markers, sketch:d.sketch||[], isBlank:!!d.isBlank, legendPct:d.legendPct||null, legendFramePct:d.legendFramePct||null, legendScale:d.legendScale||null, imgScale:d.imgScale||null, presetName:d.presetName||null }))
     };
   }
 
@@ -10019,6 +10703,10 @@
       setSketchWidthMult(parseFloat(btn.getAttribute('data-sketch-width')));
     });
   });
+  document.getElementById('btnSketchTextBorder').addEventListener('click', ()=> setSketchTextBorder(!sketchTextBorder));
+  // 색 고르개는 끄는 동안 input이 계속 흘러나온다 — 그때마다 다시 그려도 부담이 크지 않고,
+  // 고르는 중에 결과가 바로 보이는 편이 색을 맞추기 쉽다.
+  document.getElementById('sketchTextBorderColor').addEventListener('input', e=> setSketchTextBorderColor(e.target.value));
   // 인출선 모양(직선/ㄱ자/ㄷ자)
   document.querySelectorAll('.leader-shape-btn').forEach(btn=>{
     btn.addEventListener('click', ()=> applyLeaderShape(btn.getAttribute('data-leader-shape')));
@@ -10160,6 +10848,51 @@
     markDirty();
     drawTbPreviewCanvas(d);
   });
+  // 이미지 크기(도면별). 100%가 지금까지의 배치이고, 100%를 넘기면 넘치는 만큼 잘린다.
+  document.getElementById('tbPreviewImgScaleSlider').addEventListener('input', e=>{
+    const d = getActiveDrawing(); if(!d) return;
+    d.imgScale = clamp(parseFloat(e.target.value) || 1, IMG_SCALE_RANGE[0], IMG_SCALE_RANGE[1]);
+    document.getElementById('tbPreviewImgScaleLabel').textContent = Math.round(d.imgScale*100);
+    markDirty();
+    drawTbPreviewCanvas(d);
+  });
+  document.getElementById('btnPvImgScaleReset').addEventListener('click', ()=>{
+    const d = getActiveDrawing(); if(!d) return;
+    d.imgScale = 1;
+    document.getElementById('tbPreviewImgScaleSlider').value = '1';
+    document.getElementById('tbPreviewImgScaleLabel').textContent = '100';
+    markDirty();
+    drawTbPreviewCanvas(d);
+  });
+  // 범례 상자 모양 — 화면에서 고른 대로 저장물에도 그대로 나온다.
+  document.getElementById('legendBgSelect').addEventListener('change', e=>{
+    legendBoxStyle = sanitizeLegendBoxStyle(Object.assign({}, legendBoxStyle, { bg: e.target.value }));
+    saveLegendBoxStyle(); markDirty();
+    refreshTbPreviewIfOpen(); renderCanvas();
+  });
+  document.getElementById('legendBorderToggle').addEventListener('change', e=>{
+    legendBoxStyle = sanitizeLegendBoxStyle(Object.assign({}, legendBoxStyle, { border: e.target.checked }));
+    saveLegendBoxStyle(); markDirty();
+    refreshTbPreviewIfOpen(); renderCanvas();
+  });
+  // 미리보기 안의 표제란 칸 — 진짜 입력칸에 옮겨 적고 input 을 흘려보내면, 자동저장·미리보기
+  // 갱신 등 원래 붙어 있던 동작이 그대로 따라온다(로직을 두 벌로 만들지 않기 위함).
+  document.getElementById('tbPvFieldsPanel').addEventListener('input', e=>{
+    const key = e.target.dataset && e.target.dataset.mirror;
+    if(!key) return;
+    const src = document.getElementById(key);
+    if(!src || src.value === e.target.value) return;
+    src.value = e.target.value;
+    src.dispatchEvent(new Event('input', { bubbles:true }));
+    src.dispatchEvent(new Event('change', { bubbles:true }));
+  });
+  document.getElementById('tbPvFieldsToggle').addEventListener('click', e=>{
+    const panel = document.getElementById('tbPvFieldsPanel');
+    const willShow = panel.style.display==='none';
+    if(willShow) syncPvFields();
+    panel.style.display = willShow ? 'flex' : 'none';
+    e.currentTarget.classList.toggle('open', willShow);
+  });
   document.getElementById('legendToggle').addEventListener('change', ()=>{
     markDirty();
     updateTbPreviewButtonVisibility();
@@ -10208,6 +10941,14 @@
     e.currentTarget.classList.toggle('open', willShow);
   });
   // 표제란 입력 — 도면틀을 켤 때만 쓰는 값이라 평소에는 접어 둔다(우측 패널이 그만큼 짧아진다).
+  // 도면틀 조절 — 평소에는 접어 둔다(미리보기 창이 그만큼 낮아져 도면이 더 크게 보인다).
+  document.getElementById('tbFrameToggle').addEventListener('click', (e)=>{
+    const panel = document.getElementById('tbFramePanel');
+    const willShow = panel.style.display==='none';
+    if(willShow) syncFrameTuneUI();
+    panel.style.display = willShow ? 'flex' : 'none';
+    e.currentTarget.classList.toggle('open', willShow);
+  });
   document.getElementById('tbFieldsToggle').addEventListener('click', (e)=>{
     const panel = document.getElementById('tbFieldsPanel');
     const willShow = panel.style.display==='none';
@@ -10377,6 +11118,7 @@
         const dxPct = (e.key==='ArrowLeft' ? -stepPx : e.key==='ArrowRight' ? stepPx : 0) / canvas.width * 100;
         const dyPct = (e.key==='ArrowUp' ? -stepPx : e.key==='ArrowDown' ? stepPx : 0) / canvas.height * 100;
         d.legendPct = { x: d.legendPct.x+dxPct, y: d.legendPct.y+dyPct };
+        d.legendFramePct = null; // 마지막으로 옮긴 쪽이 이긴다 — 도곽 쪽 자리는 여기서 다시 잡힌다
         markDirty();
         renderCanvas();
       }
@@ -10613,6 +11355,7 @@
       const dxPct = (p.x-legendDragState.startX)/w*100;
       const dyPct = (p.y-legendDragState.startY)/h*100;
       d.legendPct = { x: legendDragState.startPct.x+dxPct, y: legendDragState.startPct.y+dyPct };
+      d.legendFramePct = null; // 위와 같음 — 작업 화면에서 옮겼으면 도곽 쪽도 이 자리를 따른다
       markDirty(); // legendPct는 가벼운 메타데이터라 이미지 전용 자동저장(markImagesDirty)이 아니라 일반 저장 플래그만 세운다
       scheduleMarkerRender();
       return;
@@ -11403,10 +12146,14 @@
       siteName: document.getElementById('siteNameInput').value,
       structureType: document.getElementById('structureTypeInput').value,
       docTitle: document.getElementById('docTitleInput').value,
+      frameLayout: Object.assign({}, frameLayout),
+      docTitlePct: docTitlePct ? Object.assign({}, docTitlePct) : null,
+      legendBoxStyle: Object.assign({}, legendBoxStyle),
       seriesPresetName: activePresetName,
       seriesSnapshot: DEFECT_TYPES,
       drawings: drawings.map(d=>({
         id: d.id, name: d.name, surveyLocation: d.surveyLocation||'', legendPct: d.legendPct||null,
+        legendFramePct: d.legendFramePct||null, imgScale: d.imgScale||null,
         legendScale: d.legendScale||null, presetName: d.presetName||null,
         // 그린 선은 벡터라 이 "가벼운 메타" 쪽에 실린다 — 30초 주기 자동저장에 그대로 따라오고,
         // 무거운 이미지 저장(imagesDirty)을 건드리지 않는다.
@@ -11769,6 +12516,7 @@
   { const el = document.getElementById('buildDateLabel'); if(el) el.textContent = APP_BUILD_DATE; }
   sketchGridOn = isSketchGridStored(); // 지난번에 모눈을 켜둔 채 닫았으면 그대로 켜진 상태로 시작한다
   sketchGridDiv = storedSketchGridDiv(); // 칸 수도 지난번에 맞춰 둔 값으로 시작한다
+  loadSketchTextBoxPrefs(); // 글상자 테두리(넣을지·무슨 색)도 지난번에 맞춰 둔 값으로 시작한다
   renderGridDivUI();
   renderTypeGrid();
   renderSeriesPresetSelect();
@@ -11780,6 +12528,28 @@
   renderTable();
   isDirty = false; // 빈 프로젝트 = "저장됨" 기준선
   checkAutosaveRecovery();
+
+  // ---------- 검사용 통로 ----------
+  // 앱 전체가 즉시실행함수 안에 있어 바깥에서는 아무것도 보이지 않는다. 실제 브라우저로 도는
+  // 검사(tests/*.mjs)가 도곽 치수와 저장 결과를 직접 확인할 수 있도록 필요한 것만 내어 둔다.
+  // 다른 현장조사 앱의 __exDbg·__tiltDbg 와 같은 구실을 한다.
+  window.__markerDbg = {
+    get frameLayout(){ return frameLayout; },
+    set frameLayout(v){ frameLayout = sanitizeFrameLayout(v); },
+    get docTitlePct(){ return docTitlePct; },
+    set docTitlePct(v){ docTitlePct = sanitizeDocTitlePct(v); },
+    FRAME_LAYOUT_DEFAULT, FRAME_LAYOUT_RANGE, FRAME_BASE, frameAbs,
+    get legendBoxStyle(){ return legendBoxStyle; },
+    set legendBoxStyle(v){ legendBoxStyle = sanitizeLegendBoxStyle(v); },
+    imgScaleFor, IMG_SCALE_RANGE, PROJECT_FILE_VERSION, convertLegacyFrameLayout,
+    getActiveDrawing, saveFrameLayout, syncFrameTuneUI,
+    sketchTextMetricsNatural, sketchHitTest, textBorderOn, textBorderColor,
+    SKETCH_TEXT_BORDER_DEFAULT, fitTbPreviewCanvas,
+    get sketchTextBorder(){ return sketchTextBorder; },
+    get sketchTextBorderColor(){ return sketchTextBorderColor; },
+    setSketchTextBorder, setSketchTextBorderColor,
+    buildExportCanvasTitleBlock, buildExportCanvasSimple,
+  };
 })();
 </script>
 </body>
