@@ -451,7 +451,18 @@
     flex:1 1 340px;min-width:0;
   }
   .mode-hint b{color:var(--signal);font-weight:700;}
-  #cropActions{display:none;align-items:center;gap:6px;}
+  #cropActions{display:none;align-items:center;gap:6px;flex-wrap:wrap;}
+  .crop-ratio{display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--text-secondary);white-space:nowrap;}
+  .crop-ratio select{font-size:12.5px;padding:5px 6px;border-radius:6px;border:1px solid var(--gridline);}
+  #cropRatioCustom{align-items:center;gap:3px;font-size:12px;color:var(--text-secondary);}
+  /* 숫자 칸에 type=number 를 쓰지 않는다 — 스핀 단추와 방향키 값 변경이 끼어든다.
+     inputmode="decimal" 로 두고 숫자가 아닌 글자는 걸러낸다(다른 조사 앱들과 같은 약속). */
+  #cropRatioCustom input{width:46px;text-align:center;font:inherit;font-size:12px;padding:5px 4px;
+    border:1px solid var(--gridline);border-radius:6px;background:var(--surface-1);color:var(--text-primary);}
+  #cropRatioCustom input:focus{outline:2px solid var(--accent);outline-offset:-2px;}
+  #btnCropRatioSwap{padding:5px 8px;}
+  body.layout-tablet #cropRatioCustom input{width:60px;min-height:40px;}
+  body.layout-tablet .crop-ratio select{min-height:40px;}
 
   /* ────────────────────────────────────────────────────────────────────────────
      도면이 아직 없을 때 — 화면이 한 가지만 말하게 한다.
@@ -1163,6 +1174,7 @@
               <li>마우스 휠: 커서 위치 기준 확대/축소 · 화면 이동은 Space+드래그 / 우클릭 드래그 / 휠 버튼 드래그</li>
               <li>도면을 추가하면 자동으로 화면에 맞춰집니다. 언제든 "화면 맞춤"(F)으로 되돌릴 수 있습니다</li>
               <li>배율 고르기·자르기·좌우회전·좌표안내·아이콘 크기는 도구줄의 <b>「보기·편집 ▾」</b> 안에 있습니다 — 회전과 자르기도 실행취소됩니다(이미지 작업은 최근 8회까지)</li>
+              <li><b>자르기의 「비율」</b>: 1:1·4:3·16:9·A4 가로/세로 중에서 고르거나 「직접 입력…」으로 원하는 값을 넣으면, 어느 쪽으로 끌어도 그 비율의 영역만 잡히고 저장되는 그림도 정확히 그 비율이 됩니다(<b>⇄</b>로 가로·세로를 맞바꾸고, <b>Alt</b>를 누른 채 끌면 이번만 비율을 무시합니다). 고른 비율은 다음에 열 때도 그대로 남습니다</li>
               <li>태블릿: 손가락 1개로 그리기·이동·선택, 2개로 핀치 확대/축소</li>
               <li>화면이 좁으면 좌우 목록이 자동으로 서랍(edge tab)으로 바뀝니다. 상단 "태블릿 모드" 버튼으로 수동 전환 가능</li>
             </ul>
@@ -1233,6 +1245,29 @@
           <!-- 자르기를 켜면 나타나는 적용/취소는 메뉴 밖(줄 위)에 둔다 — 메뉴는 자르기를 누르는 순간
                닫히므로, 그 안에 있으면 적용할 방법이 보이지 않는다. -->
           <span id="cropActions">
+            <!-- 비율 고정은 「자르기 적용」 앞에 둔다 — 영역을 잡기 "전에" 정하는 값이라, 읽는 순서와
+                 쓰는 순서가 같아야 한다. 고른 비율은 다음에 열 때도 그대로 이어진다. -->
+            <label class="crop-ratio" title="잘라낸 그림의 가로:세로를 고정합니다. 고정하면 어느 쪽으로 끌어도 그 비율의 상자만 잡히고, 「자르기 적용」으로 저장되는 그림도 정확히 그 비율이 됩니다. Alt를 누른 채 끌면 이번만 비율을 무시합니다.">비율
+              <select id="cropRatioSelect">
+                <option value="free">자유</option>
+                <option value="1:1">1 : 1 (정사각)</option>
+                <option value="4:3">4 : 3</option>
+                <option value="3:4">3 : 4</option>
+                <option value="3:2">3 : 2</option>
+                <option value="2:3">2 : 3</option>
+                <option value="16:9">16 : 9</option>
+                <option value="9:16">9 : 16</option>
+                <option value="a4l">A4 가로 (297 : 210)</option>
+                <option value="a4p">A4 세로 (210 : 297)</option>
+                <option value="custom">직접 입력…</option>
+              </select>
+            </label>
+            <span id="cropRatioCustom" style="display:none;">
+              <input type="text" id="cropRatioW" inputmode="decimal" maxlength="7" placeholder="가로" title="가로 비율" />
+              <span>:</span>
+              <input type="text" id="cropRatioH" inputmode="decimal" maxlength="7" placeholder="세로" title="세로 비율" />
+            </span>
+            <button type="button" id="btnCropRatioSwap" class="tool" style="display:none;" title="가로와 세로 비율을 서로 바꿉니다 (예: 4:3 → 3:4)">⇄ 가로·세로</button>
             <button class="primary" id="btnCropApply">자르기 적용</button>
             <button id="btnCropCancel" class="tool">취소</button>
           </span>
@@ -2432,6 +2467,23 @@
   let pendingAction = null; // {mode:'move'|'rotate'|'create'|'rubberband'|'crop', hitId, startX, startY, moved}
   let cropMode = false;
   let cropRect = null; // {x,y,w,h} in canvas backing-px
+  // 자르기 비율 고정. 0 = 자유. 값은 "잘라낸 원본 그림"의 가로:세로이지 화면 위 상자의 비율이 아니다
+  // (화면 캔버스는 원본과 가로·세로 배율이 미세하게 다를 수 있다 — cropRatioCanvas 참고).
+  let cropRatioW = 0, cropRatioH = 0;
+  let cropRatioCustom = false; // 「직접 입력…」을 고른 상태인지 — 값이 프리셋과 같아져도 칸을 닫지 않기 위해
+  const CROP_RATIO_STORE_KEY = 'defectMarkerCropRatio_v1';
+  const CROP_RATIOS = [
+    { key:'free', w:0,   h:0   },
+    { key:'1:1',  w:1,   h:1   },
+    { key:'4:3',  w:4,   h:3   },
+    { key:'3:4',  w:3,   h:4   },
+    { key:'3:2',  w:3,   h:2   },
+    { key:'2:3',  w:2,   h:3   },
+    { key:'16:9', w:16,  h:9   },
+    { key:'9:16', w:9,   h:16  },
+    { key:'a4l',  w:297, h:210 },
+    { key:'a4p',  w:210, h:297 },
+  ];
   let moveMode = false; // true = 이동 모드 (마커 이동 전용, 빈 곳 클릭/드래그는 아무 동작 없음)
   let selectMode = false; // true = 선택 모드 (빈 곳 드래그 = 러버밴드 다중 선택)
   let eraseMode = false; // true = 지우개 모드 (마커 클릭 삭제 + 도면 위 드래그는 흰색 브러시)
@@ -5656,11 +5708,7 @@
   function drawInteractionOverlay(ctx, w, h){
     if(cropMode){
       let rect = cropRect;
-      if(pendingAction && pendingAction.mode==='crop'){
-        const x0=Math.min(pendingAction.startX,pendingAction.curX), x1=Math.max(pendingAction.startX,pendingAction.curX);
-        const y0=Math.min(pendingAction.startY,pendingAction.curY), y1=Math.max(pendingAction.startY,pendingAction.curY);
-        rect = {x:x0,y:y0,w:x1-x0,h:y1-y0};
-      }
+      if(pendingAction && pendingAction.mode==='crop') rect = cropRectFromAction(pendingAction);
       ctx.save();
       ctx.fillStyle = 'rgba(11,11,11,0.45)';
       if(rect && rect.w>2 && rect.h>2){
@@ -5671,7 +5719,13 @@
         ctx.strokeStyle = '#ffffff'; ctx.lineWidth=1.5; ctx.setLineDash([6,4]);
         ctx.strokeRect(rect.x+0.5, rect.y+0.5, rect.w, rect.h);
         ctx.setLineDash([]);
-        const label = `${Math.round(rect.w)} × ${Math.round(rect.h)} px`;
+        // 여기 적히는 수는 "저장될 그림의 크기"여야 한다. 화면 캔버스의 픽셀 수를 그대로 적으면
+        // 화면 배율·devicePixelRatio가 곱해진 값이라 실제 결과와 다른 수가 보인다.
+        const dNow = getActiveDrawing();
+        const rw = dNow ? Math.round(rect.w * dNow.naturalW / w) : Math.round(rect.w);
+        const rh = dNow ? Math.round(rect.h * dNow.naturalH / h) : Math.round(rect.h);
+        const locked = cropRatioValue() && !(pendingAction && pendingAction.mode==='crop' && pendingAction.alt);
+        const label = `${rw} × ${rh} px` + (locked ? `   ${cropRatioText()} 고정` : '');
         ctx.font = '600 12px system-ui, -apple-system, sans-serif';
         const tw = ctx.measureText(label).width;
         const ly = Math.max(0, rect.y-20);
@@ -5684,7 +5738,9 @@
         ctx.fillRect(0,0,w,h);
         ctx.fillStyle='#fff'; ctx.font='600 14px system-ui, -apple-system, sans-serif';
         ctx.textAlign='center'; ctx.textBaseline='middle';
-        ctx.fillText('잘라낼 영역을 드래그로 지정하세요', w/2, h/2);
+        ctx.fillText(cropRatioValue()
+          ? `잘라낼 영역을 드래그로 지정하세요 — ${cropRatioText()} 비율로 고정됩니다`
+          : '잘라낼 영역을 드래그로 지정하세요', w/2, h/2);
       }
       ctx.restore();
       return;
@@ -7753,6 +7809,15 @@
   function updateModeHint(){
     const hint = document.getElementById('modeHint');
     if(!hint) return;
+    // 자르기를 맨 앞에 둔다 — 자르기로 들어서면 다른 모드는 모두 꺼지므로 아래 갈래에 걸릴 일이 없고,
+    // 그동안 마커 유형 안내가 떠 있으면 지금 무엇을 하는 중인지 화면 어디에도 적혀 있지 않게 된다.
+    if(cropMode){
+      hint.innerHTML = '<b>자르기 모드</b> (Shift+C) — 남길 영역을 드래그로 지정하고 <b>Enter</b> 또는 「자르기 적용」 · <b>Esc</b> 취소'
+        + (cropRatioValue()
+            ? ' · 지금 <b>' + escapeHTML(cropRatioText()) + '</b> 비율로 고정 (<b>Alt</b>: 이번만 비율 무시)'
+            : ' · 비율은 <b>자유</b> — 도구줄의 「비율」에서 고정할 수 있습니다');
+      return;
+    }
     if(sketchTool){
       const guide = {
         line:  '드래그로 벽선을 긋습니다. <b>Shift</b>: 수평·수직·45° 고정 · 다른 선의 끝점 근처에서 시작·종료하면 자동으로 이어붙습니다',
@@ -8202,6 +8267,107 @@
   });
 
   // ---------- 이미지 자르기(크롭) ----------
+  // ── 비율 고정 ──────────────────────────────────────────────────────────────
+  // 비율은 "잘라낸 원본 그림"의 가로:세로다. 화면 위 상자의 비율을 그대로 쓰면 안 된다 —
+  // 화면 캔버스 크기는 baseW/baseH(반올림·최소값이 걸린 값)에 화면 배율·devicePixelRatio를 곱한
+  // 것이라, 원본 대비 가로 배율과 세로 배율이 미세하게 다를 수 있기 때문이다. 여기서 그 차이를
+  // 미리 곱해 두면, 화면에서 잡은 상자가 곧 원본에서도 같은 비율이 된다.
+  function cropRatioValue(){
+    return (cropRatioW>0 && cropRatioH>0) ? cropRatioW/cropRatioH : 0;
+  }
+  function cropRatioCanvas(){
+    const R = cropRatioValue();
+    if(!R) return 0;
+    const d = getActiveDrawing();
+    const canvas = document.getElementById('mainCanvas');
+    if(!d || !d.naturalW || !d.naturalH || !canvas || !canvas.width || !canvas.height) return R;
+    const sx = canvas.width/d.naturalW, sy = canvas.height/d.naturalH;
+    return R * sx/sy;
+  }
+  function cropRatioText(){
+    const trim = n => String(Math.round(n*1000)/1000);
+    return cropRatioValue() ? (trim(cropRatioW) + ' : ' + trim(cropRatioH)) : '자유';
+  }
+  // 끄는 동안 상자를 만드는 곳은 딱 여기 하나다 — 화면에 보이는 점선과 손을 뗐을 때 확정되는 영역이
+  // 서로 다른 식으로 계산되면, 보이는 것과 잘리는 것이 어긋난다.
+  function cropRectFromAction(a){
+    const x0=Math.min(a.startX,a.curX), x1=Math.max(a.startX,a.curX);
+    const y0=Math.min(a.startY,a.curY), y1=Math.max(a.startY,a.curY);
+    const free = {x:x0, y:y0, w:x1-x0, h:y1-y0};
+    const Rc = a.alt ? 0 : cropRatioCanvas();   // Alt: 이번 한 번만 비율 무시(그리기의 모눈과 같은 약속)
+    if(!Rc) return free;
+    const canvas = document.getElementById('mainCanvas');
+    const cw = canvas ? canvas.width : 0, ch = canvas ? canvas.height : 0;
+    const right = a.curX >= a.startX, down = a.curY >= a.startY;
+    // 시작점에서 끄는 방향으로 남은 자리. 비율을 지키면서 도면 밖으로 나가지 않게 여기에 맞춰 줄인다.
+    const availW = right ? cw - a.startX : a.startX;
+    const availH = down  ? ch - a.startY : a.startY;
+    // "더 많이 끈 쪽"이 크기를 정한다 — 가로로만 끌어도 그 비율의 상자가 곧바로 생긴다.
+    let w = Math.max(free.w, free.h*Rc);
+    w = Math.max(0, Math.min(w, availW, availH*Rc));
+    const h = w/Rc;
+    return { x: right ? a.startX : a.startX-w, y: down ? a.startY : a.startY-h, w, h };
+  }
+  // 비율을 고르는 순간 그 비율의 영역을 곧바로 잡아 준다 — 이미 잡아 둔 영역이 있으면 그 한가운데를
+  // 지키며 비율에 맞게 줄이고, 없으면 도면 전체에서 그 비율로 가능한 가장 큰 영역을 가운데에 잡는다.
+  // (고르기만 하고 아무 일도 일어나지 않으면, 비율이 걸렸는지 확인할 방법이 없다.)
+  function applyCropRatioToRect(){
+    const canvas = document.getElementById('mainCanvas');
+    const Rc = cropRatioCanvas();
+    if(!Rc || !canvas || !canvas.width || !canvas.height) return;
+    const cw = canvas.width, ch = canvas.height;
+    const base = cropRect || {x:0, y:0, w:cw, h:ch};
+    const cx = base.x + base.w/2, cy = base.y + base.h/2;
+    let w = Math.min(base.w, base.h*Rc, cw);
+    let h = w/Rc;
+    if(h > ch){ h = ch; w = h*Rc; }
+    cropRect = {
+      x: Math.min(Math.max(0, cx-w/2), cw-w),
+      y: Math.min(Math.max(0, cy-h/2), ch-h),
+      w, h
+    };
+  }
+  function setCropRatio(w, h){
+    const ok = (w>0 && h>0 && isFinite(w) && isFinite(h));
+    cropRatioW = ok ? w : 0;
+    cropRatioH = ok ? h : 0;
+    saveCropRatio();
+    syncCropRatioUI();
+    if(cropMode){ applyCropRatioToRect(); renderCanvas(); }
+    updateModeHint();
+  }
+  function syncCropRatioUI(){
+    const sel = document.getElementById('cropRatioSelect');
+    const cus = document.getElementById('cropRatioCustom');
+    const swap = document.getElementById('btnCropRatioSwap');
+    if(!sel || !cus || !swap) return;
+    const R = cropRatioValue();
+    const hit = R ? CROP_RATIOS.find(r=> r.w>0 && Math.abs(r.w/r.h - R) < 1e-9) : null;
+    const key = cropRatioCustom ? 'custom' : (R ? (hit ? hit.key : 'custom') : 'free');
+    if(key === 'custom') cropRatioCustom = true;
+    sel.value = key;
+    cus.style.display = (key === 'custom') ? 'inline-flex' : 'none';
+    swap.style.display = R ? '' : 'none';
+    const wi = document.getElementById('cropRatioW'), hi = document.getElementById('cropRatioH');
+    const trim = n => n>0 ? String(Math.round(n*1000)/1000) : '';
+    // 지금 치고 있는 칸은 건드리지 않는다 — 값을 되돌려 쓰면 글자를 칠 수가 없다.
+    if(wi && document.activeElement !== wi) wi.value = trim(cropRatioW);
+    if(hi && document.activeElement !== hi) hi.value = trim(cropRatioH);
+  }
+  function saveCropRatio(){
+    try{ localStorage.setItem(CROP_RATIO_STORE_KEY, cropRatioValue() ? (cropRatioW+':'+cropRatioH) : 'free'); }catch(err){}
+  }
+  function loadCropRatio(){
+    try{
+      const v = localStorage.getItem(CROP_RATIO_STORE_KEY);
+      if(!v || v === 'free') return;
+      const m = /^([0-9]*\.?[0-9]+):([0-9]*\.?[0-9]+)$/.exec(v);
+      if(!m) return;
+      const w = parseFloat(m[1]), h = parseFloat(m[2]);
+      if(w>0 && h>0 && w<100000 && h<100000){ cropRatioW = w; cropRatioH = h; }
+    }catch(err){}
+  }
+
   function enterCropMode(){
     const d = getActiveDrawing();
     if(!d){ showToast('먼저 도면 이미지를 추가해주세요.'); return; }
@@ -8214,13 +8380,19 @@
     document.getElementById('btnCropMode').style.display='none';
     document.getElementById('cropActions').style.display='inline-flex';
     document.getElementById('zoomSelect').disabled = true;
+    syncCropRatioUI();
+    applyCropRatioToRect(); // 비율이 걸려 있으면 들어서자마자 그 비율의 최대 영역을 보여준다
+    updateModeHint();
     renderCanvas();
   }
   function exitCropMode(){
+    // 고른 비율은 지우지 않는다 — 도면을 여러 장 같은 비율로 잘라내는 일이 잦아, 나갈 때마다
+    // 자유로 돌아가면 매번 다시 골라야 한다(다음에 열 때까지 남는다).
     cropMode = false; cropRect = null; pendingAction = null;
     document.getElementById('btnCropMode').style.display='';
     document.getElementById('cropActions').style.display='none';
     document.getElementById('zoomSelect').disabled = false;
+    updateModeHint();
     renderCanvas();
   }
   function performCropApply(){
@@ -8228,8 +8400,20 @@
     if(!d || !cropRect){ showToast('먼저 도면 위를 드래그해 자를 영역을 지정해주세요.'); return; }
     const canvas = document.getElementById('mainCanvas');
     const scaleX = d.naturalW/canvas.width, scaleY = d.naturalH/canvas.height;
-    const nx = Math.round(cropRect.x*scaleX), ny = Math.round(cropRect.y*scaleY);
-    const nw = Math.round(cropRect.w*scaleX), nh = Math.round(cropRect.h*scaleY);
+    let nx = Math.round(cropRect.x*scaleX), ny = Math.round(cropRect.y*scaleY);
+    let nw = Math.round(cropRect.w*scaleX), nh = Math.round(cropRect.h*scaleY);
+    nx = Math.max(0, Math.min(nx, d.naturalW-1));
+    ny = Math.max(0, Math.min(ny, d.naturalH-1));
+    nw = Math.min(nw, d.naturalW-nx);
+    nh = Math.min(nh, d.naturalH-ny);
+    const R = cropRatioValue();
+    if(R){
+      // 가로·세로를 따로 반올림하면 비율이 1px씩 어긋난다 — 비율을 고정했다면 그 1px이 곧 어긋남이므로,
+      // 가로를 기준으로 세로를 다시 계산해 저장되는 그림이 정확히 그 비율이 되게 한다.
+      nh = Math.max(1, Math.round(nw/R));
+      if(ny+nh > d.naturalH){ nh = d.naturalH-ny; nw = Math.max(1, Math.round(nh*R)); }
+      if(nx+nw > d.naturalW){ nw = d.naturalW-nx; nh = Math.max(1, Math.round(nw/R)); }
+    }
     if(nw<10 || nh<10){ showToast('잘라낼 영역이 너무 작습니다.'); return; }
     // 확인 알림 없이 바로 자른다(되돌리고 싶으면 헤더의 "실행취소"로 언제든 복구 가능).
     pushImageUndo(d);
@@ -10768,6 +10952,34 @@
   document.getElementById('btnCropMode').addEventListener('click', ()=> { if(cropMode) exitCropMode(); else enterCropMode(); });
   document.getElementById('btnCropCancel').addEventListener('click', exitCropMode);
   document.getElementById('btnCropApply').addEventListener('click', performCropApply);
+  document.getElementById('cropRatioSelect').addEventListener('change', e=>{
+    const v = e.target.value;
+    if(v === 'custom'){
+      cropRatioCustom = true;
+      syncCropRatioUI();
+      const wi = document.getElementById('cropRatioW');
+      if(wi){ wi.focus(); wi.select(); }
+      return;
+    }
+    cropRatioCustom = false;
+    const p = CROP_RATIOS.find(r=> r.key === v);
+    setCropRatio(p ? p.w : 0, p ? p.h : 0);
+  });
+  ['cropRatioW','cropRatioH'].forEach(id=>{
+    const el = document.getElementById(id);
+    el.addEventListener('input', ()=>{
+      // 숫자가 아닌 글자는 그 자리에서 걸러낸다(type=number를 쓰지 않는 대신).
+      const cleaned = el.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');
+      if(cleaned !== el.value) el.value = cleaned;
+      const w = parseFloat(document.getElementById('cropRatioW').value);
+      const h = parseFloat(document.getElementById('cropRatioH').value);
+      // 한쪽만 쳤을 때는 아직 비율이 아니다 — 둘 다 채워지기 전에는 건드리지 않는다.
+      if(w>0 && h>0) setCropRatio(w, h);
+    });
+  });
+  document.getElementById('btnCropRatioSwap').addEventListener('click', ()=>{
+    if(cropRatioValue()) setCropRatio(cropRatioH, cropRatioW);
+  });
 
   document.getElementById('btnThemeToggle').addEventListener('click', ()=>{
     applyTheme(isDarkNow() ? 'light' : 'dark');
@@ -11240,7 +11452,7 @@
     const p = canvasPointFromEvent(e);
 
     if(cropMode){
-      pendingAction = { mode:'crop', startX:p.x, startY:p.y, curX:p.x, curY:p.y };
+      pendingAction = { mode:'crop', startX:p.x, startY:p.y, curX:p.x, curY:p.y, alt:!!e.altKey };
       return;
     }
 
@@ -11422,6 +11634,7 @@
 
     if(pendingAction.mode==='crop'){
       pendingAction.curX = p.x; pendingAction.curY = p.y;
+      pendingAction.alt = !!e.altKey; // 끄는 도중에 눌렀다 떼도 곧바로 반영된다
       scheduleMarkerRender();
       return;
     }
@@ -11572,9 +11785,8 @@
     }
     if(d){
       if(action.mode==='crop'){
-        const x0=Math.min(action.startX,action.curX), x1=Math.max(action.startX,action.curX);
-        const y0=Math.min(action.startY,action.curY), y1=Math.max(action.startY,action.curY);
-        if(x1-x0>15 && y1-y0>15){ cropRect = {x:x0,y:y0,w:x1-x0,h:y1-y0}; }
+        const r = cropRectFromAction(action);
+        if(r.w>15 && r.h>15){ cropRect = r; }
         renderCanvas();
       } else if(action.mode==='rotate'){
         renderTable();
@@ -12517,6 +12729,7 @@
   sketchGridOn = isSketchGridStored(); // 지난번에 모눈을 켜둔 채 닫았으면 그대로 켜진 상태로 시작한다
   sketchGridDiv = storedSketchGridDiv(); // 칸 수도 지난번에 맞춰 둔 값으로 시작한다
   loadSketchTextBoxPrefs(); // 글상자 테두리(넣을지·무슨 색)도 지난번에 맞춰 둔 값으로 시작한다
+  loadCropRatio(); syncCropRatioUI(); // 자르기 비율도 지난번에 고른 값 그대로
   renderGridDivUI();
   renderTypeGrid();
   renderSeriesPresetSelect();
@@ -12549,6 +12762,12 @@
     get sketchTextBorderColor(){ return sketchTextBorderColor; },
     setSketchTextBorder, setSketchTextBorderColor,
     buildExportCanvasTitleBlock, buildExportCanvasSimple,
+    enterCropMode, exitCropMode, performCropApply, setCropRatio,
+    cropRatioValue, cropRatioCanvas, cropRatioText, cropRectFromAction, applyCropRatioToRect,
+    get cropMode(){ return cropMode; },
+    get cropRect(){ return cropRect; },
+    get cropRatioW(){ return cropRatioW; },
+    get cropRatioH(){ return cropRatioH; },
   };
 })();
 </script>
