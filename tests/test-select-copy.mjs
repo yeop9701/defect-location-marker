@@ -92,10 +92,14 @@ await tap('KeyS', 's'); await sleep(200);
 let st = await state();
 ok(st.tool === 'pick' && st.select === true, 's 하나로 통합 선택이 켜진다', st);
 ok(/선택/.test(st.badge) && /마커/.test(st.badge), '도면 위 이름표가 「선택」이라고 알린다', st.badge);
+await tap('KeyS', 's'); await sleep(150);
+ok((await state()).tool === null, '같은 키를 다시 누르면 선택이 꺼진다');
+// v는 없앴다 — 같은 일을 하는 키가 둘이면 어느 쪽이 무엇인지 설명할 길이 없고, 그리기 안에서
+// 손이 Ctrl+V(붙여넣기)와 겹쳐 헷갈렸다.
 await tap('KeyV', 'v'); await sleep(150);
-ok((await state()).tool === null, '같은 키를 다시 누르면(v도 같은 뜻) 선택이 꺼진다');
-await tap('KeyV', 'v'); await sleep(150);
-ok((await state()).tool === 'pick', '옛 키 v로도 같은 통합 선택이 켜진다');
+ok((await state()).tool === null, '옛 키 v는 이제 아무 일도 하지 않는다');
+await tap('KeyS', 's'); await sleep(150);
+ok((await state()).tool === 'pick', 's로 다시 통합 선택을 켠다');
 
 /* ── 3. 선 두 개를 긋는다 ───────────────────────────────────────────── */
 await tap('KeyL', 'l'); await sleep(150);
