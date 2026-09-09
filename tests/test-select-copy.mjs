@@ -272,24 +272,33 @@ ok(Math.abs(s3.sAng - s2.sAng) > 0.5 || Math.abs(s3.sy - s2.sy) > 0.05, 'Alt+→
 near(s3.mx, s2.mx, 0.001, 'Alt+방향키는 옮기지 않는다', { 전: s2.mx, 후: s3.mx });
 
 /* ── 14. 안내 줄은 한 줄 + 「자세히」 ────────────────────────────────── */
-const hintState = () => ev(`(()=>{const h=document.getElementById('modeHint');
-  return { text:h.textContent, more:!!h.querySelector('.hint-more'),
-    moreText: h.querySelector('.hint-more') ? h.querySelector('.hint-more').textContent : '',
-    detail:!!h.querySelector('.hint-detail'), expanded:__markerDbg.modeHintExpanded };})()`);
+// 펼친 내용은 안내 줄 안이 아니라 캔버스 위에 떠 있는 패널(#hintDetailPanel)에 그려진다 —
+// 줄 안에서 늘어나면 그만큼 도구줄이 커지고 도면이 아래로 밀리기 때문이다. 그래서 「펼쳤다」의
+// 기준은 안내 줄의 글 길이가 아니라 그 패널이 떠 있는지다.
+const hintState = () => ev(`(()=>{const h=document.getElementById('modeHintText');
+  const p=document.getElementById('hintDetailPanel'), b=document.getElementById('btnHintMore');
+  return { text:h.textContent, more:!!b && getComputedStyle(b).display!=='none',
+    moreText: b ? b.textContent : '',
+    detail: !!p && getComputedStyle(p).display!=='none' && p.textContent.trim().length>0,
+    detailLen: p ? p.textContent.trim().length : 0,
+    tbH: Math.round(document.querySelector('.toolbar2').getBoundingClientRect().height),
+    expanded:__markerDbg.modeHintExpanded };})()`);
 let hs2 = await hintState();
+const hs1 = hs2; // 접혀 있을 때의 도구줄 높이 — 펼친 뒤와 견준다
 ok(hs2.more, '안내 줄에 「자세히」 단추가 있다', hs2);
 ok(!hs2.detail && !hs2.expanded, '처음에는 접혀 있다', hs2);
 ok(hs2.text.length < 150, '접힌 안내 줄은 한 줄로 짧다', { 길이: hs2.text.length, 글: hs2.text });
-await ev(`(()=>{document.querySelector('#modeHint .hint-more').click(); return true;})()`);
+await ev(`(()=>{document.getElementById('btnHintMore').click(); return true;})()`);
 await sleep(250);
 hs2 = await hintState();
 ok(hs2.detail && hs2.expanded, '누르면 자세한 안내가 펼쳐진다', hs2);
 ok(/간단히/.test(hs2.moreText), '펼친 뒤에는 단추가 「간단히」로 바뀐다', hs2.moreText);
-ok(hs2.text.length > 150, '펼치면 전체 안내가 보인다', { 길이: hs2.text.length });
+ok(hs2.detailLen > 150, '펼치면 전체 안내가 떠 있는 패널에 보인다', { 길이: hs2.detailLen });
+ok(hs2.tbH === hs1.tbH, '펼쳐도 도구줄 높이는 그대로다(도면이 밀리지 않는다)', { 접힘: hs1.tbH, 펼침: hs2.tbH });
 // 도구를 바꿔도 펼친 상태는 이어진다(다시 그릴 때마다 접히면 읽던 중에 사라진다)
 await tap('KeyL', 'l'); await sleep(200);
 ok((await hintState()).detail, '도구를 바꿔도 펼친 상태가 이어진다');
-await ev(`(()=>{document.querySelector('#modeHint .hint-more').click(); return true;})()`);
+await ev(`(()=>{document.getElementById('btnHintMore').click(); return true;})()`);
 await sleep(200);
 ok(!(await hintState()).detail, '다시 누르면 접힌다');
 ok(await ev(`localStorage.getItem('defectMarkerHintExpanded_v1') === 'off'`), '접고 편 상태가 저장된다');
