@@ -69,7 +69,9 @@ ok(ui0.actions !== 'none', '자르기 모드에서 「자르기 적용」 줄이
 ok(ui0.sel === 'free', '비율은 처음에 「자유」다', ui0);
 ok(ui0.swap === 'none', '자유일 때는 ⇄ 단추가 숨어 있다', ui0);
 ok(ui0.custom === 'none', '「직접 입력…」 칸은 고르기 전에는 숨어 있다', ui0);
-ok(/자르기 모드/.test(ui0.hint) && /자유/.test(ui0.hint), '안내 줄이 자르기 모드와 자유 비율을 알린다', ui0.hint);
+// 안내 줄은 34단계에서 "한 줄 + 자세히 ▾"로 나뉘었다 — 비율이 자유일 때는 한 줄에 비율 이야기가
+// 없고(고정했을 때만 적힌다), 자세한 안내는 「자세히」를 눌러야 나온다.
+ok(/자르기/.test(ui0.hint) && !/비율 고정/.test(ui0.hint), '안내 줄이 자르기 모드임을 한 줄로 알린다', ui0.hint);
 
 /* ── 2. 자유일 때는 끈 그대로 잡힌다 ──────────────────────────────────── */
 let a = await ptAt(0.15, 0.20), b = await ptAt(0.75, 0.40);
@@ -119,6 +121,9 @@ ok(rc.cx + rc.cw <= rc.canvasW + 0.5 && rc.cy + rc.ch <= rc.canvasH + 0.5,
    '도면 밖까지 끌어도 영역이 도면 안에 머문다', rc);
 
 /* ── 7. Alt를 누른 채 끌면 이번만 비율을 무시한다 ─────────────────────── */
+// 잡아 둔 영역 안에서 끌면 이제 "새로 잡기"가 아니라 "옮기기"다(34단계) — 새로 끄는 동작을 보려면
+// 먼저 잡아 둔 것을 놓아야 한다. 앞의 6번이 도면 거의 전체를 잡아 두었으므로 여기서 비워 준다.
+await ev('__markerDbg.cropRect = null; __markerDbg.renderCanvas(); true');
 a = await ptAt(0.20, 0.20); b = await ptAt(0.80, 0.35);
 await drag(cdp, [a, b], { modifiers: 1 }); // 1 = Alt
 await sleep(250);
@@ -157,6 +162,14 @@ ok(await ev(`document.getElementById('cropRatioSelect').value === 'custom'`),
    '값이 프리셋과 같아져도 「직접 입력…」 칸이 닫히지 않는다');
 
 /* ── 10. 실제로 잘려 나온 그림의 비율 ────────────────────────────────── */
+// 앞의 검사들이 비율을 여러 번 갈아 끼우며 영역을 조금씩 줄여, 여기까지 오면 상자가 원본 50px
+// 남짓밖에 되지 않는다. 그만한 크기에서는 정수 픽셀로 딱 떨어지는 16:9가 아예 존재하지 않아
+// (54×30 = 1.800) 반올림 오차가 비율 자체보다 커진다 — 잘려 나온 그림의 비율을 보려는 검사이므로
+// 여기서는 넉넉한 크기로 다시 잡는다.
+await ev('__markerDbg.cropRect = null; __markerDbg.renderCanvas(); true');
+a = await ptAt(0.10, 0.12); b = await ptAt(0.85, 0.80);
+await drag(cdp, [a, b]);
+await sleep(250);
 await pick('16:9');
 await sleep(250);
 const before = await ev(RECT);

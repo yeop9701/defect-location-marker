@@ -451,6 +451,15 @@
     flex:1 1 340px;min-width:0;
   }
   .mode-hint b{color:var(--signal);font-weight:700;}
+  /* 「자세히 ▾」 — 안내 줄을 한 줄로 유지하되, 필요한 사람은 그 자리에서 전부 볼 수 있게 한다.
+     펼친 내용은 줄을 바꿔 시작해, 접었을 때와 첫 줄이 똑같아 보이도록 한다. */
+  .hint-more{font:inherit;font-size:11.5px;line-height:1.2;color:var(--signal);cursor:pointer;
+    background:transparent;border:1px solid color-mix(in srgb, var(--signal) 45%, transparent);
+    border-radius:999px;padding:1px 8px;margin-left:4px;white-space:nowrap;vertical-align:1px;}
+  .hint-more:hover{background:color-mix(in srgb, var(--signal) 14%, transparent);}
+  .hint-detail{display:block;margin-top:5px;padding-top:5px;
+    border-top:1px dashed color-mix(in srgb, var(--signal) 28%, transparent);}
+  body.layout-tablet .hint-more{font-size:12.5px;padding:3px 10px;}
   #cropActions{display:none;align-items:center;gap:6px;flex-wrap:wrap;}
   .crop-ratio{display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--text-secondary);white-space:nowrap;}
   .crop-ratio select{font-size:12.5px;padding:5px 6px;border-radius:6px;border:1px solid var(--gridline);}
@@ -461,7 +470,27 @@
     border:1px solid var(--gridline);border-radius:6px;background:var(--surface-1);color:var(--text-primary);}
   #cropRatioCustom input:focus{outline:2px solid var(--accent);outline-offset:-2px;}
   #btnCropRatioSwap{padding:5px 8px;}
+  /* 크기(px) 직접 입력 — 비율 칸과 같은 생김새를 쓴다(같은 줄에서 성격이 같은 값이라, 다르게
+     생기면 하나는 "설정", 하나는 "표시"처럼 보인다). 단위는 늘 도면 원본 픽셀이다. */
+  .crop-size{display:inline-flex;align-items:center;gap:3px;font-size:12px;color:var(--text-secondary);white-space:nowrap;}
+  .crop-size input{width:56px;text-align:center;font:inherit;font-size:12px;padding:5px 4px;
+    border:1px solid var(--gridline);border-radius:6px;background:var(--surface-1);color:var(--text-primary);}
+  .crop-size input:focus{outline:2px solid var(--accent);outline-offset:-2px;}
+  .crop-size .crop-unit{color:var(--muted);}
+  /* 모든 도면 자르기 미리보기 — 축소판 격자. 한 화면에 여러 장이 보여야 "어디가 잘리는지"를
+     장마다 눈으로 견줄 수 있다(한 장씩 넘기면 견주지 못한다). */
+  .crop-all-grid{display:grid;grid-template-columns:repeat(auto-fill, minmax(190px, 1fr));gap:10px;
+    max-height:52vh;overflow:auto;padding:2px;}
+  .crop-all-card{border:1px solid var(--gridline);border-radius:9px;padding:7px;background:var(--surface-1);
+    display:flex;flex-direction:column;gap:6px;cursor:pointer;}
+  .crop-all-card.off{opacity:0.45;}
+  .crop-all-card canvas{width:100%;height:auto;display:block;border-radius:5px;background:var(--surface-2);}
+  .crop-all-card .crop-all-name{font-size:12px;font-weight:600;display:flex;align-items:center;gap:6px;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .crop-all-card .crop-all-size{font-size:11px;color:var(--text-secondary);}
+  .crop-all-card .crop-all-size b{color:var(--accent);}
   body.layout-tablet #cropRatioCustom input{width:60px;min-height:40px;}
+  body.layout-tablet .crop-size input{width:70px;min-height:40px;}
   body.layout-tablet .crop-ratio select{min-height:40px;}
 
   /* ────────────────────────────────────────────────────────────────────────────
@@ -1175,6 +1204,11 @@
               <li>도면을 추가하면 자동으로 화면에 맞춰집니다. 언제든 "화면 맞춤"(F)으로 되돌릴 수 있습니다</li>
               <li>배율 고르기·자르기·좌우회전·좌표안내·아이콘 크기는 도구줄의 <b>「보기·편집 ▾」</b> 안에 있습니다 — 회전과 자르기도 실행취소됩니다(이미지 작업은 최근 8회까지)</li>
               <li><b>자르기의 「비율」</b>: 1:1·4:3·16:9·A4 가로/세로 중에서 고르거나 「직접 입력…」으로 원하는 값을 넣으면, 어느 쪽으로 끌어도 그 비율의 영역만 잡히고 저장되는 그림도 정확히 그 비율이 됩니다(<b>⇄</b>로 가로·세로를 맞바꾸고, <b>Alt</b>를 누른 채 끌면 이번만 비율을 무시합니다). 고른 비율은 다음에 열 때도 그대로 남습니다</li>
+              <li><b>자르기 영역 손보기</b>: 한 번 잡은 영역은 <b>상자 안을 끌어 옮기고</b>(Shift: 수평·수직으로만), <b>여덟 개 손잡이로 크기</b>를 바꿉니다(Shift: 지금 가로:세로 유지 · 비율을 걸어 두었으면 늘 그 비율). 크기는 도구줄에서 <b>px로 직접</b> 넣을 수 있고, 「가운데」로 도면 한가운데에 놓입니다</li>
+              <li><b>「새 도면으로」</b>: 지금 잡은 영역을 <b>새 도면 탭</b>으로 만들고 원본은 그대로 둡니다 — 한 장을 여러 조각으로 잘라 쓸 때, 자르고 되돌리기를 반복하지 않고 영역만 옮겨가며 계속 떠 담으면 됩니다(영역 안의 마커·그린 것도 함께 옮겨집니다). <b>「모든 도면 자르기」</b>는 올려둔 도면 전부를 같은 자리·같은 비율로 한꺼번에 자릅니다 — 누르면 <b>도면마다 어디가 잘리는지 축소판으로 먼저 보여주고</b>, 거기서 뺄 도면을 고를 수 있습니다(실행취소 한 번으로 전부 복구)</li>
+              <li><b>「선택」은 하나입니다</b> — <b>s</b>(또는 v) 한 번으로 마커와 그린 것을 같은 도구로 고릅니다. <b>Shift</b>+드래그로 곧게 옮기고, <b>Ctrl</b>(또는 Alt)+드래그로 복제하며, <b>Ctrl+C</b>/<b>Ctrl+V</b>로 그린 것을 <b>다른 도면에 붙여넣습니다</b>. <b>방향키</b>는 골라 둔 것(마커·그린 것 모두)을 1px씩 옮기고(<b>Shift</b>: 10px), <b>Alt+←/→</b>는 돌립니다(마커는 인출선 각도, 그린 것은 도형 각도)</li>
+              <li><b>안내 줄의 「자세히 ▾」</b>: 도구줄 아래 안내는 지금 무엇을 하는 중인지 한 줄만 보여주고, 눌러서 펼치면 그 모드에서 쓸 수 있는 것을 모두 보여줍니다. 펼친 상태는 다음에 열 때도 그대로 남습니다</li>
+              <li><b>그리기 도구는 바로 눌립니다</b> — w를 거치지 않고 <b>l</b>(직선)·<b>r</b>(사각형)·<b>c</b>(원)·<b>a</b>(화살표)·<b>p</b>(자유선)·<b>t</b>(글자)·<b>e</b>(선 지우개)를 누르면 그리기가 함께 켜집니다</li>
               <li>태블릿: 손가락 1개로 그리기·이동·선택, 2개로 핀치 확대/축소</li>
               <li>화면이 좁으면 좌우 목록이 자동으로 서랍(edge tab)으로 바뀝니다. 상단 "태블릿 모드" 버튼으로 수동 전환 가능</li>
             </ul>
@@ -1207,7 +1241,7 @@
       <div class="toolbar2">
         <div class="toolbar-row toolbar-row-main">
           <div class="btn-group">
-            <button id="btnSelectMode" class="tool" title="선택 모드 — 드래그 영역에 완전히 들어온 마커만 선택 (단축키 s)"><svg class="icon"><use href="#i-select"/></svg> 선택</button>
+            <button id="btnSelectMode" class="tool" title="선택 — 마커와 그린 것을 같은 도구로 고릅니다. 드래그 영역에 완전히 들어온 것만 선택되며, Shift+드래그로 곧게 옮기고 Ctrl+드래그로 복제합니다 (단축키 s)"><svg class="icon"><use href="#i-select"/></svg> 선택</button>
             <button id="btnMoveMode" class="tool" title="이동 모드 — 마커 이동 전용, 빈 곳 클릭으로는 아무 것도 생기지 않음 (단축키 m)"><svg class="icon"><use href="#i-move"/></svg> 이동</button>
             <button id="btnEraseMode" class="tool" title="지우개 모드 — 도면 원본을 지웁니다. 마커는 클릭으로 삭제, 도면 이미지는 드래그하면 흰색 브러시로 지워짐. 직접 그린 선은 그리기의 선 지우개(E)로 지웁니다 (단축키 d)"><svg class="icon"><use href="#i-eraser"/></svg> 지우개</button>
             <button id="btnSketchMode" class="tool" title="그리기 모드 — 도면 위에 직선·사각형·자유선·글자를 그립니다. 도면이 없으면 빈 도면을 만들어 현장에서 직접 그릴 수 있습니다 (단축키 w)"><svg class="icon"><use href="#i-pencil"/></svg> 그리기</button>
@@ -1268,7 +1302,20 @@
               <input type="text" id="cropRatioH" inputmode="decimal" maxlength="7" placeholder="세로" title="세로 비율" />
             </span>
             <button type="button" id="btnCropRatioSwap" class="tool" style="display:none;" title="가로와 세로 비율을 서로 바꿉니다 (예: 4:3 → 3:4)">⇄ 가로·세로</button>
+            <!-- 잡아 둔 영역의 크기를 눈이 아니라 숫자로 정하는 길. 단위는 화면 픽셀이 아니라
+                 도면 원본 픽셀이다 — 저장되는 그림의 크기가 곧 이 수다. -->
+            <span class="crop-size" title="잘라낼 영역의 크기입니다(도면 원본 픽셀 = 저장되는 그림의 크기). 값을 넣으면 잡아 둔 영역이 그 크기로 바뀝니다. 비율이 걸려 있으면 한쪽만 넣어도 나머지가 따라옵니다.">크기
+              <input type="text" id="cropSizeW" inputmode="decimal" maxlength="6" placeholder="가로" title="잘라낼 가로 (원본 px)" />
+              <span>×</span>
+              <input type="text" id="cropSizeH" inputmode="decimal" maxlength="6" placeholder="세로" title="잘라낼 세로 (원본 px)" />
+              <span class="crop-unit">px</span>
+            </span>
+            <button type="button" id="btnCropCenter" class="tool" title="잡아 둔 영역을 도면 한가운데로 옮깁니다 (크기·비율은 그대로)">가운데</button>
+            <!-- 원본을 건드리지 않는 길. 한 장을 여러 조각으로 잘라 쓸 때, 자르고 되돌리기를
+                 반복하지 않도록 조각만 새 탭으로 떠 담고 자르기 모드에 그대로 머무른다. -->
+            <button type="button" id="btnCropToNew" class="tool" title="지금 잡은 영역을 새 도면 탭으로 만듭니다. 원본 도면은 그대로 남으므로, 한 장을 여러 조각으로 잘라 쓸 때 이어서 다음 영역을 잡으면 됩니다 (영역 안의 마커와 그린 것도 함께 옮겨 담습니다)">새 도면으로</button>
             <button class="primary" id="btnCropApply">자르기 적용</button>
+            <button type="button" id="btnCropApplyAll" class="tool" title="올려져 있는 모든 도면을 같은 자리·같은 비율로 한꺼번에 자릅니다. 도면마다 크기가 달라도 「도면 대비 위치·크기」가 같게 잘리며, 비율을 걸어 두었으면 모든 도면이 정확히 그 비율로 나옵니다">모든 도면 자르기</button>
             <button id="btnCropCancel" class="tool">취소</button>
           </span>
           <div style="flex:1;"></div>
@@ -1317,17 +1364,20 @@
              도구 → 색 → 굵기 순서는 "무엇을 그릴지 → 어떤 색으로 → 얼마나 굵게"라는 결정 순서 그대로다. -->
         <div class="toolbar-row toolbar-row-sketch" id="sketchToolbar">
           <div class="btn-group" id="sketchToolGroup">
-            <button type="button" class="tool sketch-tool-btn" data-sketch-tool="pick"    title="선택 (V) — 이미 그린 것을 눌러 고르고, 끌어서 옮기고, 파란 조절점으로 모양을 고칩니다. 빈 곳을 끌면 여러 개를 한 번에(Shift: 추가), Alt를 누른 채 끌면 복제, Delete로 삭제, 방향키로 미세 이동. 글자는 두 번 누르면 바로 고쳐 쓸 수 있습니다"><svg class="icon"><use href="#i-select"/></svg></button>
+            <button type="button" class="tool sketch-tool-btn" data-sketch-tool="pick"    title="선택 (S) — 마커와 그린 것을 함께 고릅니다. 눌러 고르고 끌어서 옮기며(Shift: 곧게, Ctrl 또는 Alt: 복제), 빈 곳을 끌면 여러 개를 한 번에(Shift: 추가). Ctrl+C·Ctrl+V로 그린 것을 다른 도면에 붙여넣고, Delete로 삭제, 방향키로 미세 이동. 글자는 두 번 누르면 바로 고쳐 쓸 수 있습니다"><svg class="icon"><use href="#i-select"/></svg></button>
             <button type="button" class="tool sketch-tool-btn" data-sketch-tool="line"    title="직선 (L) — 드래그. Shift: 수평/수직/45° 고정. 다른 선의 끝점 근처에서 시작·종료하면 자동으로 이어붙습니다"><svg class="icon"><use href="#i-sk-line"/></svg></button>
             <button type="button" class="tool sketch-tool-btn" data-sketch-tool="rect"    title="사각형 (R) — 드래그. Shift: 정사각형"><svg class="icon"><use href="#i-sk-rect"/></svg></button>
             <button type="button" class="tool sketch-tool-btn" data-sketch-tool="pen"     title="자유선 (P) — 손으로 그리듯 드래그"><svg class="icon"><use href="#i-sk-scribble"/></svg></button>
             <button type="button" class="tool sketch-tool-btn" data-sketch-tool="ellipse" title="원/타원 (C) — 드래그. Shift: 정원"><svg class="icon"><use href="#i-sk-ellipse"/></svg></button>
             <button type="button" class="tool sketch-tool-btn" data-sketch-tool="arrow"   title="화살표 (A) — 드래그한 방향으로 화살촉이 붙습니다"><svg class="icon"><use href="#i-sk-arrow"/></svg></button>
             <button type="button" class="tool sketch-tool-btn" data-sketch-tool="text"    title="글자 (T) — 클릭한 자리에 바로 입력합니다(Enter 확정, Esc 취소)"><svg class="icon"><use href="#i-sk-text"/></svg></button>
-            <button type="button" class="tool sketch-tool-btn" data-sketch-tool="sketchErase" title="선 지우개 (E) — 지나간 그린 선을 지웁니다(도면 이미지와 마커는 건드리지 않음). 골라서 지우려면 「선택」(V) 후 Delete"><svg class="icon"><use href="#i-eraser"/></svg></button>
+            <button type="button" class="tool sketch-tool-btn" data-sketch-tool="sketchErase" title="선 지우개 (E) — 지나간 그린 선을 지웁니다(도면 이미지와 마커는 건드리지 않음). 골라서 지우려면 「선택」(S) 후 Delete"><svg class="icon"><use href="#i-eraser"/></svg></button>
           </div>
           <div class="sketch-colors" id="sketchColorRow"></div>
           <div class="btn-group" id="sketchWidthGroup">
+            <!-- 「아주 가는 선」은 치수보조선·해치처럼 도면 위에 얹되 벽선보다 뒤로 물러나야 하는
+                 선을 위한 굵기다. 가는 선(0.6)만으로는 벽선과 구별이 안 된다는 현장 요구로 넣었다. -->
+            <button type="button" class="tool sketch-width-btn" data-sketch-width="0.35" title="아주 가는 선 — 치수선·보조선처럼 벽선보다 얇게 그릴 때"><i style="height:1px;opacity:0.55;"></i></button>
             <button type="button" class="tool sketch-width-btn" data-sketch-width="0.6" title="가는 선"><i style="height:1px;"></i></button>
             <button type="button" class="tool sketch-width-btn" data-sketch-width="1" title="보통 굵기"><i style="height:2.5px;"></i></button>
             <button type="button" class="tool sketch-width-btn" data-sketch-width="1.8" title="굵은 선"><i style="height:4.5px;"></i></button>
@@ -1366,7 +1416,7 @@
         <div class="tablet-float-sep"></div>
         <div class="tablet-float-types" id="tabletFloatTypeGrid"></div>
         <div class="tablet-float-sep"></div>
-        <button type="button" class="tablet-float-btn" id="btnFloatSelectMode" title="선택 모드 (S)"><svg class="icon"><use href="#i-select"/></svg></button>
+        <button type="button" class="tablet-float-btn" id="btnFloatSelectMode" title="선택 — 마커와 그린 것 (S)"><svg class="icon"><use href="#i-select"/></svg></button>
         <button type="button" class="tablet-float-btn" id="btnFloatMoveMode" title="이동 모드 (M)"><svg class="icon"><use href="#i-move"/></svg></button>
         <button type="button" class="tablet-float-btn" id="btnFloatEraseMode" title="지우개 모드 (D)"><svg class="icon"><use href="#i-eraser"/></svg></button>
         <button type="button" class="tablet-float-btn" id="btnFloatSketchMode" title="그리기 모드 (W)"><svg class="icon"><use href="#i-pencil"/></svg></button>
@@ -1376,7 +1426,7 @@
              버튼을 감춘다 — 그 셋은 누르는 순간 그리기가 꺼지는, 지금은 쓸 수 없는 버튼들이다. -->
         <div class="tablet-float-sketch" id="tabletFloatSketchGroup">
           <div class="tablet-float-sep"></div>
-          <button type="button" class="tablet-float-btn float-sketch-tool" data-sketch-tool="pick" title="선택 (V) — 그린 것을 골라 옮기고 고칩니다"><svg class="icon"><use href="#i-select"/></svg></button>
+          <button type="button" class="tablet-float-btn float-sketch-tool" data-sketch-tool="pick" title="선택 (S) — 마커와 그린 것을 골라 옮기고 고칩니다"><svg class="icon"><use href="#i-select"/></svg></button>
           <button type="button" class="tablet-float-btn float-sketch-tool" data-sketch-tool="line" title="직선 (L)"><svg class="icon"><use href="#i-sk-line"/></svg></button>
           <button type="button" class="tablet-float-btn float-sketch-tool" data-sketch-tool="rect" title="사각형 (R)"><svg class="icon"><use href="#i-sk-rect"/></svg></button>
           <button type="button" class="tablet-float-btn float-sketch-tool" data-sketch-tool="pen" title="자유선 (P)"><svg class="icon"><use href="#i-sk-scribble"/></svg></button>
@@ -1459,7 +1509,7 @@
       </div>
 
       <div class="footer-note">
-        Ver 2.4 (<span id="buildDateLabel"></span>) · 건축시설물 정밀안전진단/점검용 결함 마킹 도구
+        Ver 2.5 (<span id="buildDateLabel"></span>) · 건축시설물 정밀안전진단/점검용 결함 마킹 도구
         <span id="storageUsageLabel"></span>
       </div>
     </aside>
@@ -1662,6 +1712,35 @@
       <button type="button" class="tool" id="btnDuplicateCancel">취소</button>
       <button type="button" id="btnDuplicateAppend" title="대상 도면의 기존 마킹은 그대로 두고 뒤에 이어붙입니다">뒤에 추가</button>
       <button type="button" class="danger" id="btnDuplicateOverwrite" title="대상 도면에 이미 있는 마킹을 전부 지우고 복제한 마킹으로 바꿉니다">덮어쓰기</button>
+    </div>
+  </div>
+</div>
+
+<!-- 모든 도면 자르기 미리보기: 도면 축소판마다 "잘릴 자리"를 겹쳐 보여준다. 20장을 한 번에 바꾸는
+     작업을 확인창 문구만 보고 누르게 하면, 자르고 나서야 잘못된 것을 알게 된다. 여기서 도면을 하나씩
+     빼 둘 수도 있다(표제란이 다른 자리에 있는 한 장만 빼는 일이 실제로 생긴다). -->
+<div class="modal-backdrop" id="cropAllBackdrop" style="display:none;">
+  <div class="modal-panel" id="cropAllPanel" style="width:min(880px, 94vw);">
+    <div class="modal-header" id="cropAllDragHandle" title="여기를 마우스로 눌러 끌면 창을 옮길 수 있습니다">
+      <div>
+        <div class="modal-title">모든 도면 자르기</div>
+        <div class="modal-sub">지금 잡아 둔 영역을 <b>도면 대비 %</b>로 옮겨 아래 도면들을 같은 자리로 자릅니다. 도면마다 크기가 달라도 같은 자리가 잘리며, 잘릴 자리는 축소판에 <b>밝게</b> 표시됩니다. 실행취소 한 번으로 전부 되돌릴 수 있습니다.</div>
+      </div>
+      <button type="button" id="btnCropAllClose" class="icon-btn"><svg class="icon icon-lg"><use href="#i-close"/></svg></button>
+    </div>
+    <div class="modal-body">
+      <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;">
+        <button type="button" class="tool" id="btnCropAllSelectAll">전체 선택</button>
+        <button type="button" class="tool" id="btnCropAllSelectNone">선택 해제</button>
+        <div style="flex:1;"></div>
+        <span style="font-size:11px;color:var(--muted);" id="cropAllRatioNote"></span>
+      </div>
+      <div id="cropAllList" class="crop-all-grid"></div>
+    </div>
+    <div class="modal-footer">
+      <div style="font-size:11px;color:var(--text-secondary);flex:1;" id="cropAllFootNote"></div>
+      <button type="button" class="tool" id="btnCropAllCancel">취소</button>
+      <button type="button" class="danger" id="btnCropAllRun" title="고른 도면을 모두 같은 자리로 자릅니다(실행취소 한 번으로 전부 복구)">모두 자르기</button>
     </div>
   </div>
 </div>
@@ -2453,7 +2532,7 @@
   const PROJECT_FILE_VERSION = 5;
   // 빌드 도구 없이 파일 하나로 배포하는 프로젝트라 커밋 해시를 자동으로 넣을 수 없으므로,
   // 배포용으로 이 파일을 고칠 때 날짜를 함께 갱신한다. 하단 "Ver 2.1" 표기 옆에 표시된다.
-  const APP_BUILD_DATE = '2026-09-07';
+  const APP_BUILD_DATE = '2026-09-09';
   // "미저장 변경사항이 있는가"를 매번 전체 스냅샷을 JSON.stringify해서 비교하면(특히 사진·도면
   // 이미지가 많을 때) beforeunload/자동저장 틱마다 무거운 직렬화가 반복된다. 대신 마커·도면·프로젝트
   // 정보를 실제로 바꾸는 지점에서 markDirty()/markImagesDirty()를 호출해 플래그만 세우고, 파일
@@ -4854,7 +4933,7 @@
   function reorderSelectedSketch(toFront){
     const d = getActiveDrawing();
     const list = selectedSketchStrokes(d);
-    if(list.length === 0){ showToast('먼저 「선택」(V)으로 그린 것을 고르세요.'); return; }
+    if(list.length === 0){ showToast('먼저 「선택」(S)으로 그린 것을 고르세요.'); return; }
     pushUndo();
     const ids = new Set(list.map(s=>s.id));
     const rest = (d.sketch||[]).filter(s=> !ids.has(s.id));
@@ -4882,6 +4961,50 @@
     const copies = list.map(s=> Object.assign({}, s, { id: newSketchId(), pts: (s.pts||[]).map(p=>({x:p.x, y:p.y})) }));
     copies.forEach(c=> getSketch(d).push(c));
     selectedSketchIds = new Set(copies.map(c=>c.id));
+    return true;
+  }
+
+  // ── 도면 사이로 그린 것 옮기기 (Ctrl+C · Ctrl+X · Ctrl+V) ──────────────────
+  // 같은 창틀·같은 계단·같은 범례를 다른 층 도면에도 그대로 쓰고 싶은 일이 잦은데, 지금까지 도면
+  // 사이를 건너가는 길은 「마킹 전체 복제」(도면 통째로)뿐이었다. 골라 둔 것 몇 개만 옮기려면
+  // 다시 그리는 수밖에 없었으므로, 앱 안에서만 도는 복사판을 하나 둔다(시스템 클립보드가 아니다 —
+  // 브라우저에서 도형을 클립보드에 넣으려면 그림이나 글자로 납작하게 만들어야 해서, 다시 붙여
+  // 넣었을 때 고칠 수 있는 "그린 선"으로 돌아오지 않는다).
+  let sketchClipboard = [];
+  let sketchClipboardFrom = null;   // 어느 도면에서 복사했는지 — 같은 도면에 붙이면 겹치지 않게 비껴 놓는다
+  function copySelectedSketch(cut){
+    const d = getActiveDrawing();
+    const list = selectedSketchStrokes(d);
+    if(list.length === 0){ showToast('먼저 「선택」(S)으로 그린 것을 고르세요.'); return false; }
+    sketchClipboard = list.map(s=> Object.assign({}, s, { pts: (s.pts||[]).map(p=>({x:p.x, y:p.y})) }));
+    sketchClipboardFrom = d.id;
+    if(cut){
+      deleteSelectedSketch();
+      showToast(`그린 것 ${sketchClipboard.length}개를 잘라냈습니다 — 다른 도면에서 Ctrl+V로 붙여넣으세요.`);
+    } else {
+      showToast(`그린 것 ${sketchClipboard.length}개를 복사했습니다 — 다른 도면에서 Ctrl+V로 붙여넣으세요.`);
+    }
+    return true;
+  }
+  function pasteSketchClipboard(){
+    const d = getActiveDrawing();
+    if(!d){ showToast('먼저 도면을 추가하고 선택해주세요.'); return false; }
+    if(sketchClipboard.length === 0) return false;
+    pushUndo();
+    // 복사해 온 그 도면에 다시 붙이면 원본과 정확히 겹쳐 "붙여넣어졌는지" 알 수가 없다 —
+    // 조금 비껴 놓아 눈에 보이게 하고, 곧바로 고른 것이 되므로 그대로 끌어 자리를 잡으면 된다.
+    const off = (sketchClipboardFrom === d.id) ? 2 : 0;
+    const copies = sketchClipboard.map(s=> Object.assign({}, s, {
+      id: newSketchId(),
+      pts: (s.pts||[]).map(p=>({ x: p.x+off, y: p.y+off })),
+    }));
+    copies.forEach(c=> getSketch(d).push(c));
+    // 붙여넣은 것을 곧바로 고른 상태로 만든다. 「선택」 도구가 아니면 함께 그리로 넘어간다 —
+    // 안 그러면 골라져 있다는 표시(조절점)가 보이지 않아 붙여넣기가 실패한 것처럼 보인다.
+    if(sketchTool !== 'pick') setSketchTool('pick');
+    selectedSketchIds = new Set(copies.map(c=>c.id));
+    renderCanvas(); updateModeHint();
+    showToast(`그린 것 ${copies.length}개를 "${d.name}"에 붙여넣었습니다.`);
     return true;
   }
 
@@ -4998,15 +5121,18 @@
     }
     const hit = sketchHitTest(d, pct.x, pct.y, sketchPickTolNatural(d));
     if(hit){
-      if(e && e.shiftKey){
-        // Shift+클릭은 고르기 목록에 넣고 빼기만 한다(끌지 않는다) — 마커 쪽 Shift+클릭과 같은 약속.
-        if(selectedSketchIds.has(hit.id)) selectedSketchIds.delete(hit.id);
-        else selectedSketchIds.add(hit.id);
+      if(e && e.shiftKey && !selectedSketchIds.has(hit.id)){
+        // 아직 고르지 않은 것에 Shift+클릭 = 고르기 목록에 더한다(마커 쪽 Shift+클릭과 같은 약속).
+        selectedSketchIds.add(hit.id);
         pendingAction = null;
         if(selectedSketchIds.size === 1) syncSketchToolbarToStroke(selectedSketchStrokes(d)[0]);
         renderCanvas(); updateModeHint();
         return;
       }
+      // 이미 골라 둔 것을 Shift로 누르면 두 가지 뜻이 겹친다: 그대로 떼면 "고르기에서 빼기",
+      // 끌면 "곧게 옮기기". 어느 쪽인지는 손을 뗄 때 움직였는지로 가른다 — 눌리자마자 빼 버리면
+      // Shift를 누른 채 곧게 옮기는 손동작이 아예 시작될 수 없다(그것이 원래 하려던 일인데도).
+      const shiftUnselectId = (e && e.shiftKey && selectedSketchIds.has(hit.id)) ? hit.id : null;
       // 이미 혼자 골라져 있던 글자를 다시 톡 누르면(끌지 않고) 고쳐 쓰기로 들어간다 — 태블릿에는
       // 더블클릭이 없어서(터치는 기본 동작을 막아 dblclick 이벤트가 오지 않는다) 이 길이 유일한
       // 통로다. 실제 전환은 "안 움직였을 때"만 일어나므로 끌어서 옮기는 동작과 부딪히지 않는다.
@@ -5017,11 +5143,17 @@
         selectedSketchIds = new Set([hit.id]);
         syncSketchToolbarToStroke(hit);
       }
+      // 통합 선택에서 그린 선을 잡으면 마커 선택은 놓는다 — 끌리는 것은 선이므로, 골라져 있던
+      // 마커가 화면에 계속 표시되면 그것도 함께 움직이는 줄 알게 된다.
+      if(selectMode && selectedIds.size) clearSelection();
       pushUndo();
-      const duplicated = (e && e.altKey) ? duplicateSelectedSketch() : false;
+      // Ctrl(또는 Alt)을 누른 채 끌면 복제본이 따라 나온다. 원래는 Alt만이었는데, 다른 그림 도구
+      // 대부분이 Ctrl+드래그를 복사로 쓰고 있어 두 키를 모두 받는다(Alt는 그리는 도중 "이번 획만
+      // 눈금 무시"로도 쓰이므로, 복사로는 Ctrl이 손에 더 익다).
+      const duplicated = (e && (e.altKey || e.ctrlKey || e.metaKey)) ? duplicateSelectedSketch() : false;
       const orig = {};
       selectedSketchStrokes(d).forEach(s=> orig[s.id] = (s.pts||[]).map(q=>({x:q.x, y:q.y})));
-      pendingAction = { mode:'sketchMove', startPct: pct, orig, moved:false, duplicated,
+      pendingAction = { mode:'sketchMove', startPct: pct, orig, moved:false, duplicated, shiftUnselectId,
         textRetap: (textRetap && !duplicated) ? hit : null };
       renderCanvas(); updateModeHint();
       return;
@@ -5260,9 +5392,14 @@
     const pct = canvasPtToPct(p);
     if(pendingAction.mode === 'sketchErase'){ sketchEraseAt(d, pct); return; }
     if(pendingAction.mode === 'sketchMove'){
-      const dx = pct.x - pendingAction.startPct.x, dy = pct.y - pendingAction.startPct.y;
+      let dx = pct.x - pendingAction.startPct.x, dy = pct.y - pendingAction.startPct.y;
       // "움직였나"는 화면 픽셀이 아니라 도면 원본 px로 잰다 — 확대 배율이 달라도 판정이 같아진다.
       if(Math.hypot(dx/100*d.naturalW, dy/100*d.naturalH) > 1) pendingAction.moved = true;
+      // Shift를 누른 채 끌면 곧게(수평 또는 수직으로만) 옮긴다. 어느 쪽인지는 % 가 아니라 원본
+      // px로 견줘야 한다 — x는 폭, y는 높이 대비 %라, 긴 도면에서는 % 만 보면 축이 뒤바뀐다.
+      if(e && e.shiftKey){
+        if(Math.abs(dx/100*d.naturalW) >= Math.abs(dy/100*d.naturalH)) dy = 0; else dx = 0;
+      }
       (d.sketch||[]).forEach(s=>{
         const o = pendingAction.orig[s.id];
         if(o) s.pts = o.map(q=>({ x:q.x+dx, y:q.y+dy }));
@@ -5314,6 +5451,13 @@
       // 그냥 두면 Ctrl+Z를 눌러도 아무 일도 안 일어나는 "먹통 한 번"이 생긴다. 다만 Alt로 복제한
       // 경우에는 제자리에 겹친 복제본이 실제로 늘어났으므로 기록을 남긴다.
       if(!pa.moved && !pa.duplicated && undoStack.length) undoStack.pop();
+      // 끌지 않고 그대로 뗀 Shift+누르기 = 고르기에서 빼기(위 handleSketchPickPointerDown 참고).
+      if(!pa.moved && pa.shiftUnselectId){
+        selectedSketchIds.delete(pa.shiftUnselectId);
+        if(selectedSketchIds.size === 1) syncSketchToolbarToStroke(selectedSketchStrokes(d)[0]);
+        renderCanvas(); updateModeHint();
+        return;
+      }
       if(!pa.moved && pa.textRetap){
         openSketchTextEditor(d, { x: pa.textRetap.pts[0].x, y: pa.textRetap.pts[0].y }, pa.textRetap);
         return; // openSketchTextEditor가 화면을 다시 그린다
@@ -5328,8 +5472,9 @@
     }
     if(pa.mode === 'sketchBand'){
       if(!pa.moved){
-        // 빈 곳을 그냥 눌렀다 = 선택 해제(마커 쪽 러버밴드와 같은 약속).
-        if(!pa.additive) clearSketchSelection();
+        // 빈 곳을 그냥 눌렀다 = 선택 해제(마커 쪽 러버밴드와 같은 약속). 통합 선택에서는
+        // 마커 선택도 함께 놓는다 — 「선택」 하나로 둘 다 다루므로 놓는 것도 하나여야 한다.
+        if(!pa.additive){ clearSketchSelection(); if(selectMode && selectedIds.size){ clearSelection(); renderTable(); } }
       } else {
         const x0 = Math.min(pa.startPct.x, pa.curPct.x), x1 = Math.max(pa.startPct.x, pa.curPct.x);
         const y0 = Math.min(pa.startPct.y, pa.curPct.y), y1 = Math.max(pa.startPct.y, pa.curPct.y);
@@ -5346,6 +5491,20 @@
         if(pa.additive) matched.forEach(id=> selectedSketchIds.add(id));
         else selectedSketchIds = new Set(matched);
         if(selectedSketchIds.size === 1) syncSketchToolbarToStroke(selectedSketchStrokes(d)[0]);
+        // 통합 선택: 같은 사각형 안에 완전히 들어온 마커도 함께 고른다(마커 쪽 러버밴드와 같은
+        // 판정 — markerVisualPoints의 모든 점이 안에 들어와야 한다).
+        if(selectMode){
+          const cv = document.getElementById('mainCanvas');
+          const W = cv.width, H = cv.height;
+          const mm = (d.markers||[]).filter(m=>{
+            if(m.typeKey==='tilt_dir') return false; // 측정방향은 자동 계산 표시라 선택 대상이 아니다
+            return markerVisualPoints(d, m, W, H).every(pt=>
+              pt.x/W*100 >= x0 && pt.x/W*100 <= x1 && pt.y/H*100 >= y0 && pt.y/H*100 <= y1);
+          }).map(m=>m.id);
+          if(pa.additive) mm.forEach(id=> selectedIds.add(id));
+          else selectedIds = new Set(mm);
+          renderTable();
+        }
       }
       renderCanvas(); updateModeHint();
       return;
@@ -5734,6 +5893,19 @@
         ctx.fillStyle = '#fff';
         ctx.textAlign='left'; ctx.textBaseline='middle';
         ctx.fillText(label, rect.x+6, ly+9);
+        // 여덟 개의 손잡이 — 잡아 둔 영역을 다시 끌어 옮기고 크기를 바꿀 수 있다는 것을 눈으로
+        // 알려주는 유일한 표시다. 새로 끄는 도중에는 그리지 않는다(아직 확정되지 않은 상자라
+        // 손잡이가 커서를 따라 흔들리면 무엇을 잡아야 할지 알 수 없다).
+        if(!(pendingAction && pendingAction.mode==='crop')){
+          cropHandlePoints(rect).forEach(hd=>{
+            ctx.beginPath();
+            ctx.rect(hd.x-4.5, hd.y-4.5, 9, 9);
+            ctx.fillStyle = '#ffffff';
+            ctx.strokeStyle = '#2a78d6';
+            ctx.lineWidth = 1.8;
+            ctx.fill(); ctx.stroke();
+          });
+        }
       } else {
         ctx.fillRect(0,0,w,h);
         ctx.fillStyle='#fff'; ctx.font='600 14px system-ui, -apple-system, sans-serif';
@@ -6262,13 +6434,20 @@
 
   // 스택 안의 'image' 타입 항목(이미지 Data URL을 통째로 들고 있어 무거움) 개수를 최근 8개로 제한한다.
   // 'markers' 타입 항목은 가벼우므로 건드리지 않고, 오래된 'image' 항목만 골라서 제거한다.
+  // 이미지 이력은 Data URL을 통째로 들고 있어 가장 무겁다. 최근 것부터 8"장"까지만 남긴다.
+  // multiImage(모든 도면 자르기)는 한 항목에 도면 수만큼의 이미지가 들어 있으므로 그 수만큼 무겁게
+  // 센다 — 항목 하나로 세면 20장을 자른 기록 세 개가 곧 60장이 되어 메모리가 조용히 부푼다.
+  // 다만 "가장 최근 것"은 무게와 상관없이 반드시 남긴다(방금 한 일을 되돌릴 수 없으면 안 된다).
   function trimImageEntries(stack){
-    let count = 0;
+    let budget = 8;
+    let newest = true;
     for(let i=stack.length-1;i>=0;i--){
-      if(stack[i].type==='image'){
-        count++;
-        if(count>8) stack.splice(i,1);
-      }
+      const t = stack[i].type;
+      if(t!=='image' && t!=='multiImage') continue;
+      const weight = (t==='multiImage') ? Math.max(1, (stack[i].entries||[]).length) : 1;
+      if(newest){ newest = false; budget -= weight; continue; }
+      if(budget - weight < 0){ stack.splice(i,1); continue; }
+      budget -= weight;
     }
   }
   // 마커를 실행취소 이력용으로 복사한다. id·좌표·유형 등 스칼라 필드는 서로 독립되도록 복사하되,
@@ -6332,6 +6511,66 @@
     trimImageEntries(undoStack);
     redoStack = [];
   }
+  // 도면 여러 장의 이미지를 한 번에 바꾸는 작업(모든 도면 자르기) 직전에 호출 — 도면마다 따로
+  // pushImageUndo하면 Ctrl+Z를 도면 수만큼 눌러야 하고, 그 사이 어느 한 장만 되돌아간 어정쩡한
+  // 상태가 생긴다. 하나의 항목으로 묶어 한 번에 전부 돌아가게 한다(multiMarkers와 같은 방식).
+  function pushMultiImageUndo(targetDrawings){
+    if(!targetDrawings || targetDrawings.length===0) return;
+    markDirty();
+    undoStack.push({ type:'multiImage', entries: targetDrawings.map(d=>({
+      drawingId: d.id, imgSrc: d.imgSrc, naturalW: d.naturalW, naturalH: d.naturalH,
+      baseW: d.baseW, baseH: d.baseH,
+      markers: cloneMarkersForUndo(d.markers), sketch: cloneSketchForUndo(d.sketch),
+    })) });
+    if(undoStack.length>60) undoStack.shift();
+    trimImageEntries(undoStack);
+    redoStack = [];
+  }
+  // 도면 여러 장의 이미지를 한꺼번에 되돌리고, 그 반대편 스택에 지금 상태를 담는다.
+  // undo와 redo가 방향만 다르고 하는 일이 같아 한 함수로 묶었다.
+  function restoreMultiImage(entry, oppositeStack){
+    const opposite = [];
+    let pending = 0, done = false;
+    const finish = ()=>{
+      if(pending>0 || !done) return;
+      markImagesDirty();
+      selectedIds = new Set();
+      renderCanvas(); renderTable(); renderDrawingTabs();
+    };
+    entry.entries.forEach(en=>{
+      const d2 = drawings.find(x=>x.id===en.drawingId); if(!d2) return;
+      opposite.push({ drawingId:d2.id, imgSrc:d2.imgSrc, naturalW:d2.naturalW, naturalH:d2.naturalH,
+        baseW:d2.baseW, baseH:d2.baseH,
+        markers: cloneMarkersForUndo(d2.markers), sketch: cloneSketchForUndo(d2.sketch) });
+      pending++;
+      const img = new Image();
+      img.onload = img.onerror = ()=>{
+        d2.imgSrc = en.imgSrc; d2.imgEl = img;
+        d2.naturalW = en.naturalW; d2.naturalH = en.naturalH;
+        d2.baseW = en.baseW; d2.baseH = en.baseH;
+        d2.markers = en.markers;
+        if(en.sketch) d2.sketch = en.sketch;
+        pending--;
+        finish();
+      };
+      img.src = en.imgSrc;
+    });
+    if(opposite.length>0){
+      oppositeStack.push({ type:'multiImage', entries: opposite });
+      trimImageEntries(oppositeStack);
+      if(oppositeStack.length>60) oppositeStack.shift();
+    }
+    done = true;
+    finish();
+  }
+  // 도면이 "늘어나는" 작업(자르기의 「이 영역을 새 도면으로」)도 되돌릴 수 있어야 한다. 삭제 쪽
+  // 기록({drawing, index} = 되살리기)과 방향만 반대인 항목을 따로 둔다({drawingId} = 없애기).
+  function pushAddDrawingUndo(d){
+    markDirty();
+    undoStack.push({ type:'drawingAdded', drawingId: d.id });
+    if(undoStack.length>60) undoStack.shift();
+    redoStack = [];
+  }
   // 도면 탭 삭제(휴지통 아이콘)도 실행취소로 되돌릴 수 있도록, 필터로 바로 지우지 않고 undoStack에
   // {type:'drawing', drawing, index} 형태로 기록한 뒤 배열에서 제거한다. undo()가 같은 자리에 되살린다.
   function deleteDrawing(id){
@@ -6356,6 +6595,18 @@
       setActiveDrawing(last.drawing.id);
       return;
     }
+    // 새로 만든 도면을 되돌린다 = 그 도면을 없앤다(다시하기가 같은 자리에 되살린다).
+    if(last.type==='drawingAdded'){
+      const idx = drawings.findIndex(x=>x.id===last.drawingId);
+      if(idx<0){ undo(); return; }
+      const removed = drawings[idx];
+      redoStack.push({type:'drawingAdded', drawing:removed, index:idx});
+      if(redoStack.length>60) redoStack.shift();
+      drawings.splice(idx,1);
+      if(activeDrawingId===removed.id){ activeDrawingId = drawings[0] ? drawings[0].id : null; }
+      renderDrawingTabs(); setActiveDrawing(activeDrawingId);
+      return;
+    }
     // 마킹 전체 복제(4단계)처럼 도면 여러 개를 한 번에 바꾸는 작업 전용 — 실행취소 한 번으로
     // 관련된 모든 도면이 함께 원상복구된다(도면마다 따로 pushUndo하면 Ctrl+Z를 여러 번 눌러야 함).
     if(last.type==='multiMarkers'){
@@ -6374,6 +6625,8 @@
       renderCanvas(); renderTable(); renderDrawingTabs();
       return;
     }
+    // 모든 도면 자르기 — 이미지 여러 장이 한 항목에 담겨 있다(되돌리기 한 번으로 전부 돌아온다).
+    if(last.type==='multiImage'){ restoreMultiImage(last, redoStack); return; }
     const d = drawings.find(x=>x.id===last.drawingId); if(!d){ undo(); return; }
     if(last.type==='image'){
       redoStack.push({ type:'image', drawingId:d.id, imgSrc:d.imgSrc, naturalW:d.naturalW, naturalH:d.naturalH,
@@ -6412,6 +6665,15 @@
       renderDrawingTabs(); setActiveDrawing(activeDrawingId);
       return;
     }
+    // 되돌렸던 "새 도면 만들기"를 다시 한다 = 같은 자리에 되살린다.
+    if(next.type==='drawingAdded'){
+      const insertAt = Math.min(next.index, drawings.length);
+      drawings.splice(insertAt, 0, next.drawing);
+      undoStack.push({type:'drawingAdded', drawingId: next.drawing.id});
+      if(undoStack.length>60) undoStack.shift();
+      renderDrawingTabs(); setActiveDrawing(next.drawing.id);
+      return;
+    }
     if(next.type==='multiMarkers'){
       const undoEntries = [];
       next.entries.forEach(en=>{
@@ -6428,6 +6690,7 @@
       renderCanvas(); renderTable(); renderDrawingTabs();
       return;
     }
+    if(next.type==='multiImage'){ restoreMultiImage(next, undoStack); return; }
     const d = drawings.find(x=>x.id===next.drawingId); if(!d){ redo(); return; }
     if(next.type==='image'){
       undoStack.push({ type:'image', drawingId:d.id, imgSrc:d.imgSrc, naturalW:d.naturalW, naturalH:d.naturalH,
@@ -7794,17 +8057,39 @@
     // 배타 모드는 도면 자체가 말해준다 — 테두리 색(CSS)과 좌상단 이름표. 시선이 도면에 가 있을 때
     // 툴바 버튼 하나의 배경색만으로는 "지금 지우개"라는 걸 알아채지 못해 실수로 마커를 지우게 된다.
     document.body.classList.toggle('mode-move', moveMode);
-    document.body.classList.toggle('mode-select', selectMode);
+    // 통합 선택은 그리기의 pick 도구로 구현되어 있어 두 상태가 동시에 참이다 — 도면 테두리 색이
+    // 두 번 칠해지지 않도록, 그럴 때는 그리기 쪽 표시 하나만 남긴다(이름표가 「선택」이라 말해준다).
+    document.body.classList.toggle('mode-select', selectMode && sketchTool !== 'pick');
     document.body.classList.toggle('mode-erase', eraseMode);
     document.body.classList.toggle('mode-sketch', !!sketchTool);
     const badge = document.getElementById('modeBadge');
     if(badge){
-      badge.textContent = sketchTool ? ('그리기 모드 · ' + sketchToolLabel(sketchTool) + ' — Esc 또는 유형을 고르면 해제')
+      badge.textContent = sketchTool==='pick' ? '선택 — 마커와 그린 것을 함께 고릅니다 · Esc 해제'
+        : sketchTool ? ('그리기 모드 · ' + sketchToolLabel(sketchTool) + ' — Esc 또는 유형을 고르면 해제')
         : eraseMode ? '지우개 모드 — Esc 또는 유형을 고르면 해제'
         : selectMode ? '선택 모드 — Esc 또는 유형을 고르면 해제'
         : moveMode ? '이동 모드 — Esc 또는 유형을 고르면 해제'
         : '';
     }
+  }
+  // 안내 줄은 "지금 무엇을 하는 중인지" 한 줄과, 눌러서 펼치는 "자세히"로 나눈다. 예전에는 모든
+  // 설명이 늘 펼쳐져 있어 자르기에서는 세 줄까지 갔는데, 줄이 길어질수록 오히려 읽지 않게 되고
+  // 도구줄 높이가 들쭉날쭉해 도면이 위아래로 밀린다. 펼친 상태는 다음에 열 때까지 기억한다.
+  const HINT_EXPAND_STORE_KEY = 'defectMarkerHintExpanded_v1';
+  let modeHintExpanded = (()=>{ try{ return localStorage.getItem(HINT_EXPAND_STORE_KEY) === 'on'; }catch(err){ return false; } })();
+  function setModeHintExpanded(on){
+    modeHintExpanded = !!on;
+    try{ localStorage.setItem(HINT_EXPAND_STORE_KEY, modeHintExpanded ? 'on' : 'off'); }catch(err){}
+    updateModeHint();
+  }
+  function renderModeHint(head, detail){
+    const hint = document.getElementById('modeHint');
+    if(!hint) return;
+    if(!detail){ hint.innerHTML = head; return; }
+    hint.innerHTML = head
+      + ' <button type="button" class="hint-more" title="이 모드에서 쓸 수 있는 것을 모두 보여줍니다">'
+      + (modeHintExpanded ? '간단히 ▴' : '자세히 ▾') + '</button>'
+      + (modeHintExpanded ? '<span class="hint-detail">' + detail + '</span>' : '');
   }
   function updateModeHint(){
     const hint = document.getElementById('modeHint');
@@ -7812,40 +8097,62 @@
     // 자르기를 맨 앞에 둔다 — 자르기로 들어서면 다른 모드는 모두 꺼지므로 아래 갈래에 걸릴 일이 없고,
     // 그동안 마커 유형 안내가 떠 있으면 지금 무엇을 하는 중인지 화면 어디에도 적혀 있지 않게 된다.
     if(cropMode){
-      hint.innerHTML = '<b>자르기 모드</b> (Shift+C) — 남길 영역을 드래그로 지정하고 <b>Enter</b> 또는 「자르기 적용」 · <b>Esc</b> 취소'
-        + (cropRatioValue()
-            ? ' · 지금 <b>' + escapeHTML(cropRatioText()) + '</b> 비율로 고정 (<b>Alt</b>: 이번만 비율 무시)'
-            : ' · 비율은 <b>자유</b> — 도구줄의 「비율」에서 고정할 수 있습니다');
+      renderModeHint(
+        '<b>자르기</b> (Shift+C) — 남길 영역을 드래그 · <b>Enter</b> 적용 · <b>Esc</b> 취소'
+          + (cropRatioValue() ? ' · <b>' + escapeHTML(cropRatioText()) + '</b> 비율 고정' : ''),
+        '잡은 뒤에는 <b>상자 안을 끌어 옮기고</b>(Shift: 곧게) <b>손잡이로 크기</b>를 바꿉니다(Shift: 지금 비율 유지)'
+          + ' · 크기는 <b>px로 직접</b> 넣을 수 있고 「가운데」로 한가운데에 놓입니다'
+          + ' · <b>「새 도면으로」</b>는 원본을 그대로 둔 채 지금 영역만 새 탭으로 떠 담습니다(한 장을 여러 조각으로 쓸 때)'
+          + (drawings.length>1 ? ' · <b>「모든 도면 자르기」</b>는 올려둔 도면 전부를 같은 자리로 자릅니다(미리보기에서 뺄 도면을 고를 수 있습니다)' : '')
+          + (cropRatioValue()
+              ? ' · <b>Alt</b>를 누른 채 끌면 이번만 비율을 무시합니다'
+              : ' · 비율은 <b>자유</b> — 도구줄의 「비율」에서 고정할 수 있습니다')
+      );
       return;
     }
     if(sketchTool){
+      // 한 줄로 보이는 짧은 안내(head)와, 눌러서 펼치는 자세한 안내(more)를 도구마다 나눠 둔다.
       const guide = {
-        line:  '드래그로 벽선을 긋습니다. <b>Shift</b>: 수평·수직·45° 고정 · 다른 선의 끝점 근처에서 시작·종료하면 자동으로 이어붙습니다',
-        rect:  '드래그로 사각형을 그립니다. <b>Shift</b>: 정사각형',
-        pen:   '손으로 그리듯 드래그합니다 — 거의 곧게 그으면 자동으로 반듯한 직선이 됩니다',
-        ellipse:'드래그로 원/타원을 그립니다. <b>Shift</b>: 정원',
-        arrow: '드래그한 방향으로 화살촉이 붙습니다',
-        text:  '클릭한 자리에 바로 입력합니다 — <b>Enter</b> 확정 · <b>Esc</b> 취소',
-        sketchErase:'지나간 <b>그린 선만</b> 지웁니다(도면 이미지와 결함 마커는 건드리지 않습니다)',
-        pick:  '그린 것을 눌러 고르고 끌어서 옮깁니다 — 빈 곳 드래그: 여러 개 고르기(<b>Shift</b>: 추가) · <b>Alt</b>+드래그: 복제 · <b>Delete</b>: 삭제 · <b>방향키</b>: 미세 이동 · 글자는 <b>두 번 누르면</b> 고쳐 쓸 수 있습니다',
-      }[sketchTool] || '';
+        line:  ['드래그로 벽선을 긋습니다 (<b>Shift</b>: 수평·수직·45°)', '다른 선의 끝점 근처에서 시작·종료하면 자동으로 이어붙습니다'],
+        rect:  ['드래그로 사각형을 그립니다 (<b>Shift</b>: 정사각형)', ''],
+        pen:   ['손으로 그리듯 드래그합니다', '거의 곧게 그으면 자동으로 반듯한 직선이 되고, 그 끝점은 다른 선을 이어 붙일 자리가 됩니다'],
+        ellipse:['드래그로 원/타원을 그립니다 (<b>Shift</b>: 정원)', ''],
+        arrow: ['드래그한 방향으로 화살촉이 붙습니다', ''],
+        text:  ['클릭한 자리에 바로 입력합니다 (<b>Enter</b> 확정 · <b>Esc</b> 취소)', '이미 쓴 글자는 「선택」에서 두 번 누르면 고쳐 쓸 수 있습니다'],
+        sketchErase:['지나간 <b>그린 선만</b> 지웁니다', '도면 이미지와 결함 마커는 건드리지 않습니다 — 도면 원본을 지우려면 <b>지우개(d)</b>를 쓰세요'],
+        pick:  ['<b>마커와 그린 것을 함께</b> 고릅니다 — 눌러 고르고 끌어서 옮깁니다',
+                '<b>Shift</b>+드래그: 곧게 · <b>Ctrl</b>(또는 Alt)+드래그: 복제 · 빈 곳 드래그: 여러 개 고르기(<b>Shift</b>: 추가)'
+                + ' · <b>Ctrl+C</b>/<b>Ctrl+V</b>: 다른 도면으로 그린 것 복사 · <b>Delete</b>: 삭제'
+                + ' · <b>방향키</b>: 미세 이동(Shift: 10px) · <b>Alt+←/→</b>: 돌리기 · 글자는 <b>두 번 누르면</b> 고쳐 쓸 수 있습니다'],
+      }[sketchTool] || ['', ''];
       const picked = sketchTool==='pick' ? selectedSketchStrokes(getActiveDrawing()).length : 0;
-      // 몇 개를 골랐는지 · 지금 무엇을 할 수 있는지를 안내 줄이 그때그때 말해준다. 하나만 골랐을
-      // 때만 조절점이 나오므로, 그 차이를 문구로도 드러낸다.
-      const pickedMsg = picked === 1
-        ? ' · <b>1개 선택됨</b> — 도형 위 <b>둥근 점</b>으로 한 점만 고치고, 바깥 <b>네모 틀</b>로 크기·회전(위쪽 손잡이, Shift: 15°씩)'
-        : picked > 1 ? ' · <b>' + picked + '개 선택됨</b> — 함께 옮기고, 바깥 틀로 <b>한꺼번에 크기·회전</b>(Shift: 비율 유지)' : '';
-      hint.innerHTML = '<b>그리기 모드</b> (단축키 w) · 지금 도구: <b>' + escapeHTML(sketchToolLabel(sketchTool)) + '</b> — ' + guide
-        + pickedMsg
-        + (sketchGridOn ? ' · <b>모눈 ' + sketchGridDiv + '칸</b>(Alt: 이번 획만 눈금 무시)' : '');
+      const pickedMarkers = sketchTool==='pick' ? selectedIds.size : 0;
+      // 몇 개를 골랐는지는 한 줄에 남긴다 — 지금 상태라서 접어두면 안 된다. 그것으로 무엇을 할 수
+      // 있는지(조절점·틀)는 자세히 쪽으로 보낸다.
+      const countMsg = (picked || pickedMarkers)
+        ? ' · <b>' + [picked ? '그린 것 '+picked+'개' : '', pickedMarkers ? '마커 '+pickedMarkers+'개' : ''].filter(Boolean).join(' · ') + ' 선택됨</b>'
+        : '';
+      const pickedMore = picked === 1
+        ? ' · 도형 위 <b>둥근 점</b>으로 한 점만 고치고, 바깥 <b>네모 틀</b>로 크기·회전(위쪽 손잡이, Shift: 15°씩)'
+        : picked > 1 ? ' · 함께 옮기고, 바깥 틀로 <b>한꺼번에 크기·회전</b>(Shift: 비율 유지)' : '';
+      const head = (sketchTool==='pick'
+        ? '<b>선택</b> (s)'
+        : '<b>그리기</b> (w) · <b>' + escapeHTML(sketchToolLabel(sketchTool)) + '</b>')
+        + ' — ' + guide[0] + countMsg
+        + (sketchGridOn ? ' · <b>모눈 ' + sketchGridDiv + '칸</b>' : '');
+      renderModeHint(head, guide[1] + pickedMore
+        + (sketchGridOn ? ' · 모눈이 켜져 있으면 <b>Alt</b>를 누른 채 그린 획만 눈금을 무시합니다' : ''));
       return;
     }
     if(eraseMode){
-      hint.innerHTML = '<b>지우개 모드</b> (단축키 d) — <b>도면 원본</b>을 지웁니다: 마커 위는 클릭하면 삭제, 그 외 도면 위를 드래그하면 브러시처럼 흰색으로 지워집니다 (직접 그린 선은 그리기의 <b>선 지우개 X</b>로)';
+      renderModeHint('<b>지우개</b> (d) — <b>도면 원본</b>을 지웁니다 (마커는 클릭, 도면은 드래그)',
+        '드래그하면 브러시처럼 흰색으로 덮어 지웁니다. <b>직접 그린 선</b>은 이 지우개로 지워지지 않습니다 — 그리기의 <b>선 지우개(e)</b>를 쓰거나, 「선택」에서 골라 <b>Delete</b>를 누르세요');
     } else if(selectMode){
-      hint.innerHTML = '<b>선택 모드</b> (단축키 s) — 빈 곳을 드래그하면 완전히 안에 들어온 마커만 선택됩니다(Shift: 추가/해제). 마커를 직접 클릭해도 선택됩니다';
+      renderModeHint('<b>선택</b> (s) — 마커와 그린 것을 함께 고릅니다',
+        '빈 곳을 드래그하면 완전히 안에 들어온 것만 선택됩니다(<b>Shift</b>: 추가/해제) · <b>Shift</b>+드래그: 곧게 옮기기 · <b>Ctrl</b>+드래그: 복제');
     } else if(moveMode){
-      hint.innerHTML = '<b>이동 모드</b> (단축키 m) — 마커를 드래그해 이동만 합니다. 빈 곳을 클릭·드래그해도 아무 일도 일어나지 않습니다';
+      renderModeHint('<b>이동</b> (m) — 마커를 드래그해 옮깁니다',
+        '빈 곳을 클릭·드래그해도 아무 일도 일어나지 않습니다(실수로 마커가 찍히지 않게 하는 모드입니다). <b>Shift</b>+드래그: 곧게');
     } else if(getType(activeTypeKey).endStyle==='rect'){
       // 3클릭 생성은 "지금 무엇을 클릭할 차례인지"를 단계마다 다르게 알려준다. 예전에는 세 단계
       // 내내 "① … ② … ③ …"이라는 같은 문구가 떠 있어서, 중간에 다른 일을 하다 돌아오면 어디까지
@@ -7863,7 +8170,12 @@
       // 계열 개수가 프리셋마다 달라지므로 단축키 안내도 "1~N"(N=min(계열수,9))으로 동적으로 맞춘다.
       const selectableCount = selectableDefectTypes().length;
       const shortcutRange = selectableCount>1 ? `1~${Math.min(selectableCount,9)}` : '1';
-      hint.innerHTML = `현재 선택된 유형: <b id="activeTypeLabel">${escapeHTML(getType(activeTypeKey).label)}</b> (단축키 ${shortcutRange}) — 클릭해 추가, 드래그로 방향·길이 지정 (Shift: 수직/수평 고정) · <b>s</b>: 선택 · <b>m</b>: 이동 · <b>d</b>: 지우개`;
+      renderModeHint(
+        `현재 선택된 유형: <b id="activeTypeLabel">${escapeHTML(getType(activeTypeKey).label)}</b> (단축키 ${shortcutRange}) — 클릭해 추가, 드래그로 방향·길이 지정 (Shift: 수직/수평 고정)`,
+        '<b>s</b>: 선택(마커·그린 것 함께) · <b>m</b>: 이동 · <b>d</b>: 지우개 · <b>f</b>: 화면 맞춤 · <b>g</b>: 전체 보기 · <b>q</b>: 좌표안내'
+        + ' · <b>Shift+C</b>: 자르기 · <b>Shift+L/R</b>: 좌·우 회전'
+        + ' · 그리기는 <b>l</b> 직선 · <b>r</b> 사각형 · <b>c</b> 원 · <b>a</b> 화살표 · <b>p</b> 자유선 · <b>t</b> 글자 · <b>e</b> 선 지우개 (w를 거치지 않고 바로)'
+      );
     }
   }
   function setMoveMode(v){
@@ -7876,13 +8188,18 @@
   }
   function toggleMoveMode(){ setMoveMode(!moveMode); }
 
+  // 통합 선택 — 마커와 그린 선을 같은 도구로 고른다. 실제 상태는 sketchTool='pick' 하나이므로
+  // 여기서는 그리로 넘긴다(두 벌의 상태를 두면 어느 쪽이 참인지 갈라진다).
   function setSelectMode(v){
-    if(v && gridViewMode) setGridView(false);
-    selectMode = !!v;
-    if(selectMode){ moveMode = false; eraseMode = false; pendingRectCreate = null; exitSketchMode(); }
-    updateModeButtonsUI();
-    updateModeHint();
-    renderCanvas();
+    if(v){
+      if(gridViewMode) setGridView(false);
+      setSketchTool('pick');
+    } else if(sketchTool === 'pick'){
+      setSketchTool(null);
+    } else {
+      selectMode = false;
+      updateModeButtonsUI(); updateModeHint(); renderCanvas();
+    }
   }
   function toggleSelectMode(){ setSelectMode(!selectMode); }
 
@@ -7894,10 +8211,15 @@
   function exitSketchMode(){
     if(sketchTextEditor) closeSketchTextEditor(false);
     sketchTool = null;
+    selectMode = false;   // 「선택」은 이제 그리기의 pick 도구와 같은 것이다(아래 setSketchTool 참고)
     eraseCursorPt = null;
     if(pendingAction && isSketchAction(pendingAction.mode)) pendingAction = null;
     clearSketchSelection();
   }
+  // 「선택」은 하나다 — 예전에는 마커를 고르는 「선택 모드」(s)와 그린 선을 고르는 「선택」 도구(v)가
+  // 따로 있어서, 화면에 보이는 것 중 무엇을 고르느냐에 따라 다른 키를 눌러야 했다(그리고 그리기
+  // 바깥에서는 그린 선을 아예 고를 수 없었다). 이제 pick 도구 하나가 마커와 그린 선을 모두 고르며,
+  // selectMode는 "그 통합 선택이 켜져 있다"는 뜻으로만 남는다. 단축키는 s.
   function setSketchTool(t){
     if(t && gridViewMode) setGridView(false);
     if(t && cropMode) exitCropMode();
@@ -7907,8 +8229,12 @@
     // 「선택」에서 다른 도구로 넘어가면 골라둔 획을 놓아준다 — 그리는 도구에서는 조절점을 잡을 수
     // 없는데 화면에는 계속 떠 있어, 왜 안 잡히는지 알 수 없는 표시가 되기 때문이다.
     if(prevTool === 'pick' && sketchTool !== 'pick') clearSketchSelection();
+    selectMode = (sketchTool === 'pick');
     if(sketchTool){
-      moveMode = false; selectMode = false; eraseMode = false; pendingRectCreate = null; clearSelection();
+      moveMode = false; eraseMode = false; pendingRectCreate = null;
+      // 그리는 도구에서는 마커 선택을 놓는다(끌리는 것은 선이지 마커가 아니다). 「선택」에서는
+      // 마커도 함께 다루므로 그대로 둔다.
+      if(!selectMode) clearSelection();
       // 「그리기」를 다시 켤 때 돌아올 도구 — 지우개와 선택은 "그리는 도구"가 아니라 손보는
       // 도구라서 기억하지 않는다(다시 켰을 때 아무것도 못 그리는 상태로 열리면 곤란하다).
       if(sketchTool !== 'sketchErase' && sketchTool !== 'pick') lastSketchTool = sketchTool;
@@ -8327,13 +8653,177 @@
       w, h
     };
   }
+  // ── 잡아 둔 영역을 옮기고·크기를 바꾸기 ────────────────────────────────────
+  // 예전에는 영역을 잡는 길이 "새로 끌기" 하나뿐이었다. 조금 아래로 내리고 싶을 때에도 처음부터
+  // 다시 끌어야 했고, 비율을 걸어 둔 상태에서는 그 한 번을 정확히 맞추기가 특히 번거로웠다.
+  // 이제 상자 안을 끌면 옮기고, 여덟 개 손잡이로 크기를 바꾼다(그림 편집기의 관례 그대로).
+  const CROP_HANDLES = ['nw','n','ne','e','se','s','sw','w'];
+  const CROP_MIN_PX = 16;          // 캔버스 px 기준 최소 크기 — 이보다 작아지면 손잡이를 잡을 수 없다
+  // 변 손잡이는 그 변의 한가운데에 있어서, 변이 짧으면 양 끝 모서리 손잡이와 겹쳐 버린다
+  // (손가락 판정 반경이 24px이라 태블릿에서는 더 일찍 겹친다). 짧은 변에서는 모서리만 남긴다 —
+  // 잡을 수 없는 손잡이가 여덟 개 뭉쳐 있는 것보다, 네 개라도 확실히 잡히는 편이 낫다.
+  const CROP_EDGE_HANDLE_MIN = 72;   // 캔버스 px — 이보다 짧은 변에는 가운데 손잡이를 두지 않는다
+  function cropHandlePoints(rect){
+    if(!rect) return [];
+    const { x, y, w, h } = rect;
+    const mx = x + w/2, my = y + h/2;
+    const out = [
+      { c:'nw', x:x,   y:y   }, { c:'ne', x:x+w, y:y   },
+      { c:'se', x:x+w, y:y+h }, { c:'sw', x:x,   y:y+h },
+    ];
+    if(w >= CROP_EDGE_HANDLE_MIN){ out.push({ c:'n', x:mx, y:y }, { c:'s', x:mx, y:y+h }); }
+    if(h >= CROP_EDGE_HANDLE_MIN){ out.push({ c:'e', x:x+w, y:my }, { c:'w', x:x, y:my }); }
+    return out;
+  }
+  function cropHandleHitTest(x, y, isTouch){
+    if(!cropRect) return null;
+    const r = isTouch ? 24 : 13;   // 손가락은 넉넉하게 — 태블릿에서도 같은 조작이 되어야 한다
+    for(const hd of cropHandlePoints(cropRect)){
+      if(Math.hypot(x-hd.x, y-hd.y) <= r) return hd;
+    }
+    return null;
+  }
+  function cropRectContains(rect, x, y){
+    return !!rect && x>=rect.x && x<=rect.x+rect.w && y>=rect.y && y<=rect.y+rect.h;
+  }
+  const CROP_RESIZE_CURSORS = { nw:'nwse-resize', se:'nwse-resize', ne:'nesw-resize', sw:'nesw-resize',
+                                n:'ns-resize', s:'ns-resize', e:'ew-resize', w:'ew-resize' };
+  // 옮기기. Shift를 누르고 있으면 많이 움직인 쪽 한 축으로만 간다(그리기·마커 이동과 같은 약속) —
+  // 같은 높이의 띠를 도면 좌우로 훑어가며 잘라낼 때 손이 흔들려도 줄이 어긋나지 않는다.
+  function cropMoveRect(pa, p, e){
+    const cv = document.getElementById('mainCanvas');
+    const cw = cv.width, ch = cv.height;
+    const s = pa.start;
+    let dx = p.x - pa.startX, dy = p.y - pa.startY;
+    if(e && e.shiftKey){ if(Math.abs(dx) >= Math.abs(dy)) dy = 0; else dx = 0; }
+    return { x: clamp(s.x+dx, 0, Math.max(0, cw-s.w)), y: clamp(s.y+dy, 0, Math.max(0, ch-s.h)), w:s.w, h:s.h };
+  }
+  // 크기 바꾸기. 잡은 손잡이의 반대쪽(모서리면 대각, 변이면 마주 보는 변)이 제자리에 붙박이고,
+  // 거기서 커서까지가 새 크기가 된다. 비율은 세 갈래다:
+  //   · 「비율」을 걸어 두었으면 늘 그 비율 (Alt를 누르면 이번만 무시)
+  //   · 걸지 않았어도 Shift를 누르고 있으면 "지금 상자의 가로:세로"를 지킨다
+  //   · 그 외에는 자유
+  function cropResizeRect(pa, p, e){
+    const cv = document.getElementById('mainCanvas');
+    const cw = cv.width, ch = cv.height;
+    const s = pa.start, c = pa.corner;
+    let R = (e && e.altKey) ? 0 : cropRatioCanvas();
+    if(!R && e && e.shiftKey && s.h > 0) R = s.w/s.h;
+    const hasX = c.indexOf('w')>=0 || c.indexOf('e')>=0;
+    const hasY = c.indexOf('n')>=0 || c.indexOf('s')>=0;
+    // 붙박이는 자리와, 커서가 거기서 어느 쪽으로 가는지
+    const anchorX = (c.indexOf('w')>=0) ? s.x+s.w : (c.indexOf('e')>=0 ? s.x : null);
+    const anchorY = (c.indexOf('n')>=0) ? s.y+s.h : (c.indexOf('s')>=0 ? s.y : null);
+    const dirX = (c.indexOf('w')>=0) ? -1 : 1;
+    const dirY = (c.indexOf('n')>=0) ? -1 : 1;
+    const availX = (anchorX===null) ? cw : (dirX>0 ? cw-anchorX : anchorX);
+    const availY = (anchorY===null) ? ch : (dirY>0 ? ch-anchorY : anchorY);
+    const put = (w, h)=> ({
+      x: hasX ? (dirX>0 ? anchorX : anchorX-w) : clamp(s.x + (s.w-w)/2, 0, Math.max(0, cw-w)),
+      y: hasY ? (dirY>0 ? anchorY : anchorY-h) : clamp(s.y + (s.h-h)/2, 0, Math.max(0, ch-h)),
+      w, h,
+    });
+    if(!R){
+      const w = hasX ? clamp(dirX*(p.x-anchorX), CROP_MIN_PX, Math.max(CROP_MIN_PX, availX)) : s.w;
+      const h = hasY ? clamp(dirY*(p.y-anchorY), CROP_MIN_PX, Math.max(CROP_MIN_PX, availY)) : s.h;
+      // 세로만(또는 가로만) 바꾸는 손잡이는 반대 축을 원래 자리에 그대로 둔다.
+      const out = put(w, h);
+      if(!hasX){ out.x = s.x; out.w = s.w; }
+      if(!hasY){ out.y = s.y; out.h = s.h; }
+      return out;
+    }
+    if(hasX && hasY){
+      // 모서리: "더 많이 끈 쪽"이 크기를 정한다(새로 끌 때의 cropRectFromAction과 같은 규칙).
+      let w = Math.max(dirX*(p.x-anchorX), dirY*(p.y-anchorY)*R);
+      w = clamp(w, CROP_MIN_PX, Math.max(CROP_MIN_PX, Math.min(availX, availY*R)));
+      return put(w, w/R);
+    }
+    if(hasX){
+      // 변 손잡이 + 비율: 늘어나는 반대 축은 원래 한가운데를 지키며 함께 늘어난다.
+      let w = clamp(dirX*(p.x-anchorX), CROP_MIN_PX, Math.max(CROP_MIN_PX, availX));
+      let h = w/R;
+      if(h > ch){ h = ch; w = h*R; }
+      return put(w, h);
+    }
+    let h = clamp(dirY*(p.y-anchorY), CROP_MIN_PX, Math.max(CROP_MIN_PX, availY));
+    let w = h*R;
+    if(w > cw){ w = cw; h = w/R; }
+    return put(w, h);
+  }
+  // 도면 한가운데로. 크기와 비율은 그대로 두고 자리만 옮긴다.
+  function centerCropRect(){
+    const cv = document.getElementById('mainCanvas');
+    if(!cropRect || !cv || !cv.width) return false;
+    cropRect = {
+      x: Math.max(0, (cv.width-cropRect.w)/2),
+      y: Math.max(0, (cv.height-cropRect.h)/2),
+      w: cropRect.w, h: cropRect.h,
+    };
+    return true;
+  }
+  // ── 크기(px) 직접 입력 ─────────────────────────────────────────────────────
+  // 사용자에게 보이는 수는 언제나 "도면 원본 픽셀"이다 — 화면 캔버스 픽셀은 화면 배율·
+  // devicePixelRatio가 곱해진 값이라 저장되는 그림의 크기와 다르다(상자 옆 표시와 같은 기준).
+  function cropCanvasToNatural(){
+    const d = getActiveDrawing();
+    const cv = document.getElementById('mainCanvas');
+    if(!d || !cv || !cv.width || !cv.height) return { sx:1, sy:1 };
+    return { sx: d.naturalW/cv.width, sy: d.naturalH/cv.height };
+  }
+  // rectOverride: 아직 확정되지 않은 상자(새로 끄는 중)를 보여줄 때 쓴다 — 그때 cropRect는 이전
+  // 상자를 들고 있으므로, 그것을 그대로 적으면 화면의 점선과 칸의 수가 서로 다른 말을 한다.
+  function syncCropSizeUI(rectOverride){
+    const wi = document.getElementById('cropSizeW'), hi = document.getElementById('cropSizeH');
+    if(!wi || !hi) return;
+    const { sx, sy } = cropCanvasToNatural();
+    const rect = rectOverride || cropRect;
+    const wv = rect ? String(Math.round(rect.w*sx)) : '';
+    const hv = rect ? String(Math.round(rect.h*sy)) : '';
+    // 지금 치고 있는 칸은 건드리지 않는다 — 값을 되돌려 쓰면 글자를 칠 수가 없다(비율 칸과 같은 처리).
+    if(document.activeElement !== wi) wi.value = wv;
+    if(document.activeElement !== hi) hi.value = hv;
+  }
+  // 칸에 넣은 원본 px 크기를 그대로 상자에 반영한다. 왼쪽 위 모서리를 제자리에 두고 크기만 바꾸되,
+  // 도면을 넘치면 안쪽으로 밀어 넣고, 그래도 넘치면 도면 크기에 맞춰 줄인다.
+  function applyCropSizeInput(which){
+    const cv = document.getElementById('mainCanvas');
+    const d = getActiveDrawing();
+    if(!cv || !cv.width || !d) return;
+    const wi = document.getElementById('cropSizeW'), hi = document.getElementById('cropSizeH');
+    if(!wi || !hi) return;
+    const { sx, sy } = cropCanvasToNatural();
+    const base = cropRect || { x:0, y:0, w:cv.width, h:cv.height };
+    const nw = parseFloat(wi.value), nh = parseFloat(hi.value);
+    let w = (isFinite(nw) && nw>0) ? nw/sx : base.w;
+    let h = (isFinite(nh) && nh>0) ? nh/sy : base.h;
+    const Rc = cropRatioCanvas();
+    // 비율이 걸려 있으면 방금 고친 칸이 기준이 되고 나머지는 따라온다 — 두 칸을 다 맞추려 애쓰지
+    // 않아도 되게 하는 것이 비율을 걸어 둔 이유다.
+    if(Rc){ if(which === 'h') w = h*Rc; else h = w/Rc; }
+    w = clamp(w, CROP_MIN_PX, cv.width);
+    h = clamp(h, CROP_MIN_PX, cv.height);
+    if(Rc){
+      if(w/Rc > cv.height){ h = cv.height; w = h*Rc; }
+      else h = w/Rc;
+      w = Math.min(w, cv.width);
+      h = Math.min(h, cv.height);
+    }
+    cropRect = {
+      x: clamp(base.x, 0, Math.max(0, cv.width-w)),
+      y: clamp(base.y, 0, Math.max(0, cv.height-h)),
+      w, h,
+    };
+    syncCropSizeUI();
+    renderCanvas();
+  }
+
   function setCropRatio(w, h){
     const ok = (w>0 && h>0 && isFinite(w) && isFinite(h));
     cropRatioW = ok ? w : 0;
     cropRatioH = ok ? h : 0;
     saveCropRatio();
     syncCropRatioUI();
-    if(cropMode){ applyCropRatioToRect(); renderCanvas(); }
+    if(cropMode){ applyCropRatioToRect(); syncCropSizeUI(); renderCanvas(); }
     updateModeHint();
   }
   function syncCropRatioUI(){
@@ -8382,8 +8872,16 @@
     document.getElementById('zoomSelect').disabled = true;
     syncCropRatioUI();
     applyCropRatioToRect(); // 비율이 걸려 있으면 들어서자마자 그 비율의 최대 영역을 보여준다
+    syncCropSizeUI();
+    updateCropApplyAllUI();
     updateModeHint();
     renderCanvas();
+  }
+  // 「모든 도면 자르기」는 도면이 두 장 이상일 때만 뜻이 있다 — 한 장뿐인데 버튼이 보이면
+  // "이게 뭘 더 해주는 건가" 하고 한 번 눌러 보게 된다.
+  function updateCropApplyAllUI(){
+    const b = document.getElementById('btnCropApplyAll');
+    if(b) b.style.display = (drawings.length > 1) ? '' : 'none';
   }
   function exitCropMode(){
     // 고른 비율은 지우지 않는다 — 도면을 여러 장 같은 비율로 잘라내는 일이 잦아, 나갈 때마다
@@ -8395,42 +8893,233 @@
     updateModeHint();
     renderCanvas();
   }
-  function performCropApply(){
-    const d = getActiveDrawing();
-    if(!d || !cropRect){ showToast('먼저 도면 위를 드래그해 자를 영역을 지정해주세요.'); return; }
-    const canvas = document.getElementById('mainCanvas');
-    const scaleX = d.naturalW/canvas.width, scaleY = d.naturalH/canvas.height;
-    let nx = Math.round(cropRect.x*scaleX), ny = Math.round(cropRect.y*scaleY);
-    let nw = Math.round(cropRect.w*scaleX), nh = Math.round(cropRect.h*scaleY);
+  // 잡아 둔 영역을 "도면 대비 %"로 환산한다. 도면마다 크기가 달라도 같은 자리를 가리킬 수 있는
+  // 유일한 기준이라, 「모든 도면 자르기」가 이 값을 그대로 다른 도면에 적용한다.
+  function cropRectPct(){
+    const cv = document.getElementById('mainCanvas');
+    if(!cropRect || !cv || !cv.width || !cv.height) return null;
+    return { x: cropRect.x/cv.width*100, y: cropRect.y/cv.height*100,
+             w: cropRect.w/cv.width*100, h: cropRect.h/cv.height*100 };
+  }
+  // % 영역을 한 도면의 원본 픽셀 영역으로 옮긴다. 비율이 걸려 있으면 가로를 기준으로 세로를 다시
+  // 계산해(따로 반올림하면 1px씩 어긋난다) 어느 도면에서 잘라도 정확히 같은 비율이 나오게 한다.
+  function cropRegionForDrawing(d, pct){
+    let nx = Math.round(pct.x/100*d.naturalW), ny = Math.round(pct.y/100*d.naturalH);
+    let nw = Math.round(pct.w/100*d.naturalW), nh = Math.round(pct.h/100*d.naturalH);
     nx = Math.max(0, Math.min(nx, d.naturalW-1));
     ny = Math.max(0, Math.min(ny, d.naturalH-1));
     nw = Math.min(nw, d.naturalW-nx);
     nh = Math.min(nh, d.naturalH-ny);
     const R = cropRatioValue();
     if(R){
-      // 가로·세로를 따로 반올림하면 비율이 1px씩 어긋난다 — 비율을 고정했다면 그 1px이 곧 어긋남이므로,
-      // 가로를 기준으로 세로를 다시 계산해 저장되는 그림이 정확히 그 비율이 되게 한다.
       nh = Math.max(1, Math.round(nw/R));
       if(ny+nh > d.naturalH){ nh = d.naturalH-ny; nw = Math.max(1, Math.round(nh*R)); }
       if(nx+nw > d.naturalW){ nw = d.naturalW-nx; nh = Math.max(1, Math.round(nw/R)); }
     }
-    if(nw<10 || nh<10){ showToast('잘라낼 영역이 너무 작습니다.'); return; }
+    return { nx, ny, nw, nh };
+  }
+  // 한 도면을 실제로 자른다(실행취소 기록·화면 갱신은 부르는 쪽 몫). 이미지 로딩이 비동기라
+  // 약속(Promise)을 돌려주고, 여러 도면을 한꺼번에 자를 때는 이것을 모아 기다린다.
+  function cropDrawingTo(d, region){
+    const { nx, ny, nw, nh } = region;
+    return new Promise(resolve=>{
+      const off = document.createElement('canvas');
+      off.width = nw; off.height = nh;
+      const octx = off.getContext('2d');
+      octx.drawImage(d.imgEl, nx, ny, nw, nh, 0, 0, nw, nh);
+      const newSrc = off.toDataURL('image/png');
+      const newImg = new Image();
+      newImg.onload = ()=>{
+        d.markers = d.markers.filter(m=>{
+          const ax = m.xPct/100*d.naturalW, ay = m.yPct/100*d.naturalH;
+          return !(ax<nx || ax>nx+nw || ay<ny || ay>ny+nh);
+        }).map(m=>{
+          const ax = m.xPct/100*d.naturalW, ay = m.yPct/100*d.naturalH;
+          const out = Object.assign({}, m, { xPct: (ax-nx)/nw*100, yPct: (ay-ny)/nh*100 });
+          if(getType(m.typeKey).endStyle==='rect'){
+            const rx = (m.rectXPct||0)/100*d.naturalW, ry = (m.rectYPct||0)/100*d.naturalH;
+            const rw = (m.rectWPct||0)/100*d.naturalW, rh = (m.rectHPct||0)/100*d.naturalH;
+            out.rectXPct = (rx-nx)/nw*100; out.rectYPct = (ry-ny)/nh*100;
+            out.rectWPct = rw/nw*100; out.rectHPct = rh/nh*100;
+          }
+          return out;
+        });
+        // 그려둔 선도 마커와 같은 기준(도면 대비 %)이라, 같은 자리에서 함께 새 영역 기준으로 옮긴다.
+        // d.naturalW/H를 갱신하기 "전에" 호출해야 한다 — 옛 크기를 기준으로 환산해야 하기 때문.
+        d.sketch = remapSketchForCrop(d, nx, ny, nw, nh);
+        d.imgSrc = newSrc; d.imgEl = newImg; d.naturalW = nw; d.naturalH = nh;
+        const fit = fitBaseSize(nw, nh);
+        d.baseW = fit.baseW; d.baseH = fit.baseH;
+        resolve(true);
+      };
+      newImg.onerror = ()=> resolve(false);
+      newImg.src = newSrc;
+    });
+  }
+  function performCropApply(){
+    const d = getActiveDrawing();
+    if(!d || !cropRect){ showToast('먼저 도면 위를 드래그해 자를 영역을 지정해주세요.'); return; }
+    const region = cropRegionForDrawing(d, cropRectPct());
+    if(region.nw<10 || region.nh<10){ showToast('잘라낼 영역이 너무 작습니다.'); return; }
     // 확인 알림 없이 바로 자른다(되돌리고 싶으면 헤더의 "실행취소"로 언제든 복구 가능).
     pushImageUndo(d);
+    cropDrawingTo(d, region).then(()=>{
+      markImagesDirty();
+      selectedIds = new Set();
+      exitCropMode();
+      renderTable();
+    });
+  }
+  // ── 올려져 있는 도면 전부를 같은 자리로 자르기 ─────────────────────────────
+  // 같은 평면도가 동만 바뀌어 여러 장 들어오는 실무에서, 장마다 똑같이 여백을 떼어내고 표제란을
+  // 잘라내는 일이 반복된다. 지금 잡아 둔 영역을 "도면 대비 %"로 옮겨 모든 도면에 그대로 적용한다 —
+  // 도면마다 해상도가 달라도 같은 자리가 잘리고, 비율을 걸어 두었으면 전부 정확히 그 비율이 된다.
+  // 되돌리기는 한 번으로 전부 돌아온다(multiImage 항목 하나로 묶어 기록한다).
+  // 20장을 한 번에 바꾸는 작업을 확인창 문구만 보고 누르게 하면, 자르고 나서야 잘못된 것을 알게
+  // 된다. 도면마다 "어디가 잘리는지"를 축소판에 겹쳐 보여주고, 그 자리에서 뺄 도면을 고르게 한다.
+  let cropAllExcluded = new Set();
+  let cropAllPct = null;   // 창을 연 순간의 영역을 붙들어 둔다 — 뒤에서 상자를 만져도 보이는 것과 잘리는 것이 갈라지지 않게
+  function isCropAllOpen(){ return document.getElementById('cropAllBackdrop').style.display !== 'none'; }
+  function closeCropAllModal(){ document.getElementById('cropAllBackdrop').style.display = 'none'; }
+  function cropAllCandidates(){ return drawings.filter(t=> t.imgEl && t.naturalW>0 && t.naturalH>0); }
+  function cropAllTargets(){ return cropAllCandidates().filter(t=> !cropAllExcluded.has(t.id)); }
+  function renderCropAllList(){
+    const wrap = document.getElementById('cropAllList');
+    if(!wrap || !cropAllPct) return;
+    wrap.innerHTML = '';
+    cropAllCandidates().forEach(t=>{
+      const region = cropRegionForDrawing(t, cropAllPct);
+      const on = !cropAllExcluded.has(t.id);
+      const card = document.createElement('div');
+      card.className = 'crop-all-card' + (on ? '' : ' off');
+      const cv = document.createElement('canvas');
+      const TW = 200;
+      cv.width = TW;
+      cv.height = Math.max(1, Math.round(TW * t.naturalH / t.naturalW));
+      const ctx = cv.getContext('2d');
+      try{ ctx.drawImage(t.imgEl, 0, 0, cv.width, cv.height); }catch(err){}
+      // 남을 자리는 그대로 두고 바깥을 어둡게 덮는다 — 자르기 화면에서 보던 것과 같은 표시라
+      // 무엇이 남는지 따로 배우지 않아도 된다.
+      const sx = cv.width/t.naturalW, sy = cv.height/t.naturalH;
+      const rx = region.nx*sx, ry = region.ny*sy, rw = region.nw*sx, rh = region.nh*sy;
+      ctx.fillStyle = 'rgba(11,11,11,0.55)';
+      ctx.fillRect(0, 0, cv.width, ry);
+      ctx.fillRect(0, ry+rh, cv.width, Math.max(0, cv.height-(ry+rh)));
+      ctx.fillRect(0, ry, rx, rh);
+      ctx.fillRect(rx+rw, ry, Math.max(0, cv.width-(rx+rw)), rh);
+      ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.2; ctx.setLineDash([5,3]);
+      ctx.strokeRect(rx+0.5, ry+0.5, rw, rh);
+      ctx.setLineDash([]);
+      const name = document.createElement('div');
+      name.className = 'crop-all-name';
+      const cb = document.createElement('input');
+      cb.type = 'checkbox'; cb.checked = on;
+      cb.addEventListener('click', e=> e.stopPropagation());
+      cb.addEventListener('change', ()=>{
+        if(cb.checked) cropAllExcluded.delete(t.id); else cropAllExcluded.add(t.id);
+        renderCropAllList();
+      });
+      name.appendChild(cb);
+      const nameText = document.createElement('span');
+      nameText.textContent = t.name;
+      nameText.style.overflow = 'hidden';
+      nameText.style.textOverflow = 'ellipsis';
+      name.appendChild(nameText);
+      const size = document.createElement('div');
+      size.className = 'crop-all-size';
+      size.innerHTML = `${t.naturalW}×${t.naturalH} → <b>${region.nw}×${region.nh} px</b>`;
+      card.appendChild(cv); card.appendChild(name); card.appendChild(size);
+      card.addEventListener('click', ()=>{
+        if(cropAllExcluded.has(t.id)) cropAllExcluded.delete(t.id); else cropAllExcluded.add(t.id);
+        renderCropAllList();
+      });
+      wrap.appendChild(card);
+    });
+    const targets = cropAllTargets();
+    const foot = document.getElementById('cropAllFootNote');
+    if(foot){
+      // 되돌리기는 원본 이미지를 그대로 들고 있어야 가능하다 — 몇 장을, 대략 얼마나 들고 있게
+      // 되는지 미리 알려준다(Data URL은 base64라 실제 바이트는 길이의 약 3/4이다).
+      const mb = targets.reduce((s,t)=> s + (t.imgSrc ? t.imgSrc.length*0.75 : 0), 0) / (1024*1024);
+      foot.innerHTML = targets.length === 0
+        ? '자를 도면을 하나 이상 고르세요.'
+        : `도면 <b>${targets.length}장</b>을 같은 자리로 자릅니다 · 되돌리기용으로 원본 ${targets.length}장(약 ${mb.toFixed(1)}MB)을 잠시 들고 있게 됩니다`
+          + (targets.length >= 8 ? ' — 장수가 많으면 그만큼 메모리를 씁니다' : '');
+    }
+    const note = document.getElementById('cropAllRatioNote');
+    if(note){
+      note.innerHTML = cropAllPct
+        ? `잡아 둔 영역: 도면의 <b>${Math.round(cropAllPct.w)}% × ${Math.round(cropAllPct.h)}%</b>`
+          + (cropRatioValue() ? ` · <b>${escapeHTML(cropRatioText())}</b> 비율 고정` : '')
+        : '';
+    }
+    const run = document.getElementById('btnCropAllRun');
+    if(run) run.disabled = targets.length === 0;
+  }
+  function performCropApplyAll(){
+    const d = getActiveDrawing();
+    if(!d || !cropRect){ showToast('먼저 도면 위를 드래그해 자를 영역을 지정해주세요.'); return; }
+    if(cropAllCandidates().length === 0) return;
+    cropAllPct = cropRectPct();
+    cropAllExcluded = new Set();
+    renderCropAllList();
+    document.getElementById('cropAllBackdrop').style.display = 'flex';
+  }
+  function runCropAll(){
+    if(!cropAllPct) return;
+    const targets = cropAllTargets();
+    if(targets.length === 0){ showToast('자를 도면을 하나 이상 고르세요.'); return; }
+    const regions = targets.map(t=> ({ d:t, region: cropRegionForDrawing(t, cropAllPct) }));
+    const tooSmall = regions.find(r=> r.region.nw<10 || r.region.nh<10);
+    if(tooSmall){ showToast(`"${tooSmall.d.name}"에서는 잘라낼 영역이 너무 작습니다.`); return; }
+    pushMultiImageUndo(targets);
+    closeCropAllModal();
+    Promise.all(regions.map(r=> cropDrawingTo(r.d, r.region))).then(()=>{
+      markImagesDirty();
+      selectedIds = new Set();
+      exitCropMode();
+      renderTable(); renderDrawingTabs();
+      showToast(`도면 ${targets.length}장을 같은 자리로 잘랐습니다. 되돌리려면 실행취소(Ctrl+Z) 한 번이면 됩니다.`);
+    });
+  }
 
+  // ── 잡아 둔 영역을 새 도면으로 (원본은 그대로) ─────────────────────────────
+  // 한 장을 여러 조각으로 잘라 보고서에 나눠 싣는 일이 잦은데, 「자르기 적용」은 원본을 바꿔 버려서
+  // 조각마다 자르고 → 되돌리고 → 다시 자르기를 반복해야 했다. 이 길은 원본을 건드리지 않고 지금
+  // 영역만 새 도면 탭으로 떠 담는다 — 자르기 모드에 그대로 머무르므로, 이어서 다음 조각을 잡으면 된다.
+  function cropPieceName(baseName){
+    const base = String(baseName || '도면');
+    let n = 1;
+    while(drawings.some(d=> d.name === `${base} 조각 ${n}`)) n++;
+    return `${base} 조각 ${n}`;
+  }
+  function cropRegionToNewDrawing(){
+    const d = getActiveDrawing();
+    if(!d || !cropRect){ showToast('먼저 도면 위를 드래그해 영역을 지정해주세요.'); return; }
+    const { nx, ny, nw, nh } = cropRegionForDrawing(d, cropRectPct());
+    if(nw<10 || nh<10){ showToast('영역이 너무 작습니다.'); return; }
     const off = document.createElement('canvas');
     off.width = nw; off.height = nh;
-    const octx = off.getContext('2d');
-    octx.drawImage(d.imgEl, nx, ny, nw, nh, 0, 0, nw, nh);
-    const newSrc = off.toDataURL('image/png');
-    const newImg = new Image();
-    newImg.onload = ()=>{
-      d.markers = d.markers.filter(m=>{
+    off.getContext('2d').drawImage(d.imgEl, nx, ny, nw, nh, 0, 0, nw, nh);
+    const src = off.toDataURL('image/png');
+    const img = new Image();
+    img.onerror = ()=> showToast('영역을 새 도면으로 만들지 못했습니다.');
+    img.onload = ()=>{
+      const nd = buildDrawingFromImage(img, src, cropPieceName(d.name));
+      nd.surveyLocation = d.surveyLocation || '';
+      // 영역 안의 마커와 그린 것도 같은 자리로 옮겨 담는다(원본 도면의 것은 그대로 남는다).
+      // id는 새로 발급한다 — 두 도면에 같은 id가 있으면 고르기·연결이 서로를 가리킨다.
+      // photos는 배열만 새로 만들고 안의 base64 문자열은 함께 쓴다(문자열은 못 바꾸는 값이라
+      // 서로 영향을 주지 않으면서 메모리는 한 벌만 쓴다). 기울기 짝 연결(linked*)은 옮기지 않는다 —
+      // 원본 도면의 마커 id를 가리키게 되어 죽은 참조가 되기 때문(「마킹 전체 복사」와 같은 처리).
+      nd.markers = d.markers.filter(m=>{
         const ax = m.xPct/100*d.naturalW, ay = m.yPct/100*d.naturalH;
         return !(ax<nx || ax>nx+nw || ay<ny || ay>ny+nh);
       }).map(m=>{
         const ax = m.xPct/100*d.naturalW, ay = m.yPct/100*d.naturalH;
-        const out = Object.assign({}, m, { xPct: (ax-nx)/nw*100, yPct: (ay-ny)/nh*100 });
+        const { linkedDirId, linkedFromId, ...rest } = m;
+        const out = Object.assign({}, rest, newMarkerIdPair(), { xPct: (ax-nx)/nw*100, yPct: (ay-ny)/nh*100 });
+        if(Array.isArray(m.photos)) out.photos = m.photos.slice();
         if(getType(m.typeKey).endStyle==='rect'){
           const rx = (m.rectXPct||0)/100*d.naturalW, ry = (m.rectYPct||0)/100*d.naturalH;
           const rw = (m.rectWPct||0)/100*d.naturalW, rh = (m.rectHPct||0)/100*d.naturalH;
@@ -8439,18 +9128,17 @@
         }
         return out;
       });
-      // 그려둔 선도 마커와 같은 기준(도면 대비 %)이라, 같은 자리에서 함께 새 영역 기준으로 옮긴다.
-      // d.naturalW/H를 갱신하기 "전에" 호출해야 한다 — 옛 크기를 기준으로 환산해야 하기 때문.
-      d.sketch = remapSketchForCrop(d, nx, ny, nw, nh);
-      d.imgSrc = newSrc; d.imgEl = newImg; d.naturalW = nw; d.naturalH = nh;
-      const fit = fitBaseSize(nw, nh);
-      d.baseW = fit.baseW; d.baseH = fit.baseH;
+      nd.sketch = remapSketchForCrop(d, nx, ny, nw, nh).map(s=> Object.assign({}, s, { id: newSketchId() }));
+      drawings.push(nd);
+      pushAddDrawingUndo(nd);
+      renumberDrawingMarkers(nd, {silent:true});
       markImagesDirty();
-      selectedIds = new Set();
-      exitCropMode();
-      renderTable();
+      renderDrawingTabs();
+      // 새 탭으로 넘어가지 않는다 — 넘어가면 자르기 모드가 그 도면 기준으로 다시 열려, 이어서
+      // 다음 조각을 잡으려던 손이 끊긴다. 원본에 머문 채 잡아 둔 영역만 옮겨 계속 잘라내면 된다.
+      showToast(`「${nd.name}」(${nw}×${nh}px)을 새 도면으로 만들었습니다 — 원본은 그대로입니다. 이어서 다음 영역을 잡으세요.`);
     };
-    newImg.src = newSrc;
+    img.src = src;
   }
 
   // ---------- 이미지 회전 (90° 단위) ----------
@@ -10980,6 +11668,42 @@
   document.getElementById('btnCropRatioSwap').addEventListener('click', ()=>{
     if(cropRatioValue()) setCropRatio(cropRatioH, cropRatioW);
   });
+  // 안내 줄의 「자세히 ▾」는 다시 그릴 때마다 새로 만들어지므로, 버튼마다 붙이지 않고 줄 전체에
+  // 한 번만 붙여 위임한다(다시 붙이는 것을 잊으면 조용히 안 먹는다).
+  document.getElementById('modeHint').addEventListener('click', e=>{
+    if(e.target.closest('.hint-more')) setModeHintExpanded(!modeHintExpanded);
+  });
+  document.getElementById('btnCropApplyAll').addEventListener('click', performCropApplyAll);
+  document.getElementById('btnCropToNew').addEventListener('click', cropRegionToNewDrawing);
+  document.getElementById('btnCropAllClose').addEventListener('click', closeCropAllModal);
+  document.getElementById('btnCropAllCancel').addEventListener('click', closeCropAllModal);
+  document.getElementById('btnCropAllRun').addEventListener('click', runCropAll);
+  document.getElementById('btnCropAllSelectAll').addEventListener('click', ()=>{ cropAllExcluded = new Set(); renderCropAllList(); });
+  document.getElementById('btnCropAllSelectNone').addEventListener('click', ()=>{
+    cropAllExcluded = new Set(cropAllCandidates().map(d=>d.id)); renderCropAllList();
+  });
+  document.getElementById('cropAllBackdrop').addEventListener('mousedown', e=>{
+    if(e.target.id === 'cropAllBackdrop') closeCropAllModal();
+  });
+  document.getElementById('btnCropCenter').addEventListener('click', ()=>{
+    if(!cropRect){ showToast('먼저 자를 영역을 지정해주세요.'); return; }
+    if(centerCropRect()){ syncCropSizeUI(); renderCanvas(); }
+  });
+  // 크기(px) 칸 — 비율 칸과 같은 약속을 따른다: type=number를 쓰지 않고 숫자가 아닌 글자를 걸러내며,
+  // 값은 Enter 또는 칸을 벗어날 때 반영한다(치는 도중 한 글자마다 상자가 튀면 지울 수가 없다).
+  ['cropSizeW','cropSizeH'].forEach(id=>{
+    const el = document.getElementById(id);
+    const which = (id === 'cropSizeH') ? 'h' : 'w';
+    el.addEventListener('input', ()=>{
+      const cleaned = el.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');
+      if(cleaned !== el.value) el.value = cleaned;
+    });
+    el.addEventListener('change', ()=> applyCropSizeInput(which));
+    el.addEventListener('keydown', ev=>{
+      if(ev.key === 'Enter'){ ev.preventDefault(); applyCropSizeInput(which); el.blur(); }
+      else if(ev.key === 'Escape'){ ev.preventDefault(); syncCropSizeUI(); el.blur(); }
+    });
+  });
 
   document.getElementById('btnThemeToggle').addEventListener('click', ()=>{
     applyTheme(isDarkNow() ? 'light' : 'dark');
@@ -11204,9 +11928,15 @@
       e.preventDefault();
       const d = getActiveDrawing();
       if(!d) return;
-      // 그리기의 「선택」 도구에서는 "전체 선택"이 마커가 아니라 그린 선을 뜻한다 — 지금 다루고
-      // 있는 대상이 그린 선이기 때문이다(지우개/선 지우개를 나눠 둔 것과 같은 경계).
+      // 「선택」(통합)에서는 마커와 그린 선을 모두 고른다 — 하나의 도구로 둘 다 다루므로
+      // "전체 선택"도 화면에 있는 것 전부여야 한다. 그리는 도구에서는 그린 선만 고른다.
       if(sketchTool === 'pick'){
+        selectedSketchIds = new Set((d.sketch||[]).map(s=>s.id));
+        selectedIds = new Set(d.markers.filter(m=>m.typeKey!=='tilt_dir').map(m=>m.id));
+        renderCanvas(); renderTable(); updateModeHint();
+        return;
+      }
+      if(sketchTool){
         selectedSketchIds = new Set((d.sketch||[]).map(s=>s.id));
         renderCanvas(); updateModeHint();
         return;
@@ -11214,8 +11944,33 @@
       selectedIds = new Set(d.markers.map(m=>m.id)); renderCanvas(); renderTable();
       return;
     }
+    // 그린 것을 도면 사이로 옮기는 길 — 골라 둔 획을 복사·잘라내기 해두었다가 다른 도면 탭에서
+    // 붙여넣는다. Ctrl+V는 "복사해 둔 것이 있고 지금 그리기/선택 중일 때"만 가로챈다 — 그러지
+    // 않으면 캡처 도구에서 복사한 이미지를 도면으로 붙여넣는 기존 길을 막아버린다.
+    if((e.ctrlKey||e.metaKey) && !e.shiftKey && !isEditing && e.code==='KeyC' && sketchTool && selectedSketchIds.size>0){
+      e.preventDefault(); copySelectedSketch(false); return;
+    }
+    if((e.ctrlKey||e.metaKey) && !e.shiftKey && !isEditing && e.code==='KeyX' && sketchTool && selectedSketchIds.size>0){
+      e.preventDefault(); copySelectedSketch(true); return;
+    }
+    if((e.ctrlKey||e.metaKey) && !e.shiftKey && !isEditing && e.code==='KeyV' && sketchTool && sketchClipboard.length>0){
+      e.preventDefault(); pasteSketchClipboard(); return;
+    }
     if((e.key==='Delete' || e.key==='Backspace') && sketchTool && selectedSketchIds.size>0 && !isEditing && !justLeftEditable){
-      e.preventDefault(); deleteSelectedSketch(); return;
+      e.preventDefault();
+      // 통합 선택에서는 마커와 그린 선을 함께 골라 둘 수 있다 — Delete 한 번에 둘 다 지운다
+      // (그린 선만 지우고 마커가 남으면, 한 번 더 눌러야 한다는 것을 알 방법이 없다).
+      const alsoMarkers = selectMode && selectedIds.size>0;
+      const before = undoStack.length;
+      deleteSelectedSketch();
+      if(alsoMarkers){
+        deleteSelected();
+        // 실행취소 기록은 하나면 된다 — 첫 기록이 이미 "지우기 전의 마커와 그린 선"을 통째로
+        // 담고 있으므로(pushUndo는 도면 한 장을 통으로 찍는다), 두 번째 기록은 Ctrl+Z를 두 번
+        // 누르게 만들 뿐이다.
+        if(undoStack.length === before+2) undoStack.splice(before+1, 1);
+      }
+      return;
     }
     if((e.key==='Delete' || e.key==='Backspace') && selectedIds.size>0 && !isEditing && !justLeftEditable){ e.preventDefault(); deleteSelected(); return; }
     if(e.key==='Enter' && cropMode && cropRect && !isEditing){ e.preventDefault(); performCropApply(); return; }
@@ -11224,6 +11979,8 @@
       // 항상 그 위에 뜬다 — 순서를 바꾸면 Esc가 아래쪽 창만 닫아, 위쪽 창이 갈 곳 없이 남는다.
       if(isTableInputOpen()){ e.preventDefault(); closeTableInputModal(); return; }
       if(isExportModalOpen()){ e.preventDefault(); closeExportModal(); return; }
+      // 「모든 도면 자르기」 미리보기는 자르기 모드 위에 뜬다 — 자르기보다 먼저 닫아야 한다.
+      if(isCropAllOpen()){ e.preventDefault(); closeCropAllModal(); return; }
       if(cropMode){ e.preventDefault(); exitCropMode(); return; }
       // 글자 입력칸이 떠 있으면 그 입력칸 자신의 keydown이 먼저 Esc를 받아 취소하지만, 포커스가
       // 어쩌다 빠져 있는 경우를 위해 여기서도 한 번 더 받는다.
@@ -11232,7 +11989,14 @@
       if(!isEditing && legendSelected){ e.preventDefault(); legendSelected=false; renderCanvas(); return; }
       // 그린 선을 골라둔 상태의 Esc는 먼저 "고르기 해제"다 — 곧바로 그리기 모드까지 꺼지면
       // 잘못 고른 것 하나를 놓으려다 모드가 통째로 닫혀 다시 켜야 한다.
-      if(!isEditing && selectedSketchIds.size>0){ e.preventDefault(); clearSketchSelection(); renderCanvas(); updateModeHint(); return; }
+      if(!isEditing && selectedSketchIds.size>0){
+        e.preventDefault();
+        clearSketchSelection();
+        // 통합 선택에서는 마커도 함께 골라져 있을 수 있다 — 한 번의 Esc로 둘 다 놓는다.
+        if(selectMode && selectedIds.size) clearSelection();
+        renderCanvas(); updateModeHint();
+        return;
+      }
       if(!isEditing && selectedIds.size>0){ e.preventDefault(); clearSelection(); return; }
       // 선택할 것이 없으면 Esc는 배타 모드(선택·이동·지우개·그리기)를 푼다 — 모드 이름표가 그렇게 안내한다.
       if(!isEditing && sketchTool){
@@ -11253,7 +12017,9 @@
     // (표제란을 입력하다 캔버스로 돌아온 직후가 딱 그 상황이었다). e.code는 입력기·자판 배열과
     // 무관하게 항상 'KeyS'/'Digit1'로 들어오므로 한/영 상태를 신경 쓸 필요가 없어진다.
     // Ctrl/Alt/Meta가 함께 눌린 조합은 위에서 이미 처리했으므로 여기서는 제외한다.
-    if(e.ctrlKey || e.metaKey || e.altKey) return;
+    // 다만 Alt+방향키는 아래에서 "돌리기"로 쓰므로 여기서 걸러내지 않는다.
+    const isArrowKey = ['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key);
+    if(e.ctrlKey || e.metaKey || (e.altKey && !isArrowKey)) return;
     const code = e.code;
     // 그리기 모드를 켜고 끄는 키(w). 도구를 고르는 키(직선 l · 사각형 r · 자유선 p · 원 o ·
     // 화살표 a · 글자 t · 선지우개 x)는 "그리기 모드일 때만" 듣는다 — 평소에 이 키들이 모드를
@@ -11288,11 +12054,23 @@
     if(sketchTool && (code==='BracketLeft' || code==='BracketRight')){
       e.preventDefault(); stepSketchGridDiv(code==='BracketRight' ? 1 : -1); return;
     }
-    if(sketchTool){
-      const byKey = { KeyV:'pick', KeyL:'line', KeyR:'rect', KeyP:'pen', KeyC:'ellipse', KeyA:'arrow', KeyT:'text', KeyE:'sketchErase' }[code];
-      if(byKey){ e.preventDefault(); setSketchTool(byKey); return; }
+    // 그리기 도구는 그리기 모드 밖에서도 곧바로 눌린다 — 예전에는 w로 그리기를 켠 다음에야 l·r이
+    // 들었기 때문에, 선 하나 그으려 해도 늘 두 키를 눌러야 했다(현장에서 가장 잦은 손동작인데
+    // 가장 멀었다). 이제 도구 키 하나면 그리기가 함께 켜진다. Shift 조합(Shift+L/R 회전 ·
+    // Shift+C 자르기 · Shift+G 모눈)은 위에서 이미 처리되어 여기까지 오지 않지만, 아직 뜻이 없는
+    // Shift 조합이 도구를 바꾸지는 않도록 여기서도 한 번 걸러 둔다.
+    if(!e.shiftKey && !cropMode){
+      const byKey = { KeyL:'line', KeyR:'rect', KeyP:'pen', KeyC:'ellipse', KeyA:'arrow', KeyT:'text', KeyE:'sketchErase' }[code];
+      if(byKey){
+        e.preventDefault();
+        if(!getActiveDrawing()){ showToast('먼저 도면을 추가해주세요. 도면 이미지가 없으면 좌측의 「빈 도면(백지) 추가」로 시작할 수 있습니다.'); return; }
+        setSketchTool(byKey);
+        return;
+      }
     }
-    if(code==='KeyS'){
+    // 「선택」은 s 하나다 — 마커와 그린 선을 같은 도구로 고른다(v는 손에 익은 사람을 위한 옛 키로
+    // 남겨 둔다). 예전에는 s가 마커, v가 그린 선이라 무엇을 고르느냐에 따라 키가 달랐다.
+    if(code==='KeyS' || code==='KeyV'){
       if(!cropMode){ e.preventDefault(); toggleSelectMode(); }
       return;
     }
@@ -11336,40 +12114,73 @@
       }
       return;
     }
-    // 그린 선의 미세 이동 — 마커 회전(←/→)과 겹치지 않도록, 그리기 모드에서 획을 골라둔 경우를
-    // 먼저 처리한다. 화면 픽셀 기준으로 옮긴 뒤 %로 되돌려 저장하므로 확대 배율이 달라도
-    // "화면에서 움직이는 양"은 늘 같다(범례 미세 이동과 같은 방식).
-    if(sketchTool && selectedSketchIds.size>0 && ['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)){
-      e.preventDefault();
+    // ── 방향키 = 옮기기 · Alt+방향키 = 돌리기 (마커와 그린 것에 같은 약속) ──────────────────
+    // 예전에는 같은 방향키가 무엇을 골랐느냐에 따라 다른 일을 했다 — 그린 것은 "옮기기", 마커는
+    // "인출선 회전". 「선택」을 하나로 합치고 나니 둘을 함께 골라 둘 수 있게 되어, 그 상태에서
+    // 방향키가 무엇을 할지 설명할 방법이 없어졌다. 그래서 뜻을 하나로 맞춘다:
+    //   방향키 = 골라 둔 것(마커·그린 것 전부)을 1px 옮기기 (Shift: 10px)
+    //   Alt+방향키(←/→) = 돌리기 — 마커는 인출선 각도(Shift: 45°), 그린 것은 도형 각도(Shift: 15°)
+    if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key) && !e.ctrlKey && !e.metaKey){
       const d = getActiveDrawing();
-      if(d){
+      const strokes = (d && sketchTool) ? selectedSketchStrokes(d) : [];
+      const hasMarkers = !!d && selectedIds.size>0;
+      if(!d || (strokes.length === 0 && !hasMarkers)) return;
+      e.preventDefault();
+      // 방향키를 꾹 누르면 키 반복이 초당 수십 번 들어온다 — 그때마다 실행취소를 쌓으면 스택(60개)이
+      // 미세 이동으로만 가득 차, 그 전에 한 일로 되돌아갈 수 없게 된다. 잠깐 쉬었다 누른 것만 새 기록으로 본다.
+      const now = Date.now();
+      if(now - lastNudgeUndoAt > 700) pushUndo();
+      lastNudgeUndoAt = now;
+      if(e.altKey){
+        const dir = (e.key==='ArrowLeft') ? -1 : (e.key==='ArrowRight' ? 1 : 0);
+        if(dir !== 0){
+          if(hasMarkers){
+            const step = e.shiftKey ? 45 : 10;
+            d.markers.forEach(m=>{
+              if(!selectedIds.has(m.id)) return;
+              if(getType(m.typeKey).endStyle==='rect'){ m.rectAngle = ((m.rectAngle||0)+dir*step+360)%360; }
+              else { m.angle = ((m.angle||0)+dir*step)%360; }
+              if(m.typeKey==='tilt_pos') updateTiltMarker(m);
+            });
+          }
+          if(strokes.length){
+            // 그린 것은 고른 것 전체의 틀 한가운데를 축으로 함께 돈다(틀의 회전 손잡이와 같은 축).
+            const f = selectionFrameCanvas(d, strokes, canvas.width, canvas.height);
+            if(f){
+              const pivN = { x: (f.x0+f.x1)/2/canvas.width*d.naturalW, y: (f.y0+f.y1)/2/canvas.height*d.naturalH };
+              const deg = dir * (e.shiftKey ? 15 : 5);
+              strokes.forEach(s=>{
+                const orig = { pts: (s.pts||[]).map(q=>({x:q.x, y:q.y})), angle: s.angle||0, fontSize: s.fontSize };
+                rotateStrokeAround(d, s, orig, pivN, deg);
+              });
+            }
+          }
+        }
+      } else {
+        // 화면 픽셀 기준으로 옮긴 뒤 %로 되돌려 저장하므로, 확대 배율이 달라도 "화면에서 움직이는 양"은 늘 같다.
         const stepPx = e.shiftKey ? 10 : 1;
         const dxPct = (e.key==='ArrowLeft' ? -stepPx : e.key==='ArrowRight' ? stepPx : 0) / canvas.width * 100;
         const dyPct = (e.key==='ArrowUp' ? -stepPx : e.key==='ArrowDown' ? stepPx : 0) / canvas.height * 100;
-        pushUndo();
-        selectedSketchStrokes(d).forEach(s=>{
+        strokes.forEach(s=>{
           s.pts = (s.pts||[]).map(p=>({ x:p.x+dxPct, y:p.y+dyPct }));
         });
-        renderCanvas();
+        if(hasMarkers){
+          d.markers.forEach(m=>{
+            if(!selectedIds.has(m.id)) return;
+            m.xPct = clamp(m.xPct+dxPct, 0, 100); m.yPct = clamp(m.yPct+dyPct, 0, 100);
+            if(m.rectXPct!==undefined && m.rectXPct!==null){ m.rectXPct += dxPct; m.rectYPct += dyPct; }
+            if(m.typeKey==='tilt_pos') updateTiltMarker(m);
+          });
+        }
       }
-      return;
-    }
-    if((e.key==='ArrowLeft' || e.key==='ArrowRight') && selectedIds.size>0){
-      e.preventDefault();
-      const step = e.shiftKey ? 45 : 10;
-      const delta = e.key==='ArrowLeft' ? -step : step;
-      const d = getActiveDrawing();
-      if(d){
-        d.markers.forEach(m=>{
-          if(!selectedIds.has(m.id)) return;
-          if(getType(m.typeKey).endStyle==='rect'){ m.rectAngle = ((m.rectAngle||0)+delta+360)%360; }
-          else { m.angle = ((m.angle||0)+delta)%360; }
-        });
-        renderCanvas();
-      }
+      markDirty();
+      renderCanvas();
+      if(hasMarkers) renderTable();
       return;
     }
   });
+  // 방향키 미세 이동·돌리기의 실행취소를 묶는 기준 시각(위 참고).
+  let lastNudgeUndoAt = 0;
 
   const canvas = document.getElementById('mainCanvas');
 
@@ -11452,15 +12263,50 @@
     const p = canvasPointFromEvent(e);
 
     if(cropMode){
+      // 이미 잡아 둔 영역이 있으면, 손잡이 → 옮기기 → 새로 끌기 순으로 본다. 손잡이가 상자 모서리에
+      // 있으므로 이 순서가 아니면 모서리를 잡으려다 상자를 통째로 끌게 된다.
+      const hh = cropHandleHitTest(p.x, p.y, isTouchEvent(e));
+      if(hh){
+        pendingAction = { mode:'cropResize', corner: hh.c, start: Object.assign({}, cropRect), startX:p.x, startY:p.y };
+        return;
+      }
+      // 상자가 도면을 꽉 채우고 있으면 옮길 자리가 없다 — 그때 안을 끌면 아무 일도 일어나지 않아
+      // 앱이 멎은 것처럼 보이므로, 그 경우에는 새로 잡는 것으로 본다(비율이 도면과 정확히 같은
+      // 비율일 때 실제로 그런 상자가 만들어진다).
+      const stuck = !!cropRect && cropRect.w >= canvas.width-0.5 && cropRect.h >= canvas.height-0.5;
+      if(!stuck && cropRectContains(cropRect, p.x, p.y)){
+        pendingAction = { mode:'cropMove', start: Object.assign({}, cropRect), startX:p.x, startY:p.y };
+        canvas.style.cursor = 'move';
+        return;
+      }
       pendingAction = { mode:'crop', startX:p.x, startY:p.y, curX:p.x, curY:p.y, alt:!!e.altKey };
       return;
     }
 
     // 그리기 모드는 크롭 다음, 지우개 앞에 둔다 — 이 모드에서는 마커 선택·이동·생성이 전부 일어나지
     // 않아야 하므로(그리는 도중 도면 위 마커를 건드리면 선이 아니라 마커가 끌려간다) 여기서 곧장 끝낸다.
-    if(sketchTool){
+    // 다만 「선택」(pick)은 마커와 그린 선을 함께 다루는 통합 도구라, 아래 마커 쪽 코드로 내려갈 수 있다.
+    if(sketchTool && sketchTool !== 'pick'){
       handleSketchPointerDown(d, p, e);
       return;
+    }
+    if(sketchTool === 'pick'){
+      // 통합 선택의 우선순위:
+      //   ① 골라 둔 그린 것의 조절점 — 지금 손보는 중인 대상이라 가장 먼저 잡혀야 한다
+      //   ② 마커와 그 손잡이 — 판정 범위가 좁고 정확한 대상이므로, 넓게 잡히는 선보다 앞에 둔다
+      //   ③ 그린 선 · ④ 빈 곳(범위로 여럿 고르기)  ← 스케치 쪽 처리에 맡긴다
+      const touch = isTouchEvent(e);
+      if(sketchHandleHitTest(d, p.x, p.y, touch)){ handleSketchPickPointerDown(d, p, e); return; }
+      const onMarker = !!(hitTestLegendBox(d, p.x, p.y, touch)
+        || hitTestRectRotateHandle(d, p.x, p.y, touch)
+        || hitTestRectResizeHandle(d, p.x, p.y, touch)
+        || hitTestLeaderBendHandle(d, p.x, p.y, touch)
+        || hitTestHandle(d, p.x, p.y, touch)
+        || hitTestMarker(d, p.x, p.y));
+      if(!onMarker){ handleSketchPickPointerDown(d, p, e); return; }
+      // 마커를 잡았다 — 그린 것 쪽 선택은 놓아준다(둘을 동시에 끌면 무엇이 움직이는지 알 수 없다).
+      if(!e.shiftKey && selectedSketchIds.size){ clearSketchSelection(); }
+      // 아래 마커 처리로 그대로 내려간다.
     }
 
     if(eraseMode){
@@ -11527,7 +12373,10 @@
 
     const hit = hitTestMarker(d, p.x, p.y);
     if(hit){
-      if(e.shiftKey){ toggleSelect(hit.id); pendingAction = null; return; }
+      // Shift+클릭으로 고르기 목록에 더한다. 다만 "이미 골라 둔 것"을 Shift로 누른 경우에는
+      // 곧게 옮기려는 손동작일 수 있으므로 여기서 빼지 않고, 손을 뗄 때(움직이지 않았을 때만) 뺀다.
+      if(e.shiftKey && !selectedIds.has(hit.id)){ toggleSelect(hit.id); pendingAction = null; return; }
+      const shiftUnselectId = e.shiftKey ? hit.id : null;
       if(!selectedIds.has(hit.id)) selectOnly(hit.id);
       pushUndo();
       const groupStart = {};
@@ -11535,7 +12384,7 @@
         const mm = d.markers.find(x=>x.id===id);
         if(mm) groupStart[id] = { xPct: mm.xPct, yPct: mm.yPct, rectXPct: mm.rectXPct, rectYPct: mm.rectYPct };
       });
-      pendingAction = { mode:'move', hitId: hit.id, startX:p.x, startY:p.y, moved:false, groupStart };
+      pendingAction = { mode:'move', hitId: hit.id, startX:p.x, startY:p.y, moved:false, groupStart, shiftUnselectId };
       return;
     }
 
@@ -11582,7 +12431,15 @@
       // Space를 누르고 있는 동안은 "지금 누르면 화면 이동"이라는 뜻이므로, 아래의 마커/손잡이 위치별
       // 커서 판정을 건너뛰고 손바닥 커서를 유지한다.
       if(spaceKeyDown){ canvas.style.cursor = 'grab'; return; }
-      if(cropMode){ canvas.style.cursor = 'crosshair'; return; }
+      if(cropMode){
+        // 자르기에서도 "지금 누르면 무엇이 일어나는지"를 커서로 미리 알린다:
+        // 손잡이 위 = 크기 바꾸기, 상자 안 = 옮기기, 바깥 = 새로 잡기.
+        const pC = canvasPointFromEvent(e);
+        const hh = cropHandleHitTest(pC.x, pC.y, isTouchEvent(e));
+        canvas.style.cursor = hh ? (CROP_RESIZE_CURSORS[hh.c] || 'pointer')
+          : (cropRectContains(cropRect, pC.x, pC.y) ? 'move' : 'crosshair');
+        return;
+      }
       const d0 = getActiveDrawing(); if(!d0) return;
       const p0 = canvasPointFromEvent(e);
       if(coordGuideOn){ lastMouseCanvasPt = { x:p0.x, y:p0.y }; }
@@ -11596,9 +12453,18 @@
       // 마커가 아니라 선이기 때문. 선 지우개일 때만 지워질 반경을 커서 자리에 함께 보여준다.
       if(sketchTool){
         if(sketchTool === 'pick'){
-          // 「선택」에서는 지금 누르면 무엇이 일어나는지를 커서로 미리 알려준다:
-          // 조절점 위 = 모양 고치기, 그린 선 위 = 옮기기, 빈 곳 = 범위로 고르기.
-          if(sketchHandleHitTest(d0, p0.x, p0.y, isTouchEvent(e))) canvas.style.cursor = 'pointer';
+          // 「선택」에서는 지금 누르면 무엇이 일어나는지를 커서로 미리 알려준다. 순서는 실제로
+          // 잡히는 순서(onPointerDown)와 똑같아야 한다 — 다르면 커서가 거짓말을 한다.
+          const touch0 = isTouchEvent(e);
+          const rectRot0 = hitTestRectRotateHandle(d0, p0.x, p0.y, touch0);
+          const rectHd0 = hitTestRectResizeHandle(d0, p0.x, p0.y, touch0);
+          if(sketchHandleHitTest(d0, p0.x, p0.y, touch0)) canvas.style.cursor = 'pointer';
+          else if(hitTestLegendBox(d0, p0.x, p0.y, touch0)) canvas.style.cursor = 'move';
+          else if(hitTestLeaderBendHandle(d0, p0.x, p0.y, touch0)) canvas.style.cursor = 'move';
+          else if(rectRot0) canvas.style.cursor = 'grab';
+          else if(rectHd0) canvas.style.cursor = RESIZE_CURSORS[rectHd0.corner] || 'pointer';
+          else if(hitTestHandle(d0, p0.x, p0.y, touch0)) canvas.style.cursor = 'alias';
+          else if(hitTestMarker(d0, p0.x, p0.y)) canvas.style.cursor = 'move';
           else if(sketchHitTest(d0, canvasPtToPct(p0).x, canvasPtToPct(p0).y, sketchPickTolNatural(d0))) canvas.style.cursor = 'move';
           else canvas.style.cursor = 'crosshair';
           return;
@@ -11635,6 +12501,14 @@
     if(pendingAction.mode==='crop'){
       pendingAction.curX = p.x; pendingAction.curY = p.y;
       pendingAction.alt = !!e.altKey; // 끄는 도중에 눌렀다 떼도 곧바로 반영된다
+      syncCropSizeUI(cropRectFromAction(pendingAction)); // 끄는 동안에도 크기 칸이 지금 상자를 말한다
+      scheduleMarkerRender();
+      return;
+    }
+    if(pendingAction.mode==='cropMove' || pendingAction.mode==='cropResize'){
+      cropRect = (pendingAction.mode==='cropMove') ? cropMoveRect(pendingAction, p, e)
+                                                   : cropResizeRect(pendingAction, p, e);
+      syncCropSizeUI();   // 끄는 동안 크기 칸의 수도 함께 움직인다 — 두 곳이 같은 값을 말해야 한다
       scheduleMarkerRender();
       return;
     }
@@ -11652,8 +12526,14 @@
 
     if(pendingAction.mode==='move' && pendingAction.moved){
       const w = canvas.width, h = canvas.height;
-      const dxPct = (p.x-pendingAction.startX)/w*100;
-      const dyPct = (p.y-pendingAction.startY)/h*100;
+      let dx = p.x-pendingAction.startX, dy = p.y-pendingAction.startY;
+      // Shift를 누른 채 끌면 많이 움직인 쪽 한 축으로만 간다(그린 선·자르기 상자와 같은 약속).
+      // 같은 줄에 늘어선 마커를 나란히 유지한 채 옮길 때 손 떨림으로 줄이 흐트러지지 않는다.
+      // 시작할 때가 아니라 "지금" 눌려 있는지를 본다 — Shift+클릭은 이미 선택 넣고 빼기라서,
+      // 끌기 시작한 뒤에 눌러야 하기 때문이다.
+      if(e.shiftKey){ if(Math.abs(dx) >= Math.abs(dy)) dy = 0; else dx = 0; }
+      const dxPct = dx/w*100;
+      const dyPct = dy/h*100;
       Object.keys(pendingAction.groupStart).forEach(id=>{
         const mm = d.markers.find(x=>x.id===id);
         const st = pendingAction.groupStart[id];
@@ -11787,11 +12667,21 @@
       if(action.mode==='crop'){
         const r = cropRectFromAction(action);
         if(r.w>15 && r.h>15){ cropRect = r; }
+        syncCropSizeUI();
+        canvas.style.cursor = 'crosshair';
+        renderCanvas();
+      } else if(action.mode==='cropMove' || action.mode==='cropResize'){
+        syncCropSizeUI();
         renderCanvas();
       } else if(action.mode==='rotate'){
         renderTable();
       } else if(action.mode==='move'){
         if(action.moved) renderTable();
+        else if(action.shiftUnselectId){
+          // 끌지 않고 그대로 뗀 Shift+누르기 = 고르기에서 빼기(누를 때 미뤄 둔 판정을 여기서 한다).
+          if(undoStack.length) undoStack.pop();   // 옮기지 않았으니 빈 기록이다
+          toggleSelect(action.shiftUnselectId);
+        }
       } else if(action.mode==='resizeRect'){
         renderTable();
       } else if(action.mode==='rotateRect'){
@@ -12766,8 +13656,27 @@
     cropRatioValue, cropRatioCanvas, cropRatioText, cropRectFromAction, applyCropRatioToRect,
     get cropMode(){ return cropMode; },
     get cropRect(){ return cropRect; },
+    set cropRect(v){ cropRect = v; },
     get cropRatioW(){ return cropRatioW; },
     get cropRatioH(){ return cropRatioH; },
+    // 자르기 상자 손보기 · 모든 도면 자르기
+    cropHandlePoints, cropHandleHitTest, centerCropRect, applyCropSizeInput,
+    cropRectPct, cropRegionForDrawing, performCropApplyAll, syncCropSizeUI,
+    // 통합 선택 · 그린 것 복사
+    setSketchTool, setSelectMode, toggleSelectMode, copySelectedSketch, pasteSketchClipboard,
+    get sketchTool(){ return sketchTool; },
+    get selectMode(){ return selectMode; },
+    get selectedSketchIds(){ return Array.from(selectedSketchIds); },
+    set selectedSketchIds(v){ selectedSketchIds = new Set(v); },
+    get selectedIds(){ return Array.from(selectedIds); },
+    set selectedIds(v){ selectedIds = new Set(v); },
+    get sketchClipboard(){ return sketchClipboard; },
+    get pendingActionMode(){ return pendingAction ? pendingAction.mode : null; },
+    get sketchWidthMult(){ return sketchWidthMult; },
+    get drawings(){ return drawings; },
+    setActiveDrawing, addBlankDrawing, deleteDrawing, undo, redo, renderCanvas,
+    cropRegionToNewDrawing, updateModeHint,
+    get modeHintExpanded(){ return modeHintExpanded; },
   };
 })();
 </script>
