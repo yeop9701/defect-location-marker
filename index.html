@@ -1276,7 +1276,7 @@
           <div class="help-sec">
             <h5>저장 · 내보내기</h5>
             <ul>
-              <li><b>프로젝트 저장</b>(Ctrl+S, 상단): 도면 이미지·마킹·사진까지 작업 전체를 파일 하나로 보관 — 이어서 하려면 이것으로 저장하세요</li>
+              <li><b>프로젝트 저장</b>(Ctrl+S, 상단): 도면 이미지·마킹·사진까지 작업 전체를 파일 하나로 보관 — 이어서 하려면 이것으로 저장하세요. <b>아이콘 크기·도면틀 치수·범례 설정</b>도 함께 담기므로, 다시 열면 저장 당시의 모습 그대로입니다</li>
               <li>그 밖의 내보내기는 전부 도구줄 오른쪽 <b>「내보내기」</b> 창 안에 있습니다 — CSV·엑셀, 도면 이미지(PNG·PDF), 사진 일괄저장, 통계</li>
               <li>같은 창의 「저장 모양」에서 도면틀(A4 도곽+표제란)과 범례를 켜고 끕니다 — 작업 화면은 바뀌지 않습니다</li>
               <li><b>도면틀 모양은 「미리보기」 창 안에서 맞춥니다</b> — 아래쪽 <b>「도면틀 조절」</b>을 펼치면 테두리 여백(위·아래·좌·우), 표·도면과 테두리 사이 간격, 상단표 높이, 글자 크기, 선 굵기를 저장 결과를 보면서 바로 바꿀 수 있습니다(1.0이 기본값, 「기본값으로」로 되돌리기)</li>
@@ -2537,7 +2537,17 @@
   let activeTypeKey = 'wall';
   let selectedIds = new Set();
   let zoom = 1;
+  // 마커 아이콘(번호 배지·기호)의 크기 배수. 「아이콘 크기」 손잡이(작업 화면 도구줄 / 인쇄
+  // 미리보기 아래줄)가 함께 쓰는 단 하나의 값이고, 양쪽 손잡이의 min·max와 같은 범위다.
+  // 프로젝트 파일에 함께 담긴다 — 마커 좌표(xPct/yPct)는 저장 당시의 이 값을 기준으로 적힌
+  // 수치이고, 인출선 길이가 이 크기에서 파생되므로, 다시 열 때 이 값이 1로 돌아가면 배지는
+  // 제자리인데 화살표 끝(실제 결함 지점)이 밀려난다.
+  const ICON_SIZE_RANGE = [0.6, 2];
   let iconSizeMult = 1;
+  function sanitizeIconSizeMult(v){
+    const n = Number(v);
+    return (Number.isFinite(n) && n > 0) ? clamp(n, ICON_SIZE_RANGE[0], ICON_SIZE_RANGE[1]) : null;
+  }
   let leaderLenMult = 1;
   // ---------- 도면틀(도곽) 치수 ----------
   // 예전에는 여백·간격·글자 크기가 buildExportCanvasTitleBlock() 안에 숫자로 박혀 있어, 조금
@@ -2649,7 +2659,11 @@
   // v5: 도면틀 배수의 기준자가 바뀌었고(FRAME_BASE — 1.0이 곧 지금 모습), 범례 자리를 도곽
   // 기준으로 잡는 legendFramePct·이미지 크기 d.imgScale·범례 상자 모양(legendBoxStyle)이
   // 추가됨. v4 이하 파일은 열 때 convertLegacyFrameLayout()으로 환산해 받는다.
-  const PROJECT_FILE_VERSION = 5;
+  // v6: 아이콘 크기(iconSizeMult)가 추가됨. 예전에는 저장되지 않아 다시 열 때마다 100%로
+  // 돌아갔고, 마커 배지는 제자리인데 인출선 길이가 반지름에서 파생되는 탓에 화살표 끝(실제
+  // 결함 지점)이 조금씩 밀려났다. 구버전 도구로 열면 이 값이 무시되어 같은 증상이 나므로
+  // 버전을 올려 알린다(v5 이하 파일은 열 때 지금 값을 그대로 둔다 — 저장 당시 값을 알 길이 없다).
+  const PROJECT_FILE_VERSION = 6;
   // 빌드 도구 없이 파일 하나로 배포하는 프로젝트라 커밋 해시를 자동으로 넣을 수 없으므로,
   // 배포용으로 이 파일을 고칠 때 날짜를 함께 갱신한다. 하단 "Ver 2.1" 표기 옆에 표시된다.
   const APP_BUILD_DATE = '2026-09-09';
@@ -11623,6 +11637,12 @@
       saveLegendBoxStyle();
       syncLegendBoxStyleUI();
     }
+    // 아이콘 크기(v6부터). 마커 좌표를 다시 계산하지 않는 applyIconSizeMult 로 넣는다 — 파일에
+    // 적힌 좌표가 곧 저장 당시의 모습이므로, 값만 되돌려 놓으면 크기도 자리도 그대로 열린다.
+    // v5 이하 파일에는 이 값이 없다. 저장 당시 몇 %였는지 알 길이 없어, 다른 누락 항목들과 같은
+    // 방침으로 지금 값을 그대로 둔다(100%로 되돌리지 않는다).
+    const loadedIconSize = sanitizeIconSizeMult(data.iconSizeMult);
+    if(loadedIconSize !== null) applyIconSizeMult(loadedIconSize);
     drawings = [];
     activeDrawingId = null;
     selectedIds = new Set();
@@ -11712,6 +11732,9 @@
       frameLayout: Object.assign({}, frameLayout),
       docTitlePct: docTitlePct ? Object.assign({}, docTitlePct) : null,
       legendBoxStyle: Object.assign({}, legendBoxStyle),
+      // 아이콘 크기도 함께 — 마커 좌표가 이 값을 기준으로 적힌 수치라, 둘을 같이 담아야 다시
+      // 열었을 때 크기도 화살표 끝(결함 지점)도 저장 당시 그대로다(ICON_SIZE_RANGE 설명 참고).
+      iconSizeMult: iconSizeMult,
       seriesPresetName: activePresetName,
       seriesSnapshot: DEFECT_TYPES,
       drawings: drawings.map(d=>({ id:d.id, name:d.name, surveyLocation:d.surveyLocation||'', imgSrc:d.imgSrc, markers:d.markers, sketch:d.sketch||[], isBlank:!!d.isBlank, legendPct:d.legendPct||null, legendFramePct:d.legendFramePct||null, legendScale:d.legendScale||null, imgScale:d.imgScale||null, presetName:d.presetName||null }))
@@ -11835,13 +11858,11 @@
   // iconSizeMult 하나뿐이므로 어느 쪽을 움직이든 여기로 모아, 반대쪽 슬라이더와 표시값까지 함께
   // 맞춘다. from으로 "지금 드래그 중인 쪽"을 알려 그 슬라이더의 value는 건드리지 않는다 —
   // 드래그 도중 value를 되쓰면 손가락 아래에서 노브가 튀기 때문이다.
-  function setIconSizeMult(v, from){
-    // 크기만 바꾸고 화살표 끝(결함 위치)은 그 자리에 그대로 둔다 — withMarkerTipsAnchored 주석 참고.
-    // 슬라이더를 끝까지 밀었다 되돌리면 배지도 원래 자리로 정확히 돌아온다(끝점 기준의 역산이라
-    // 오차가 누적되지 않는다).
-    withMarkerTipsAnchored(()=>{
-      iconSizeMult = clamp(parseFloat(v) || 1, 0.6, 2);
-    });
+  // 값과 두 손잡이만 맞춘다 — 마커 좌표는 건드리지 않는다. 프로젝트를 불러올 때 쓰는 길이다:
+  // 파일에 적힌 좌표는 파일에 적힌 아이콘 크기를 기준으로 한 값이므로, 여기서 좌표를 다시
+  // 계산하면(setIconSizeMult 처럼) 애써 저장해 둔 자리가 또 밀려난다.
+  function applyIconSizeMult(v, from){
+    iconSizeMult = sanitizeIconSizeMult(v) || 1;
     const pct = Math.round(iconSizeMult*100)+'%';
     const main = document.getElementById('sizeSlider');
     const pv = document.getElementById('tbPreviewIconSizeSlider');
@@ -11851,6 +11872,14 @@
     const pvVal = document.getElementById('tbPreviewIconSizeVal');
     if(mainVal) mainVal.textContent = pct;
     if(pvVal) pvVal.textContent = pct;
+  }
+  function setIconSizeMult(v, from){
+    // 크기만 바꾸고 화살표 끝(결함 위치)은 그 자리에 그대로 둔다 — withMarkerTipsAnchored 주석 참고.
+    // 슬라이더를 끝까지 밀었다 되돌리면 배지도 원래 자리로 정확히 돌아온다(끝점 기준의 역산이라
+    // 오차가 누적되지 않는다).
+    withMarkerTipsAnchored(()=>{
+      applyIconSizeMult(v, from);
+    });
     renderMarkerLayer(); // 아이콘 크기는 마커에만 영향 — 도면 이미지까지 다시 그릴 필요는 없다
     // 미리보기가 열려 있으면 저장 결과도 즉시 갱신한다. 슬라이더 값은 위에서 이미 맞췄으므로
     // renderTbPreview(슬라이더까지 다시 세팅)가 아니라 캔버스만 그리는 쪽을 쓴다.
@@ -13572,6 +13601,7 @@
       frameLayout: Object.assign({}, frameLayout),
       docTitlePct: docTitlePct ? Object.assign({}, docTitlePct) : null,
       legendBoxStyle: Object.assign({}, legendBoxStyle),
+      iconSizeMult: iconSizeMult, // 복구해 열 때도 크기·자리가 그대로여야 한다(위 설명과 같은 이유)
       seriesPresetName: activePresetName,
       seriesSnapshot: DEFECT_TYPES,
       drawings: drawings.map(d=>({
@@ -13966,6 +13996,9 @@
     get legendBoxStyle(){ return legendBoxStyle; },
     set legendBoxStyle(v){ legendBoxStyle = sanitizeLegendBoxStyle(v); },
     imgScaleFor, IMG_SCALE_RANGE, PROJECT_FILE_VERSION, convertLegacyFrameLayout,
+    markerRadiusNatural, badgeToTipPct, ICON_SIZE_RANGE,
+    get iconSizeMult(){ return iconSizeMult; },
+    setIconSizeMult, applyIconSizeMult, buildProjectSnapshot, buildProjectMetaSnapshot, applyProjectData,
     getActiveDrawing, saveFrameLayout, syncFrameTuneUI,
     sketchTextMetricsNatural, sketchHitTest, textBorderOn, textBorderColor,
     SKETCH_TEXT_BORDER_DEFAULT, fitTbPreviewCanvas,

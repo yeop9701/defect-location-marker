@@ -424,7 +424,7 @@ const conv = await ev(`__markerDbg.convertLegacyFrameLayout({marginTop:0.8, gapL
 near(conv.marginTop * B.marginTop, 108 * 0.8, 0.01, 'v4 파일의 여백 배수를 열면 저장 당시의 실제 크기 그대로다');
 near(conv.gapLeft * B.gapLeft, 32 * 0.3, 0.01, 'v4 파일의 간격도 마찬가지다');
 near(conv.lineScale * B.lineScale, 0.6, 0.001, 'v4 파일의 선 굵기도 마찬가지다');
-eq(await ev('__markerDbg.PROJECT_FILE_VERSION'), 5, '프로젝트 파일 버전이 5로 올랐다');
+eq(await ev('__markerDbg.PROJECT_FILE_VERSION'), 6, '프로젝트 파일 버전이 6으로 올랐다');
 
 /* ══ 13. 설정이 남는지 ════════════════════════════════════════════ */
 console.log('\n══ 13. 다음에 열어도 그대로인지 ══');
