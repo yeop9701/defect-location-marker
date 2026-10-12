@@ -1284,6 +1284,7 @@
               <li><b>글자</b>(T)는 <b>흰 바탕에 회색 테두리</b>가 둘린 이름표로 그려지고, 글자는 그 테두리의 한가운데에 놓입니다 — 도면 위에 그대로 얹으면 벽선과 겹쳐 읽기 어렵기 때문입니다. 테두리는 도구줄의 <b>ㅁ 단추</b>로 빼거나 넣고, 옆의 <b>색칸</b>으로 색을 바꿉니다(「선택」으로 이미 쓴 글자를 골라 두면 그 글자들에 바로 적용됩니다)</li>
               <li><b>이미지 크기</b>도 미리보기 아래줄에서 도면마다 따로 맞춥니다(100%가 기본, 100%를 넘기면 넘치는 만큼 잘립니다) — 도면틀이 있든 없든 똑같이 적용됩니다</li>
               <li><b>범례(NOTE)의 자리는 도면이 아니라 틀 기준</b>입니다 — 여백·상단표 높이·이미지 크기를 조절해도 잡아둔 자리에 그대로 남습니다. 상자의 <b>배경(반투명·흰색·없음)과 테두리</b>도 미리보기 아래줄에서 고릅니다</li>
+              <li><b>저장 화질</b>은 도면틀을 켜도 떨어지지 않습니다 — 도면이 도곽 안에서 작아지는 만큼 저장 파일의 픽셀 수를 늘려, 도면틀이 있든 없든 <b>도면 원본 해상도 그대로</b> 저장됩니다(그만큼 파일이 커지고 저장에 몇 초 걸릴 수 있습니다)</li>
               <li>표제란 값은 미리보기를 닫지 않고 <b>「표제란 내용 고치기」</b>에서 바로 고칠 수 있고, <b>「템플릿」</b>에는 표제란 값과 함께 <b>도면틀 치수·제목 자리·범례 설정</b>이 통째로 담깁니다 — 현장이 바뀌면 하나만 골라 적용하면 됩니다</li>
             </ul>
           </div>
@@ -2570,6 +2571,21 @@
     gapTop:[0,4], gapBottom:[0,4], gapLeft:[0,4], gapRight:[0,4],
     titleBarScale:[0.4,2], fontScale:[0.4,2], lineScale:[0.2,3],
   };
+  // ---------- 저장 해상도(화질) ----------
+  // 도면틀을 켜면 도면이 도곽 안쪽(표제란 아래)에 "맞춰" 들어가느라 원본보다 작아진다. 예전에는
+  // 종이(캔버스)의 픽셀 수가 도면 폭에 맞춰 정해져 있어서, 줄어든 그 배율만큼 도면의 픽셀이 실제로
+  // 버려졌다 — 가로로 긴 도면은 0.86배, 세로로 긴 도면은 0.36배까지 줄어 선과 작은 글씨가 뭉갰다.
+  // "도면틀을 넣으면 화질이 떨어진다"는 것이 이것이고, 도면틀 없이 저장할 때는 원본 크기 그대로라
+  // 멀쩡했다.
+  //   고치는 방법 : 배치(여백·표 높이·글자 크기 — 전부 아래 치수 그대로)는 손대지 않고, 줄어드는
+  //   만큼 종이의 픽셀 수만 배수로 늘린다(ctx.scale). 그러면 도면은 항상 원본 1:1 이상으로 찍히고,
+  //   테두리·표제란 글씨·마커도 같은 배수로 함께 선명해진다. 저장 결과의 "모양"은 조금도 달라지지
+  //   않고 픽셀만 촘촘해진다.
+  // 다만 끝없이 키울 수는 없다 — 캔버스 한 장이 메모리를 먹고(픽셀 하나에 4바이트), PDF는 그
+  //   픽셀을 전부 무손실로 압축해 담는다. 아래 상한은 도면 긴 변 상한(MAX_DRAWING_DIM 4000px)인
+  //   세로 도면을 1:1로 담고도 남는 크기다(A4 가로 종이에 약 530dpi).
+  const EXPORT_MAX_PIXELS = 38e6;
+  const EXPORT_MAX_SUPERSAMPLE = 6;
   // 도면틀 치수 하나를 실제 크기(px, 또는 배율)로 바꾼다 — 그리는 쪽은 이 함수만 쓴다.
   function frameAbs(key){ return FRAME_BASE[key] * frameLayout[key]; }
   let frameLayout = Object.assign({}, FRAME_LAYOUT_DEFAULT);
@@ -3621,7 +3637,9 @@
     // "도면틀"이 꺼져 있어도 "범례"만 켜져 있으면 미리보기를 열 수 있다 — 이때는 실제 PNG/PDF 저장과
     // 똑같이 도곽 없는 단순 캔버스(buildExportCanvasSimple)에 범례만 얹은 모습을 보여준다.
     const useTitleBlock = document.getElementById('titleBlockToggle').checked;
-    const off = useTitleBlock ? buildExportCanvasTitleBlock(d) : buildExportCanvasSimple(d);
+    // 미리보기는 "모양"만 보여주면 되므로 저장용 고해상도 캔버스를 만들지 않는다(superSample:false) —
+    // 화면에 축소해 그리느라 늘린 픽셀은 어차피 버려지고, 끌어 옮기기 좌표만 번거로워진다.
+    const off = useTitleBlock ? buildExportCanvasTitleBlock(d, { superSample:false }) : buildExportCanvasSimple(d);
     canvasEl.width = off.width; canvasEl.height = off.height;
     canvasEl.getContext('2d').drawImage(off, 0, 0);
   }
@@ -9502,18 +9520,36 @@
     if(!d){ showToast('먼저 도면 이미지를 추가해주세요.'); return; }
     renumberDrawingMarkers(d, {silent:true});
     const useTitleBlock = document.getElementById('titleBlockToggle').checked;
-    const off = useTitleBlock ? buildExportCanvasTitleBlock(d) : buildExportCanvasSimple(d);
     const format = document.getElementById('exportFormatSelect').value;
-    if(format==='pdf'){
-      const pageSizeKey = document.getElementById('pdfPageSizeSelect').value;
-      triggerPdfDownload(off, d, pageSizeKey);
-    } else {
-      triggerPngDownload(off, d);
-    }
+    // 저장용 캔버스는 도면을 원본 해상도로 담느라 수천만 픽셀까지 커진다 — 그리고 압축하는 동안
+    // 화면이 멈춘 것처럼 보이므로, 알림을 먼저 띄우고 한 숨 돌린 뒤에 시작한다.
+    setExportProgressText('저장 파일 만드는 중...');
+    setTimeout(()=>{
+      let off = null;
+      try{
+        off = useTitleBlock ? buildExportCanvasTitleBlock(d) : buildExportCanvasSimple(d);
+      }catch(err){
+        hideExportProgress();
+        showToast('저장 파일을 만들지 못했습니다. 도면 「이미지 크기」를 줄이거나 도면을 나눠 저장해보세요.');
+        return;
+      }
+      if(format==='pdf'){
+        const pageSizeKey = document.getElementById('pdfPageSizeSelect').value;
+        setExportProgressText('PDF로 묶는 중...');
+        Promise.resolve(triggerPdfDownload(off, d, pageSizeKey))
+          .then(()=>{ hideExportProgress(); })
+          .catch(()=>{ hideExportProgress(); showToast('PDF를 만들지 못했습니다.'); });
+      } else {
+        triggerPngDownload(off, d, ()=>hideExportProgress());
+      }
+    }, 30);
   }
 
-  function triggerPngDownload(off, d){
+  // onDone: PNG 바이트를 다 뽑은 뒤에 불린다 — 일괄 저장이 다 쓴 캔버스를 비우는 데 쓴다
+  // (toBlob은 비동기라, 부른 쪽에서 곧바로 비우면 빈 그림이 저장된다).
+  function triggerPngDownload(off, d, onDone){
     off.toBlob(blob=>{
+      if(onDone) onDone();
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url; a.download = filenameBase() + '_' + sanitizeFilename(d.name) + '.png';
@@ -9574,7 +9610,11 @@
   // 눕히지 않은 정방향 글씨) + 그 아래 도면. 페이지 전체 비율은 A4 가로(297:210)에 맞추고, 도면은
   // 항상 "현재 회전 상태 그대로"(d.imgEl 픽셀 그대로) 축소/확대만 해서 배치하므로 표제란은 도면 회전과
   // 무관하게 항상 정방향으로 표시된다.
-  function buildExportCanvasTitleBlock(d){
+  // opts.superSample === false 로 부르면 예전처럼 "배치 치수 = 캔버스 픽셀"인 1배 캔버스를 만든다 —
+  // 인쇄 미리보기가 쓰는 길이다(화면에는 축소해 보여주므로 픽셀을 늘려도 보이는 것은 같고,
+  // 미리보기에서 범례·제목을 끌 때 쓰는 좌표가 캔버스 픽셀 그대로여야 셈이 간단하다).
+  function buildExportCanvasTitleBlock(d, opts){
+    opts = opts || {};
     const w = d.naturalW, h = d.naturalH;
 
     const projName = document.getElementById('projectNameInput').value.trim() || '-';
@@ -9602,15 +9642,43 @@
     // 도면 폭을 기준으로 페이지 폭을 정하되, 너무 작은 도면도 인쇄용으로 충분한 크기가 되도록 최소값을 둔다.
     const outerW = Math.max(w + contentMarginLeft + contentMarginRight, 1400);
     const outerH = Math.round(outerW / A4_RATIO);
+    const contentW = outerW - contentMarginLeft - contentMarginRight;
+
+    // ---- 상단 표제란 높이와 도면이 놓일 영역 — 캔버스를 만들기 전에 먼저 잡는다. 도면이 이 영역에
+    // 맞춰 얼마나 줄어드는지(fitScale)를 알아야 종이의 픽셀 수를 그만큼 되돌려 줄 수 있기 때문이다.
+    const titleBarHForFont = clamp(outerH*0.135, 142, 220);
+    const titleBarH = titleBarHForFont * frameAbs('titleBarScale');
+    const contentY0 = contentMarginTop + titleBarH;
+    const contentAreaH = outerH - contentMarginTop - contentMarginBottom - titleBarH;
+    const drawAreaW = contentW;
+    // 이미지가 표제란/범례/외곽 테두리에 딱 붙지 않도록 도면 배치 영역 안쪽으로 약간의 여백을 둔다.
+    const imageMargin = clamp(Math.min(drawAreaW, contentAreaH)*0.02, 10, 26);
+    const availW = Math.max(10, drawAreaW - imageMargin*2);
+    const availH = Math.max(10, contentAreaH - imageMargin*2);
+    // 페이지가 원본 도면보다 넓어도(작은 이미지를 인쇄용 최소 크기로 맞추는 경우 등) 원본 해상도 이상으로
+    // 늘려 그리지 않는다 — 비트맵을 확대하면 흐려지기 때문. 남는 공간은 여백이 된다.
+    const fitScale = Math.min(availW/w, availH/h, 1);
+
+    // ---- 저장 해상도 : 도면이 fitScale 만큼 줄어드니, 종이의 픽셀 수를 1/fitScale 배로 늘려
+    // 도면이 원본 픽셀과 1:1로 찍히게 한다(EXPORT_MAX_PIXELS 설명 참고). 치수는 전부 위에서 잡은
+    // "배치 단위" 그대로 쓰고, 늘린 배수는 아래 ctx.scale 한 번으로만 반영한다.
+    const ss = (opts.superSample === false) ? 1 : clamp(
+      Math.min(1/Math.max(fitScale, 1e-6),
+               Math.sqrt(EXPORT_MAX_PIXELS/(outerW*outerH)),
+               EXPORT_MAX_SUPERSAMPLE), 1, EXPORT_MAX_SUPERSAMPLE);
 
     const off = document.createElement('canvas');
-    off.width = outerW; off.height = outerH;
+    off.width = Math.round(outerW*ss); off.height = Math.round(outerH*ss);
+    // 배치 단위 ↔ 캔버스 픽셀의 배수를 그리는 쪽이 적어 둔다 — PDF의 "원본 비율" 종이 크기는
+    // 이 배수로 되돌려야 예전과 같은 크기가 된다(buildPDFFromCanvases 참고).
+    off.__layoutScale = ss;
     const ctx = off.getContext('2d');
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
-    ctx.fillStyle = '#ffffff'; ctx.fillRect(0,0,outerW,outerH);
-
-    const contentW = outerW - contentMarginLeft - contentMarginRight;
+    if(ss !== 1) ctx.scale(ss, ss); // 이 아래의 모든 좌표·선 굵기·글자 크기는 "배치 단위"다
+    // 바탕은 배치 치수가 아니라 "캔버스 전체"를 칠한다 — 픽셀 수를 반올림한 탓에 가장자리
+    // 한 줄이 덜 칠해지면, 투명한 그 줄이 PDF(알파 없는 DeviceRGB)에서 검은 선으로 나온다.
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, off.width/ss, off.height/ss);
     // 도곽(외곽 테두리) 사각형 — 도면 제목의 좌표 기준이라 미리 정해 둔다(그리기는 맨 마지막).
     const frameRect = { x: mLeft, y: mTop, w: outerW - mLeft - mRight, h: outerH - mTop - mBottom };
 
@@ -9619,8 +9687,6 @@
     // 표 높이(titleBarScale)와 글자 크기(fontScale)는 서로 따로 논다 — 표만 납작하게 줄여도
     // 글자는 그대로 남도록, 배지·글자는 "줄이기 전" 높이(titleBarHForFont/rowHForFont) 기준으로
     // 계산한다. 다만 표를 아주 납작하게 줄이면 배지가 칸 밖으로 삐져나오므로 그때만 함께 조인다.
-    const titleBarHForFont = clamp(outerH*0.135, 142, 220);
-    const titleBarH = titleBarHForFont * frameAbs('titleBarScale');
     const rowHForFont = titleBarHForFont/2;
     const rowH = titleBarH/2, colW = contentW/2;
     const tbCells = [
@@ -9689,20 +9755,16 @@
     // 켜고 끄거나 크기를 바꿀 때마다 도면 자체의 크기와 위치가 함께 움직였다(계열이 많은 위치도에서는
     // 도면이 눈에 띄게 작아졌다). 도면 배치는 범례와 무관하게 항상 같아야 한다는 요청에 따라 열
     // 예약을 없애고, 작업 화면·"표제란 없이 저장"과 똑같이 d.legendPct 자리에 겹쳐 그리도록 통일했다.
-    const contentY0 = contentMarginTop + titleBarH;
-    const contentAreaH = outerH - contentMarginTop - contentMarginBottom - titleBarH;
-    const drawAreaW = contentW;
-    // 이미지가 표제란/범례/외곽 테두리에 딱 붙지 않도록 도면 배치 영역 안쪽으로 약간의 여백을 둔다.
-    const imageMargin = clamp(Math.min(drawAreaW, contentAreaH)*0.02, 10, 26);
-    const availW = Math.max(10, drawAreaW - imageMargin*2);
-    const availH = Math.max(10, contentAreaH - imageMargin*2);
-    // 페이지가 원본 도면보다 넓어도(작은 이미지를 인쇄용 최소 크기로 맞추는 경우 등) 원본 해상도 이상으로
-    // 확대하지 않는다 — 화질이 흐려지거나 깨지는 것을 막기 위함. 원본보다 페이지가 크면 남는 공간은 여백이 된다.
-    // 여기에 도면별 「이미지 크기」(d.imgScale, 미리보기의 슬라이더)를 곱한다 — 100%가 지금까지의 배치다.
-    const scale = Math.min(availW/w, availH/h, 1) * imgScaleFor(d);
+    // 도면이 놓일 영역(contentY0·contentAreaH·availW/availH)과 줄어드는 배율(fitScale)은 캔버스를
+    // 만들기 전에 위에서 이미 잡아 두었다. 여기에 도면별 「이미지 크기」(d.imgScale, 미리보기의
+    // 슬라이더)를 곱한다 — 100%가 지금까지의 배치다.
+    const scale = fitScale * imgScaleFor(d);
     const drawW = w*scale, drawH = h*scale;
-    const drawX = contentMarginLeft + imageMargin + (availW-drawW)/2;
-    const drawY = contentY0 + imageMargin + (availH-drawH)/2;
+    // 도면의 왼쪽·위 모서리를 캔버스 픽셀 눈금에 맞춘다. 늘린 배수(ss) 덕에 「이미지 크기」100%에서는
+    // 원본 픽셀과 1:1이 되는데, 시작점이 반 픽셀 어긋나 있으면 그 1:1이 다시 섞여 흐려진다.
+    const snap = v => Math.round(v*ss)/ss;
+    const drawX = snap(contentMarginLeft + imageMargin + (availW-drawW)/2);
+    const drawY = snap(contentY0 + imageMargin + (availH-drawH)/2);
     // 100%를 넘겨 키우면 도면이 배치 영역보다 커진다. 표제란이나 테두리를 침범하지 않도록 도면·
     // 스케치·마커는 도면 배치 영역 안으로 잘라서 그린다(범례와 도면 제목은 잘리면 안 되므로 이 밖에서 그린다).
     ctx.save();
@@ -9805,17 +9867,28 @@
   // 캔버스 픽셀에서 알파를 뺀 순수 RGB 바이트를 뽑는다(PDF DeviceRGB 이미지용 — 무손실 원본 그대로).
   function canvasToRGBBytes(canvas){
     const ctx = canvas.getContext('2d');
-    const { data } = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    const out = new Uint8Array(canvas.width * canvas.height * 3);
-    for(let i=0, j=0; i<data.length; i+=4, j+=3){
-      out[j]=data[i]; out[j+1]=data[i+1]; out[j+2]=data[i+2];
+    const W = canvas.width, H = canvas.height;
+    const out = new Uint8Array(W * H * 3);
+    // 고해상도 저장(수천만 픽셀)에서는 캔버스를 한 번에 읽으면 RGBA 사본만으로도 수백 MB가 되어
+    // 느려지거나 아예 실패한다. 가로 띠로 잘라 읽어 쓰고 버리면 봉우리가 띠 하나치로 줄어든다.
+    const band = Math.max(1, Math.min(H, Math.floor(4e6 / Math.max(1, W))));
+    let j = 0;
+    for(let y=0; y<H; y+=band){
+      const hh = Math.min(band, H-y);
+      const { data } = ctx.getImageData(0, y, W, hh);
+      for(let i=0; i<data.length; i+=4, j+=3){
+        out[j]=data[i]; out[j+1]=data[i+1]; out[j+2]=data[i+2];
+      }
     }
     return out;
   }
   // 캔버스 1개짜리 배열을 넘기면 기존과 동일한 1페이지 PDF, 여러 개를 넘기면 도면 수만큼 페이지가
   // 이어진 PDF 1개를 만든다("전체 도면 일괄 저장"에서 사용). 페이지마다 이미지·내용 스트림 객체를
   // 3개씩(페이지/이미지/콘텐츠) 순서대로 번호를 매겨 이어붙이는 방식이라 페이지 수에 제한이 없다.
-  async function buildPDFFromCanvases(canvases, pageSizeKey){
+  // 배열에는 캔버스 대신 "부르면 캔버스를 만들어 주는 함수"를 넣어도 된다 — 그러면 한 장씩 만들어
+  // 압축한 뒤 곧바로 비우므로, 도면이 수십 장이어도 고해상도 캔버스가 한 번에 한 장만 메모리에
+  // 남는다(일괄 저장이 이 길을 쓴다). onPage(i, n)은 몇 장째를 묶고 있는지 알려 주는 선택 사항이다.
+  async function buildPDFFromCanvases(items, pageSizeKey, onPage){
     const parts = [];
     const offsets = [];
     let pos = 0;
@@ -9829,8 +9902,8 @@
 
     pushStr('%PDF-1.4\n');
 
-    const n = canvases.length;
-    const pageObjNums = canvases.map((_,i)=> 3 + i*3);
+    const n = items.length;
+    const pageObjNums = items.map((_,i)=> 3 + i*3);
 
     beginObj(1);
     pushStr('<< /Type /Catalog /Pages 2 0 R >>\nendobj\n');
@@ -9838,8 +9911,10 @@
     beginObj(2);
     pushStr(`<< /Type /Pages /Kids [${pageObjNums.map(num=>num+' 0 R').join(' ')}] /Count ${n} >>\nendobj\n`);
 
-    for(let i=0; i<canvases.length; i++){
-      const canvas = canvases[i];
+    for(let i=0; i<items.length; i++){
+      if(onPage) onPage(i, n);
+      const lazy = typeof items[i] === 'function';
+      const canvas = lazy ? items[i]() : items[i];
       const w = canvas.width, h = canvas.height;
       let pageW, pageH, drawW, drawH, offX, offY;
       if(pageSizeKey && PDF_PAGE_SIZES[pageSizeKey]){
@@ -9850,13 +9925,18 @@
         drawW = w*scale; drawH = h*scale;
         offX = margin + (availW-drawW)/2; offY = margin + (availH-drawH)/2;
       } else {
-        // 원본 비율: 화면 96dpi 기준으로 픽셀을 포인트로 환산 (px * 0.75 = pt)
-        pageW = w*0.75; pageH = h*0.75;
+        // 원본 비율: 화면 96dpi 기준으로 픽셀을 포인트로 환산 (px * 0.75 = pt).
+        // 저장 해상도를 위해 캔버스 픽셀을 늘려 둔 경우(__layoutScale)에는 그 배수를 되돌려
+        // 센다 — 종이 크기는 예전과 똑같이 두고 그 안에 더 촘촘한 그림이 들어가야 한다.
+        const ls = canvas.__layoutScale || 1;
+        pageW = w*0.75/ls; pageH = h*0.75/ls;
         drawW = pageW; drawH = pageH; offX = 0; offY = 0;
       }
 
       const rgbBytes = canvasToRGBBytes(canvas);
       const imgBytes = await deflateBytes(rgbBytes);
+      // 우리가 만든 캔버스라면 다 썼으니 바로 비운다(다음 장을 만들 자리를 비워 둔다).
+      if(lazy){ canvas.width = 1; canvas.height = 1; }
 
       const pageObjNum = pageObjNums[i], imgObjNum = pageObjNum+1, contentObjNum = pageObjNum+2;
 
@@ -9890,8 +9970,8 @@
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(()=>URL.revokeObjectURL(url), 3000);
   }
-  async function triggerPdfDownloadMulti(canvases, filename, pageSizeKey){
-    const blob = await buildPDFFromCanvases(canvases, pageSizeKey);
+  async function triggerPdfDownloadMulti(canvases, filename, pageSizeKey, onPage){
+    const blob = await buildPDFFromCanvases(canvases, pageSizeKey, onPage);
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url; a.download = filename;
@@ -9902,50 +9982,43 @@
   // ---------- 전체 도면 일괄 저장 : 현재 켜진 형식(PNG/PDF)으로 모든 도면을 한 번에 내보낸다 ----------
   // PDF는 도면 수만큼 페이지가 이어진 파일 1개로 저장, PNG는 형식 특성상 파일을 하나로 합칠 수 없어
   // 도면별로 순서대로 저장 대화상자를 띄운다(저장 대화상자가 겹치지 않도록 약간의 지연을 둔다).
+  // 캔버스는 한 장씩 만들어 쓰고 바로 비운다 — 저장용 캔버스는 원본 해상도를 지키려 수천만 픽셀까지
+  // 커지므로(EXPORT_MAX_PIXELS), 도면 수만큼 쌓아 두면 메모리가 버티지 못한다.
   function exportAllDrawings(){
     if(drawings.length===0){ showToast('저장할 도면이 없습니다.'); return; }
     renumberAllDrawings({silent:true});
     const useTitleBlock = document.getElementById('titleBlockToggle').checked;
     const format = document.getElementById('exportFormatSelect').value;
-    // 도면이 많으면 캔버스를 만드는 동안 화면이 통째로 멈춘 것처럼 보인다 — 고해상도 도면 한
-    // 장을 그리는 데만도 시간이 걸리고, 그 사이에는 브라우저가 아무것도 다시 그리지 못한다.
-    // 한 장 만들 때마다 진행 상황을 적고 setTimeout(0)으로 숨을 돌려, 지금 어디까지 됐는지 보이게 한다.
     const total = drawings.length;
-    const canvasList = [];
-    let made = 0;
-    setExportProgressText(`도면 만드는 중... (0/${total})`);
-    const savePngs = ()=>{
-      let k = 0;
-      const next = ()=>{
-        if(k >= total){
-          hideExportProgress();
-          showToast(`도면 ${total}장을 저장했습니다.`);
-          return;
-        }
-        setExportProgressText(`저장하는 중... (${k+1}/${total}) ${drawings[k].name}`);
-        triggerPngDownload(canvasList[k], drawings[k]);
-        k++;
-        setTimeout(next, 400);
-      };
-      next();
-    };
-    const buildNext = ()=>{
-      canvasList.push(useTitleBlock ? buildExportCanvasTitleBlock(drawings[made]) : buildExportCanvasSimple(drawings[made]));
-      made++;
-      setExportProgressText(`도면 만드는 중... (${made}/${total})`);
-      if(made < total){ setTimeout(buildNext, 0); return; }
-      if(format === 'pdf'){
-        // PDF는 압축까지 끝나야 파일이 떨어진다 — 그동안에도 알림을 띄워 둔다.
-        setExportProgressText(`PDF로 묶는 중... (도면 ${total}장)`);
-        const pageSizeKey = document.getElementById('pdfPageSizeSelect').value;
-        Promise.resolve(triggerPdfDownloadMulti(canvasList, filenameBase() + '_전체도면.pdf', pageSizeKey))
-          .then(()=>{ hideExportProgress(); showToast(`도면 ${total}장을 PDF 한 파일로 저장했습니다.`); })
-          .catch(()=>{ hideExportProgress(); showToast('PDF를 만들지 못했습니다.'); });
+    const makeCanvas = (i)=> useTitleBlock ? buildExportCanvasTitleBlock(drawings[i]) : buildExportCanvasSimple(drawings[i]);
+    if(format === 'pdf'){
+      // PDF는 한 장씩 만들어 압축해 이어 붙인다(buildPDFFromCanvases가 함수를 받아 처리한다).
+      setExportProgressText(`PDF로 묶는 중... (0/${total})`);
+      const pageSizeKey = document.getElementById('pdfPageSizeSelect').value;
+      const makers = drawings.map((_,i)=> ()=> makeCanvas(i));
+      Promise.resolve(triggerPdfDownloadMulti(makers, filenameBase() + '_전체도면.pdf', pageSizeKey,
+          (i,n)=> setExportProgressText(`PDF로 묶는 중... (${i+1}/${n}) ${drawings[i].name}`)))
+        .then(()=>{ hideExportProgress(); showToast(`도면 ${total}장을 PDF 한 파일로 저장했습니다.`); })
+        .catch(()=>{ hideExportProgress(); showToast('PDF를 만들지 못했습니다.'); });
+      return;
+    }
+    // PNG — 한 장 만들어 저장하고, 그 캔버스를 비운 뒤 다음 장으로 넘어간다. 한 장을 그리는
+    // 동안에는 브라우저가 화면을 다시 그리지 못하므로, 장마다 진행 상황을 적고 숨을 돌린다.
+    let k = 0;
+    setExportProgressText(`저장하는 중... (0/${total})`);
+    const next = ()=>{
+      if(k >= total){
+        hideExportProgress();
+        showToast(`도면 ${total}장을 저장했습니다.`);
         return;
       }
-      savePngs();
+      setExportProgressText(`저장하는 중... (${k+1}/${total}) ${drawings[k].name}`);
+      const cv = makeCanvas(k);
+      triggerPngDownload(cv, drawings[k], ()=>{ cv.width = 1; cv.height = 1; });
+      k++;
+      setTimeout(next, 400);
     };
-    setTimeout(buildNext, 0);
+    setTimeout(next, 0);
   }
 
   // ---------- CSV 내보내기 / 불러오기 ----------
