@@ -112,7 +112,7 @@ const setSel = (id, v) => ev(`(()=>{const s=document.getElementById('${id}'); s.
   s.dispatchEvent(new Event('change',{bubbles:true})); return true;})()`);
 const blobs = () => ev('window.__blobs');
 await setSel('exportFormatSelect', 'pdf');
-await setSel('pdfPageSizeSelect', 'a4l');
+await setSel('exportPageSizeSelect', 'a4l');
 await ev("document.getElementById('btnExportPNG').click(); true");
 await sleep(6000);
 let bs = await blobs();
