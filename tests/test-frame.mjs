@@ -175,7 +175,9 @@ const valueBand = `(()=>{
   const cv=document.getElementById('tbPreviewCanvas');
   const g=cv.getContext('2d',{willReadFrequently:true});
   const W=cv.width,H=cv.height;
-  const x0=Math.round(W*0.125), x1=Math.round(W*0.46), hh=Math.round(H*0.30);
+  /* 띠는 라벨 배지(왼쪽 끝 ~15%)보다 오른쪽에서 시작해야 한다 — 배지 테두리가 걸리면 줄 수와
+     상관없이 배지 높이만큼의 잉크가 잡혀 한 줄·두 줄 구분이 사라진다. */
+  const x0=Math.round(W*0.18), x1=Math.round(W*0.46), hh=Math.round(H*0.30);
   const im=g.getImageData(0,0,W,hh).data;
   const wide=[], ink=[];
   for(let y=0;y<hh;y++){
@@ -424,7 +426,7 @@ const conv = await ev(`__markerDbg.convertLegacyFrameLayout({marginTop:0.8, gapL
 near(conv.marginTop * B.marginTop, 108 * 0.8, 0.01, 'v4 파일의 여백 배수를 열면 저장 당시의 실제 크기 그대로다');
 near(conv.gapLeft * B.gapLeft, 32 * 0.3, 0.01, 'v4 파일의 간격도 마찬가지다');
 near(conv.lineScale * B.lineScale, 0.6, 0.001, 'v4 파일의 선 굵기도 마찬가지다');
-eq(await ev('__markerDbg.PROJECT_FILE_VERSION'), 6, '프로젝트 파일 버전이 6으로 올랐다');
+eq(await ev('__markerDbg.PROJECT_FILE_VERSION'), 7, '프로젝트 파일 버전이 7로 올랐다(절대 치수 frameSpec이 담기는 버전)');
 
 /* ══ 13. 설정이 남는지 ════════════════════════════════════════════ */
 console.log('\n══ 13. 다음에 열어도 그대로인지 ══');

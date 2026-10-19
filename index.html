@@ -301,7 +301,7 @@
      붙여 캔버스 상단으로 옮긴다. display는 다른 모달과 같은 방식으로 JS가 inline style로 토글한다. */
   .quick-input-sheet{
     position:fixed;left:50%;transform:translateX(-50%);z-index:59;
-    bottom:calc(74px + env(safe-area-inset-bottom));
+    bottom:calc(var(--float-bar-reserve, 74px) + env(safe-area-inset-bottom));
     flex-direction:column;gap:8px;width:min(820px,96vw);padding:10px 12px;border-radius:14px;
     background:var(--surface-1);border:1px solid var(--gridline);box-shadow:0 8px 28px rgba(0,0,0,.28);
   }
@@ -340,13 +340,58 @@
   body.layout-tablet #btnUndo,          /* 하단 플로팅 바에 있음 */
   body.layout-tablet #btnToggleRightPanel{display:none;} /* 서랍(결함 목록 탭)이 같은 역할을 함 */
   body.layout-tablet .autosave-status{display:none;}     /* 같은 값을 플로팅 바에서 보여줌 */
-  body.layout-tablet header.topbar{padding:8px 12px;gap:6px;}
+  body.layout-tablet header.topbar{padding:3px 10px;gap:5px;}
   body.layout-tablet .topbar-left{gap:8px;}
+  /* ---- 태블릿 조작줄 다이어트 2 ----
+     터치 대상을 44px로 맞춰 둔 탓에 머리줄 61px + 도구줄 139px = 200px, 1024×768 아이패드에서
+     화면의 26%가 단추로 찼다("상부 목록과 하부 작업표시줄이 너무 크다"는 사용자 신고). 손가락이
+     아니라 펜으로 쓰는 화면이고 아래 떠 있는 조작바에 같은 기능이 또 있으므로, 조작줄에 한해
+     크기를 내린다(목록·표의 44px 터치 대상은 그대로 둔다).
+     높이는 "얼마나 자주 누르는가"로 갈랐다 — 아래 떠 있는 조작바(마킹하는 내내 누른다)가 가장
+     크고, 도구줄(모드를 바꿀 때), 머리줄(저장할 때)이 그 다음이다. */
+  body.layout-tablet .proj-actions > button,
+  body.layout-tablet .proj-actions .file-label > button,
+  body.layout-tablet .proj-actions .settings-menu-wrap > button{
+    min-height:32px;padding:4px 9px;font-size:12px;}
+  body.layout-tablet .toolbar-row-main > button,
+  body.layout-tablet .toolbar-row-main .btn-group button,
+  body.layout-tablet .toolbar-row-main .settings-menu-wrap > button,
+  body.layout-tablet .toolbar-row-sketch > button,
+  body.layout-tablet .toolbar-row-sketch .btn-group button,
+  body.layout-tablet .toolbar-row-sketch .settings-menu-wrap > button{
+    min-height:34px;padding:4px 9px;font-size:12.5px;}
+  /* 단추 묶음의 안쪽 테두리 여백도 함께 조인다 — 3px이면 묶음이 단추보다 6px 높아져, 그 묶음
+     하나가 줄 전체의 높이를 정해 버린다(도구줄 첫 줄이 실제로 그랬다). */
+  body.layout-tablet .toolbar-row-main .btn-group,
+  body.layout-tablet .toolbar-row-sketch .btn-group{padding:2px;gap:5px;}
+  body.layout-tablet .stepper-btn{min-width:30px;min-height:30px;}
+  body.layout-tablet .toolbar2{padding:5px 10px;gap:4px;}
+  /* ---- 설명줄 ----
+     "설명줄 높이가 너무 높다"(사용자 신고) — 56px이었다. 글은 12px 한 줄(18px)인데 오른쪽의
+     「자세히」 단추가 위 44px 규칙에 걸려 44px이어서, 그 단추 하나가 줄 높이를 정하고 있었다.
+     단추를 글 높이에 맞춰 돌려놓고 여백을 조여 28px — 꼭 절반으로 만든다. */
+  body.layout-tablet .mode-hint{padding:4px 9px;font-size:11.5px;line-height:1.35;}
+  body.layout-tablet .mode-hint .hint-more{min-height:0;padding:1px 9px;font-size:11px;}
+  /* 아래 떠 있는 조작바도 같은 이유로 한 단계 낮춘다(60px → 48px). 화면 맨 아래와의 간격도
+     14px → 8px — 그만큼 도면이 넓어진다. */
+  body.layout-tablet .tablet-float-bar{padding:4px 6px;gap:5px;
+    bottom:calc(8px + env(safe-area-inset-bottom));}
+  body.layout-tablet .tablet-float-btn,
+  body.layout-tablet .tablet-float-type-btn{width:36px;height:36px;min-height:36px;}
+  body.layout-tablet .tablet-float-type-btn .type-swatch{width:17px;height:17px;flex:0 0 17px;}
+  /* 도면 칸의 둘레 여백도 데스크톱(24px)보다 좁게. 아래쪽만은 떠 있는 조작바 높이만큼 비워
+     둔다 — 예전에는 「화면 맞춤」이 그 바를 모르고 맞춰서 도면 아래 56px이 바에 가렸다. */
+  body.layout-tablet .canvas-wrap{
+    padding:10px 10px calc(var(--float-bar-reserve) + env(safe-area-inset-bottom));}
+  body.layout-tablet.canvas-max .canvas-wrap{
+    padding:6px 8px calc(var(--float-bar-reserve) + env(safe-area-inset-bottom));}
   /* 안내 문구는 첫 마커를 찍고 나면 접는다 — 조작을 익힌 뒤에는 한 줄을 차지할 이유가 없다.
-     줄 자체가 아니라 문구만 숨기는 이유: 같은 줄에 지우개 브러시 굵기가 함께 들어 있어서, 줄을
-     통째로 감추면 태블릿에서 브러시 굵기를 조절할 방법이 사라진다. 브러시까지 숨어 있는 평소에는
-     남는 자식이 없어 줄 높이가 0이 되므로, 결과는 "한 줄만 남는다"로 같다. */
-  body.layout-tablet.has-markers .mode-hint{display:none;}
+     예전에는 문구만 숨기고 줄은 남겨 두었다(같은 줄에 지우개 브러시 굵기가 함께 들어 있던
+     시절의 처리다 — 그 묶음은 그 뒤 캔버스 위 떠 있는 층으로 옮겨 갔고, 지금 이 줄에 들어
+     있는 것은 안내 문구 하나뿐이다). 높이 0인 빈 줄이라도 도구줄의 칸 간격(gap) 하나는
+     그대로 차지하므로, 줄째로 접어 그 몫까지 돌려준다. */
+  body.layout-tablet.has-markers .mode-hint,
+  body.layout-tablet.has-markers .toolbar-row-hint{display:none;}
   body.layout-tablet .toolbar-row-hint{gap:8px;}
   body.layout-tablet .toolbar-row-main{gap:8px;}
   body.layout-tablet .toolbar-row-main .toolbar-sep{display:none;}
@@ -591,6 +636,11 @@
      채우는 배율에서 늘 도면 윗부분 — 도면 제목·범례가 있는 자리 — 을 가렸다. 아래쪽은 도면에서
      가장 덜 보는 자리이고, 태블릿의 하단 조작바와도 손이 가는 높이가 같다. 그래도 가릴 때가
      있으므로 손잡이(⠿)를 끌어 어디로든 옮길 수 있다(두 번 누르면 제자리). */
+  /* 아래에 떠 있는 것들(모드별 조작 묶음·퀵입력 시트)이 비켜야 할 높이. 태블릿 조작바의
+     "화면 아래 간격 + 높이 + 약간의 틈"이고, 도면 칸의 아래 여백도 같은 값을 쓴다 — 조작바
+     크기를 바꿀 때 네 곳이 따로 놀지 않도록 한곳에 둔다(예전에는 60px 바 시절의 78·74px이
+     그대로 남아, 바를 줄인 뒤 20px·16px씩 떠 있었다). */
+  body.layout-tablet{--float-bar-reserve:58px;}
   .canvas-float-layer{position:absolute;left:0;right:0;bottom:12px;z-index:42;
     display:flex;flex-direction:column;align-items:center;gap:6px;
     /* 바깥 빈 자리로는 클릭이 그대로 캔버스에 닿아야 한다 — 안 그러면 도면 아래쪽 띠 전체가
@@ -598,7 +648,7 @@
     pointer-events:none;}
   .canvas-float-layer > *{pointer-events:auto;max-width:calc(100% - 28px);}
   /* 태블릿에는 화면 맨 아래에 이미 조작바(.tablet-float-bar)가 있다 — 그 위로 비켜 준다. */
-  body.layout-tablet .canvas-float-layer{bottom:calc(78px + env(safe-area-inset-bottom));}
+  body.layout-tablet .canvas-float-layer{bottom:calc(var(--float-bar-reserve) + env(safe-area-inset-bottom));}
   /* 「자세히」로 펼치는 안내만은 위에 남는다 — 그 글을 펴는 「자세히 ▾」 단추가 도구줄 안내 줄에
      있어서, 펼친 내용이 화면 반대쪽 끝에 나타나면 무엇이 열렸는지 눈이 따라가지 못한다. */
   .canvas-hint-layer{position:absolute;left:0;right:0;top:10px;z-index:41;
@@ -686,6 +736,28 @@
   .qis-more.open{display:flex;}
   .qis-more-toggle{align-self:flex-start;}
   .canvas-wrap{flex:1;min-height:0;min-width:0;overflow:auto;display:flex;align-items:flex-start;justify-content:flex-start;padding:24px;}
+  /* ---------- 「크게 보기」(집중 모드) ----------
+     도면만 남기고 머리줄과 도구줄을 접는다. 태블릿에서는 이 둘이 세로 200px(화면의 26%)을
+     쓰고 있어서, 접는 것만으로 도면이 한 번에 1.3배 커진다. 조작은 그대로다 — 태블릿은 아래
+     떠 있는 조작바와 좌우 서랍 손잡이가, 데스크톱은 단축키와 우측 상단의 되돌아가기 단추가
+     받는다. 자리만 바꾸는 CSS라 마커 좌표·내보내기·표제란 로직은 전혀 건드리지 않는다. */
+  body.canvas-max header.topbar,
+  body.canvas-max .toolbar2{display:none;}
+  /* 돌아올 길은 언제나 눈에 보여야 한다 — 도면 오른쪽 위에 떠 있는 작은 단추 하나(Esc도 된다). */
+  .canvas-max-exit{display:none;position:absolute;top:8px;right:8px;z-index:59;
+    min-height:0;padding:5px 11px;font-size:12px;border-radius:999px;
+    background:var(--surface-1);border:1px solid var(--gridline);
+    box-shadow:0 2px 10px rgba(0,0,0,.22);opacity:.9;}
+  .canvas-max-exit:hover{opacity:1;}
+  body.canvas-max .canvas-max-exit{display:inline-flex;align-items:center;gap:5px;}
+  /* 서랍이 열려 있는 동안에는 감춘다 — 이 단추가 서랍보다 위층(z 59 > 55)이라, 열어 둔
+     결함 목록 위에 그대로 떠 있었다. 떠 있는 조작바가 같은 이유로 이미 그렇게 하고 있다. */
+  body.canvas-max.drawer-open .canvas-max-exit{display:none;}
+  /* 펼쳐 둔 안내(「자세히」)도 같은 자리를 쓴다. 접힌 동안에는 그 안내를 펴고 접는 단추 자체가
+     도구줄과 함께 사라지므로, 글만 남아 단추를 가리는 일이 없도록 함께 감춘다. */
+  body.canvas-max .canvas-hint-layer{display:none;}
+  /* 태블릿에서는 오른쪽 가장자리에 서랍 손잡이(결함 목록)가 붙어 있다 — 그 폭만큼 비켜 앉는다. */
+  body.layout-tablet .canvas-max-exit{min-height:34px;right:52px;}
   .canvas-shell{background:var(--surface-1);box-shadow:0 1px 8px rgba(11,11,11,0.10);border:none;
     border-radius:6px;position:relative;}
   /* touch-action:none — 브라우저의 기본 터치 제스처(스크롤·핀치줌·더블탭줌)를 캔버스에서 완전히 꺼서
@@ -950,8 +1022,20 @@
   .frame-tune .ft-grid{display:grid;grid-template-columns:auto 1fr auto;gap:5px 8px;align-items:center;}
   .frame-tune .ft-grid > label{font-size:11.5px;color:var(--text-secondary);white-space:nowrap;}
   .frame-tune input[type=range]{width:100%;min-width:70px;accent-color:var(--accent);}
-  .frame-tune .ft-val{font-size:11px;color:var(--muted);min-width:32px;text-align:right;
+  .frame-tune .ft-val{font-size:11px;color:var(--muted);min-width:78px;text-align:right;
     font-variant-numeric:tabular-nums;}
+  /* 세 요소의 절대 치수(mm)를 직접 적어 넣는 칸들 — 두 쌍씩 한 줄에 둔다 */
+  .frame-tune .ft-abs{flex:1 1 320px;min-width:300px;}
+  /* 절대 치수 제목에는 단위(mm)가 들어간다 — 대문자로 바꾸면 '(MM)'이 되어 어색하다 */
+  .frame-tune .ft-abs > h5{text-transform:none;letter-spacing:0;font-size:11px;}
+  .frame-tune .ft-num{grid-template-columns:repeat(2, auto 76px);gap:4px 8px;}
+  .frame-tune .ft-num input[type=number]{width:100%;min-width:60px;font-size:11.5px;
+    padding:2px 4px;text-align:right;font-variant-numeric:tabular-nums;}
+  .frame-tune .ft-mult{flex:1 1 100%;}
+  .frame-tune .ft-mult .ft-subsec{display:inline-block;vertical-align:top;min-width:230px;
+    margin:0 18px 6px 0;}
+  .frame-tune .ft-mult .ft-subsec > b{display:block;font-size:10.5px;font-weight:600;
+    color:var(--text-secondary);margin-bottom:3px;}
   .frame-tune .ft-foot{flex:1 1 100%;display:flex;align-items:center;gap:10px;
     font-size:11px;color:var(--text-secondary);padding-top:2px;}
   .frame-tune .ft-foot button{margin-left:auto;}
@@ -1065,6 +1149,8 @@
 <symbol id="i-rotate-cw" viewBox="0 0 24 24"><path d="M3.5 12a8.5 8.5 0 1 1 2.8 6.3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M3 21v-6h6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
 <symbol id="i-crop" viewBox="0 0 24 24"><path d="M6 1.5V17a1.5 1.5 0 0 0 1.5 1.5H22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M18 22.5V7A1.5 1.5 0 0 0 16.5 5.5H2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
 <symbol id="i-fit" viewBox="0 0 24 24"><path d="M3 9V4.5A1.5 1.5 0 0 1 4.5 3H9" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M15 3h4.5A1.5 1.5 0 0 1 21 4.5V9" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M21 15v4.5a1.5 1.5 0 0 1-1.5 1.5H15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M9 21H4.5A1.5 1.5 0 0 1 3 19.5V15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><rect x="7.5" y="7.5" width="9" height="9" rx="1" fill="none" stroke="currentColor" stroke-width="1.5"/></symbol>
+<symbol id="i-expand" viewBox="0 0 24 24"><path d="M9 3H4.5A1.5 1.5 0 0 0 3 4.5V9M15 3h4.5A1.5 1.5 0 0 1 21 4.5V9M21 15v4.5a1.5 1.5 0 0 1-1.5 1.5H15M3 15v4.5A1.5 1.5 0 0 0 4.5 21H9" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M8 8l3 3M16 8l-3 3M16 16l-3-3M8 16l3-3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
+<symbol id="i-collapse" viewBox="0 0 24 24"><path d="M3.5 9H8a1 1 0 0 0 1-1V3.5M20.5 9H16a1 1 0 0 1-1-1V3.5M20.5 15H16a1 1 0 0 0-1 1v4.5M3.5 15H8a1 1 0 0 1 1 1v4.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
 <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7.5" height="7.5" rx="1.2" fill="none" stroke="currentColor" stroke-width="1.8"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="1.2" fill="none" stroke="currentColor" stroke-width="1.8"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="1.2" fill="none" stroke="currentColor" stroke-width="1.8"/><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="1.2" fill="none" stroke="currentColor" stroke-width="1.8"/></symbol>
 <symbol id="i-guide" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 2.5v4M12 17.5v4M2.5 12h4M17.5 12h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
 <symbol id="i-archive" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="4" rx="1" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M5 8.5v9a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-9" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M10 13h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
@@ -1309,6 +1395,9 @@
             <button id="btnSketchMode" class="tool" title="그리기 모드 — 도면 위에 직선·사각형·자유선·글자를 그립니다. 도면이 없으면 빈 도면을 만들어 현장에서 직접 그릴 수 있습니다 (단축키 w)"><svg class="icon"><use href="#i-pencil"/></svg> 그리기</button>
           </div>
           <button type="button" id="btnZoomFit" class="tool" title="도면 전체가 보이도록 배율을 맞추고 가운데로 되돌립니다 (단축키 F). 스크롤하다 도면을 놓쳤을 때도 이 버튼으로 돌아옵니다."><svg class="icon"><use href="#i-fit"/></svg> 화면 맞춤</button>
+          <!-- 머리줄·도구줄을 접어 도면만 남긴다. 태블릿에서는 이 둘이 화면의 26%를 쓰므로
+               접는 것만으로 도면이 눈에 띄게 커진다(단축키 Shift+F). -->
+          <button type="button" id="btnCanvasMax" class="tool" title="머리줄과 도구줄을 접어 도면을 화면 가득 봅니다. 조작은 아래 떠 있는 바와 좌우 손잡이로 그대로 할 수 있습니다 (단축키 Shift+F, 끌 때는 Esc)"><svg class="icon"><use href="#i-expand"/></svg> <span id="canvasMaxLabel">크게 보기</span></button>
           <!-- 가끔 쓰는 조작 묶음 — 배율 고르기, 자르기·회전, 좌표안내, 아이콘 크기.
                버튼 id·핸들러는 예전 그대로이고 위치만 메뉴 안으로 들어왔다. 확대·축소는 평소 휠로
                하고 되돌릴 때는 옆의 "화면 맞춤"을 쓰므로, 배율 목록까지 줄 위에 늘 펼쳐 둘 이유가 없다. -->
@@ -1353,6 +1442,8 @@
         </div>
       </div>
       <div class="canvas-stage">
+        <!-- 「크게 보기」로 머리줄·도구줄을 접었을 때 돌아올 단추. 접힌 동안에만 보인다. -->
+        <button type="button" class="canvas-max-exit" id="btnCanvasMaxExit" title="머리줄과 도구줄을 다시 폅니다 (Esc)"><svg class="icon"><use href="#i-collapse"/></svg> 크게 보기 끄기</button>
         <div class="canvas-wrap" id="canvasWrap">
         <div class="canvas-shell" id="canvasShell">
           <canvas id="mainCanvas" tabindex="0"></canvas>
@@ -1520,6 +1611,8 @@
         <button type="button" class="tablet-float-btn" id="btnFloatRedo" title="다시실행 (Ctrl+Shift+Z)"><svg class="icon"><use href="#i-redo"/></svg></button>
         <div class="tablet-float-sep"></div>
         <button type="button" class="tablet-float-btn" id="btnFloatZoomFit" title="화면 맞춤 — 도면 전체가 보이도록 맞춥니다 (F)"><svg class="icon"><use href="#i-fit"/></svg></button>
+        <!-- 머리줄·도구줄 접기. 접고 나면 도구줄의 같은 단추가 사라지므로 여기에도 둔다. -->
+        <button type="button" class="tablet-float-btn" id="btnFloatCanvasMax" title="크게 보기 — 머리줄과 도구줄을 접어 도면을 화면 가득 봅니다"><svg class="icon"><use href="#i-expand"/></svg></button>
         <div class="tablet-float-sep"></div>
         <div class="tablet-float-types" id="tabletFloatTypeGrid"></div>
         <div class="tablet-float-sep"></div>
@@ -2072,7 +2165,7 @@
       <div style="font-size:11px;color:var(--text-secondary);flex:1;min-width:120px;">여기서 맞춘 설정은 창을 닫아도 유지되어 저장할 때 그대로 따라갑니다.</div>
       <button type="button" id="btnTbPreviewCloseFooter">닫기</button>
       <button type="button" class="help-toggle" id="tbPvFieldsToggle">표제란 내용 고치기</button>
-      <button type="button" class="help-toggle" id="tbFrameToggle">도면틀 조절 — 여백 · 상단표 높이 · 글자 크기</button>
+      <button type="button" class="help-toggle" id="tbFrameToggle">도면틀 조절 — 절대 치수(mm) · 여백 · 표제란 · 범례</button>
       <!-- 표제란 값을 고치러 이 창을 닫고 「저장」 창으로 갔다 오는 왕복을 없앤다. 여기 칸들은
            저장 창의 진짜 입력칸에 값을 옮겨 적고 input 이벤트를 흘려보내는 거울이라, 자동저장·
            미리보기 갱신 같은 기존 동작이 그대로 따라온다. -->
@@ -2241,7 +2334,7 @@
   // 툴바 줄 수가 바뀌면(모드 전환·화면 회전 등) 손잡이 위치도 따라와야 한다.
   if(window.ResizeObserver){
     const toolbarEl = document.querySelector('.toolbar2');
-    if(toolbarEl) new ResizeObserver(()=> updateTabletEdgeTabTop()).observe(toolbarEl);
+    if(toolbarEl) new ResizeObserver(()=>{ updateTabletEdgeTabTop(); scheduleRefitIfFitting(); }).observe(toolbarEl);
   }
   window.addEventListener('resize', updateTabletEdgeTabTop);
   applyTabletMode();
@@ -2576,6 +2669,17 @@
     gapTop:32, gapBottom:32, gapLeft:32, gapRight:32,
     titleBarScale:1, fontScale:1, lineScale:1,
   };
+  // 도곽을 그릴 "종이"의 배치 폭(px). 위 FRAME_BASE의 여백·글자·선 굵기가 전부 절대 px라, 이
+  // 종이 크기가 장마다 달라지면 도곽이 종이에서 차지하는 비율이 달라진다 — 같은 A4로 뽑아 놓고
+  // 보면 장마다 도곽의 자리와 굵기가 달라 보인다(사용자 신고). 그래서 종이를 도면과 무관하게
+  // 고정한다. 그러면 어떤 도면이든 도곽이 똑같은 자리에 똑같은 굵기로 온다.
+  //   값 1900의 근거 : 예전에는 `도면 폭 + 좌우 여백`(최소 1400)이었는데, 실제로 내보낸 도면
+  //   5장을 되재어 보니 1835·1850·1885·1901 — 작은 도면 한 장만 최소값 1400에 걸려 있었다
+  //   (좌우 여백이 A4에서 11.8~12.2mm 대 16.0mm). 흔히 나오던 쪽에 맞춰 고정하면 지금 모습이
+  //   거의 그대로 유지되면서 모든 장이 같아진다.
+  //   화질은 이 값과 무관하다 — 도면이 종이 안에서 줄어드는 만큼 캔버스 픽셀을 늘리는 길(ss)이
+  //   따로 있고(EXPORT_MAX_PIXELS 설명 참고), 그 상한은 종이의 배치 크기가 아니라 픽셀 수다.
+  const FRAME_LAYOUT_W = 1900;
   const FRAME_LAYOUT_DEFAULT = {
     marginTop: 1, marginBottom: 1, marginLeft: 1, marginRight: 1,
     gapTop: 1, gapBottom: 1, gapLeft: 1, gapRight: 1,
@@ -2611,6 +2715,13 @@
     a4l: [841.89, 595.28], a4p: [595.28, 841.89],
     a3l: [1190.55, 841.89], a3p: [841.89, 1190.55],
   };
+  // 같은 용지의 mm 원표. 위 pt 표는 이것을 소수 둘째 자리로 끊은 값이므로(A4 297mm =
+  // 841.8898pt → 841.89pt), 절대 치수를 px로 바꿀 때는 pt에서 거꾸로 환산하지 말고 이 표를
+  // 쓴다 — 되돌리면 297mm가 297.00008mm가 되고, 그 먼지가 도곽선의 경계 픽셀을 흔든다.
+  const PAPER_SIZES_MM = {
+    a4l: [297, 210], a4p: [210, 297],
+    a3l: [420, 297], a3p: [297, 420],
+  };
   // PNG 용지의 해상도. 인쇄 기본값인 300dpi로 고정한다 — A4 가로 3508×2480px, A3 가로
   // 4961×3508px. "도면마다 크기가 달라지지 않는다"가 용지를 고르는 이유이므로, 도면이 커도
   // 종이 픽셀을 늘리지 않고 종이 안에 맞춰 넣는다(도면이 긴 변 상한 4000px이어도 A4 가로에서
@@ -2626,8 +2737,9 @@
     return (el && PAPER_SIZES_PT[el.value]) ? el.value : null;
   }
   // 용지의 가로/세로 비. 「원본 비율」이면 A4 가로(297:210) — 도면틀이 지금까지 써 온 비율이다.
-  function exportPageRatio(){
-    const pt = PAPER_SIZES_PT[exportPageSizeKey()];
+  // key를 주면 그 용지로 센다(주지 않으면 지금 고른 용지) — frameGeometry가 그 길을 쓴다.
+  function exportPageRatio(key){
+    const pt = PAPER_SIZES_PT[key === undefined ? exportPageSizeKey() : key];
     return pt ? pt[0]/pt[1] : 297/210;
   }
   // PNG 용지의 픽셀 크기 — PNG은 항상 정확히 이 크기로 떨어진다.
@@ -2648,7 +2760,133 @@
     return { x: m + (availW-w)/2, y: m + (availH-h)/2, w, h };
   }
 
-  // 도면틀 치수 하나를 실제 크기(px, 또는 배율)로 바꾼다 — 그리는 쪽은 이 함수만 쓴다.
+  // ---------- 세 요소(도면틀·표제란·범례)의 절대 치수 ----------
+  // 「내보내기를 하면 도면틀·표제란·범례가 넣은 도면 이미지에 따라 달라진다」는 요청에 따라, 이
+  // 셋의 치수를 "도면과 무관한 절댓값" 한 벌(frameSpec)로 모았다. 단위와 기준은 이렇게 정했다.
+  //   · 단위 : mm — 종이에 인쇄했을 때의 실제 크기다. 저장 결과가 PDF(pt)든 PNG(px)든, A4든
+  //     A3든, 같은 수치가 같은 물리 크기를 뜻하려면 길이 단위여야 한다.
+  //   · 기준 : 고른 용지. 배치 종이의 폭은 용지와 무관하게 FRAME_LAYOUT_W(1900px)로 고정돼
+  //     있으므로 mm를 배치 px로 바꾸는 자는 px/mm = 1900 / 용지 폭(mm)이다(framePxPerMM).
+  //     그래서 A4를 A3로 바꾸면 세 요소는 같은 mm = 같은 물리 크기로 나오고, 커진 종이만큼
+  //     도면만 더 크게 들어간다. 「원본 비율」은 지금까지처럼 A4 가로(297×210mm)를 종이로 본다.
+  //   · 좌표 : 도면틀 여백은 용지 가장자리에서, 표제란은 도곽 안쪽 왼쪽 위에서, 범례 자리는
+  //     도면 영역(표제란 아래, 테두리 안쪽) 왼쪽 위에서 잰 mm다.
+  // frameLayout(예전 배수 손잡이 11개)은 그대로 남아 이 값 위에 곱해진다 — 최종 = mm × 배수.
+  const FRAME_MM_PER_PX = 297 / FRAME_LAYOUT_W;   // 기준 용지(A4 가로)에서 배치 px → mm
+  // 고른 용지의 폭(mm). 「원본 비율」(key 없음)은 A4 가로로 본다.
+  function paperWidthMM(key){
+    const mm = PAPER_SIZES_MM[key];
+    return mm ? mm[0] : 297;
+  }
+  // mm → 배치 px. 배치 종이 폭이 고정이라, 용지가 커지면 px/mm이 그만큼 줄어든다.
+  function framePxPerMM(key){
+    return FRAME_LAYOUT_W / paperWidthMM(key === undefined ? exportPageSizeKey() : key);
+  }
+  // 기본값 — 예전 공식(FRAME_BASE와 그 파생식)이 기준 용지에서 내던 치수를 그대로 mm로 환산한
+  // 값이다. 그래서 손대지 않은 상태의 A4 저장 결과는 이 변경 전과 픽셀 단위로 똑같다. 예전에
+  // 용지 높이에서 파생되던 값들(표제란 높이 clamp(outerH*0.135,142,220), 배지·도면 제목 글자,
+  // 도면 둘레 여백)도 여기서 절댓값이 되었다 — 용지를 바꿀 때 세 요소의 비율이 달라지던 원인이
+  // 그 파생식과 142~220px 상한이었다.
+  const FRAME_SPEC_DEFAULT = (function(){
+    const k = FRAME_MM_PER_PX;
+    const outerH = Math.round(FRAME_LAYOUT_W / (297/210));
+    const cmT = FRAME_BASE.marginTop + FRAME_BASE.gapTop;
+    const cmB = FRAME_BASE.marginBottom + FRAME_BASE.gapBottom;
+    const contentW = FRAME_LAYOUT_W - (FRAME_BASE.marginLeft + FRAME_BASE.gapLeft)
+                                    - (FRAME_BASE.marginRight + FRAME_BASE.gapRight);
+    const colW = contentW/2;
+    const titleBarHForFont = clamp(outerH*0.135, 142, 220);
+    const titleBarH = titleBarHForFont * FRAME_BASE.titleBarScale;
+    const badgeHBase = clamp(titleBarHForFont/2*0.52, 35, 62);
+    const tbFontPx = Math.max(9, Math.round(
+      clamp(badgeHBase*0.44, 13.5, 22.5) * 1.43 * FRAME_BASE.fontScale));
+    const contentAreaH = outerH - cmT - cmB - titleBarH;
+    const L = FRAME_BASE.lineScale, F = FRAME_BASE.fontScale;
+    return {
+      // 도면틀(도곽) — 용지 가장자리 ↔ 테두리, 테두리 ↔ 안쪽 내용, 선 굵기
+      marginTop: FRAME_BASE.marginTop*k, marginBottom: FRAME_BASE.marginBottom*k,
+      marginLeft: FRAME_BASE.marginLeft*k, marginRight: FRAME_BASE.marginRight*k,
+      gapTop: FRAME_BASE.gapTop*k, gapBottom: FRAME_BASE.gapBottom*k,
+      gapLeft: FRAME_BASE.gapLeft*k, gapRight: FRAME_BASE.gapRight*k,
+      lineFrame: 3*L*k, lineTable: 2.2*L*k, lineBadge: 1.6*L*k, lineDiv: 1.4*L*k,
+      // 표제란 — 높이·글자·라벨 배지
+      titleBarH: titleBarH*k, titleFont: tbFontPx*k,
+      badgeH: Math.min(Math.max(badgeHBase, tbFontPx*1.55), titleBarH/2*0.86)*k,
+      badgeW: clamp(colW*0.22, 102, 178)*k,
+      badgePadX: clamp(colW*0.035, 9, 20)*k, badgeGapX: clamp(colW*0.03, 10, 22)*k,
+      // 도면 — 배치 영역 안쪽 여백, 도곽 아랫줄 도면 제목 글자
+      imagePad: clamp(Math.min(contentW, contentAreaH)*0.02, 10, 26)*k,
+      docTitleFont: clamp(contentAreaH*0.032, 16, 32)*F*k,
+      // 범례 — 글자 높이(상자 전체가 이 값에 비례한다)와, 한 번도 옮기지 않은 범례가 앉는
+      // 모서리 여백. 1.5는 DEFAULT_LEGEND_SCALE(아래)이고 11.5·12는 overlayLegendGeometry의
+      // 1배 치수다 — 지금 모습을 그대로 환산하려고 여기서는 숫자로 적어 둔다.
+      legendFont: 11.5*1.5*k, legendPad: 12*1.5*k,
+    };
+  })();
+  // 적어 넣을 수 있는 범위(mm) — 입력칸과 "불러온 값 검사"가 함께 쓴다.
+  const FRAME_SPEC_RANGE = {
+    marginTop:[0,80], marginBottom:[0,80], marginLeft:[0,80], marginRight:[0,80],
+    gapTop:[0,40], gapBottom:[0,40], gapLeft:[0,40], gapRight:[0,40],
+    lineFrame:[0.05,3], lineTable:[0.05,3], lineBadge:[0.05,3], lineDiv:[0.05,3],
+    titleBarH:[3,150], titleFont:[0.8,20],
+    badgeH:[0.5,60], badgeW:[2,150], badgePadX:[0,60], badgeGapX:[0,60],
+    imagePad:[0,60], docTitleFont:[0.8,25],
+    legendFont:[0.4,25], legendPad:[0,80],
+  };
+  // 어느 절대 치수에 어느 배수가 곱해지는지 — 예전 손잡이 11개를 그대로 살려 두기 위한 표다.
+  const FRAME_SPEC_MULT = {
+    marginTop:'marginTop', marginBottom:'marginBottom', marginLeft:'marginLeft', marginRight:'marginRight',
+    gapTop:'gapTop', gapBottom:'gapBottom', gapLeft:'gapLeft', gapRight:'gapRight',
+    titleBarH:'titleBarScale', titleFont:'fontScale', docTitleFont:'fontScale',
+    lineFrame:'lineScale', lineTable:'lineScale', lineBadge:'lineScale', lineDiv:'lineScale',
+  };
+  let frameSpec = Object.assign({}, FRAME_SPEC_DEFAULT);
+  // 협력업체가 보낸 프로젝트 파일에서 올 수도 있는 값이라 그대로 믿지 않고 범위 안으로 다듬는다.
+  function sanitizeFrameSpec(o){
+    const out = Object.assign({}, FRAME_SPEC_DEFAULT);
+    if(!o || typeof o !== 'object') return out;
+    Object.keys(FRAME_SPEC_DEFAULT).forEach(k=>{
+      // null·빈 칸·참거짓은 "값이 없다"로 본다 — Number(null)은 0이라, 비어 있는 자리가 조용히
+      // 0mm가 되어 버린다(여백이 0이면 테두리가 용지 가장자리에 그대로 붙는다).
+      const raw = o[k];
+      if(raw === null || raw === undefined || raw === '' || typeof raw === 'boolean') return;
+      const v = Number(raw);
+      if(Number.isFinite(v)) out[k] = clamp(v, FRAME_SPEC_RANGE[k][0], FRAME_SPEC_RANGE[k][1]);
+    });
+    return out;
+  }
+  // 치수 하나의 최종 mm — 절댓값 × (딸린 배수가 있으면) 그 배수.
+  function frameSpecMM(key){
+    const m = FRAME_SPEC_MULT[key];
+    return frameSpec[key] * (m ? frameLayout[m] : 1);
+  }
+  // 도곽 한 장의 배치 — 치수 셈을 한곳에 모아, 그리는 쪽(buildExportCanvasTitleBlock)과
+  // 「절대 치수」 입력칸(범례 자리를 mm로 주고받는다)이 언제나 같은 값을 보게 한다.
+  // 돌려주는 치수는 전부 "배치 px"(= 1900px 폭 종이 기준)다.
+  function frameGeometry(pageKey){
+    const key = (pageKey === undefined) ? exportPageSizeKey() : pageKey;
+    const u = framePxPerMM(key);
+    // mm → 배치 px. 끝자리를 1e-6px에서 끊는다 — mm와 px를 왕복하면 부동소수 먼지가 1e-14쯤
+    // 남는데, 그 먼지만으로도 테두리 경계의 안티앨리어싱 픽셀이 달라져 "예전과 똑같은 그림"이
+    // 아니게 된다. 1e-6px은 300dpi에서 1억분의 1mm라 어떤 결과에도 영향이 없는 자리다.
+    const px = k => Math.round(frameSpecMM(k)*u*1e6)/1e6;
+    const outerW = FRAME_LAYOUT_W;
+    const outerH = Math.round(outerW / exportPageRatio(key));
+    const m = { top:px('marginTop'), bottom:px('marginBottom'), left:px('marginLeft'), right:px('marginRight') };
+    const g = { top:px('gapTop'), bottom:px('gapBottom'), left:px('gapLeft'), right:px('gapRight') };
+    const cm = { top:m.top+g.top, bottom:m.bottom+g.bottom, left:m.left+g.left, right:m.right+g.right };
+    const contentW = outerW - cm.left - cm.right;
+    const titleBarH = px('titleBarH');
+    const contentY0 = cm.top + titleBarH;
+    const contentAreaH = outerH - cm.top - cm.bottom - titleBarH;
+    return { key, u, px, outerW, outerH, m, g, cm, contentW, titleBarH, contentY0, contentAreaH,
+      frameRect: { x:m.left, y:m.top, w:outerW-m.left-m.right, h:outerH-m.top-m.bottom },
+      legendArea: { x:cm.left, y:contentY0, w:contentW, h:contentAreaH } };
+  }
+
+  // 도면틀 치수 하나를 실제 크기(px, 또는 배율)로 바꾼다 — 예전 기준자(FRAME_BASE)로 재는 자리다.
+  // 그리는 쪽은 이제 위 frameSpecMM/frameGeometry를 쓰고, 이 함수는 v4 이하 파일의 배수를
+  // 환산할 때(convertLegacyFrameLayout)와 검사 통로에서만 쓴다.
   function frameAbs(key){ return FRAME_BASE[key] * frameLayout[key]; }
   let frameLayout = Object.assign({}, FRAME_LAYOUT_DEFAULT);
   // 도면 제목의 자리 — 도곽(외곽 테두리) 안쪽을 기준으로 한 %. null이면 "아랫줄의 가운데"라는
@@ -2689,11 +2927,14 @@
       const o = JSON.parse(raw);
       frameLayout = sanitizeFrameLayout(o && o.layout);
       docTitlePct = sanitizeDocTitlePct(o && o.docTitlePct);
+      // 절대 치수가 없던 시절에 남은 값이면(spec 없음) 기본값으로 시작한다 — 그 기본값이 곧
+      // 예전 공식이 내던 치수라, 보이는 모습은 달라지지 않는다.
+      frameSpec = sanitizeFrameSpec(o && o.spec);
     }catch(err){ /* 저장값이 깨져 있어도 기본값으로 그냥 연다 */ }
   }
   function saveFrameLayout(){
     try{ localStorage.setItem(FRAME_LAYOUT_STORE_KEY,
-      JSON.stringify({ layout: frameLayout, docTitlePct })); }catch(err){ /* 저장 실패해도 화면은 그대로 동작 */ }
+      JSON.stringify({ layout: frameLayout, docTitlePct, spec: frameSpec })); }catch(err){ /* 저장 실패해도 화면은 그대로 동작 */ }
   }
   loadFrameLayout();
   // 통합 실행취소 기록: 마커만 바뀌는 작업과 도면 이미지 자체가 바뀌는 작업(자르기/회전/지우개브러시)을
@@ -2715,10 +2956,15 @@
   // 돌아갔고, 마커 배지는 제자리인데 인출선 길이가 반지름에서 파생되는 탓에 화살표 끝(실제
   // 결함 지점)이 조금씩 밀려났다. 구버전 도구로 열면 이 값이 무시되어 같은 증상이 나므로
   // 버전을 올려 알린다(v5 이하 파일은 열 때 지금 값을 그대로 둔다 — 저장 당시 값을 알 길이 없다).
-  const PROJECT_FILE_VERSION = 6;
+  // v7: 세 요소(도면틀·표제란·범례)의 절대 치수 frameSpec(단위 mm)이 추가됨. 예전에는 표제란
+  // 높이·글자·도면 둘레 여백이 종이 높이에서 파생돼 용지를 바꾸면 비율이 달라졌고, 치수를
+  // 숫자로 적어 넣을 길도 없었다. 구버전 도구로 이 파일을 열면 frameSpec이 무시되어 도면틀이
+  // 그 시절 공식대로 나오므로(= 기본값과 같은 모습) 버전을 올려 알린다. 거꾸로 v6 이하 파일을
+  // 여기서 열면 frameSpec을 기본값으로 되돌려 받는다 — applyProjectData 참고.
+  const PROJECT_FILE_VERSION = 7;
   // 빌드 도구 없이 파일 하나로 배포하는 프로젝트라 커밋 해시를 자동으로 넣을 수 없으므로,
   // 배포용으로 이 파일을 고칠 때 날짜를 함께 갱신한다. 하단 "Ver 2.1" 표기 옆에 표시된다.
-  const APP_BUILD_DATE = '2026-09-09';
+  const APP_BUILD_DATE = '2026-10-19';
   // "미저장 변경사항이 있는가"를 매번 전체 스냅샷을 JSON.stringify해서 비교하면(특히 사진·도면
   // 이미지가 많을 때) beforeunload/자동저장 틱마다 무거운 직렬화가 반복된다. 대신 마커·도면·프로젝트
   // 정보를 실제로 바꾸는 지점에서 markDirty()/markImagesDirty()를 호출해 플래그만 세우고, 파일
@@ -3133,7 +3379,8 @@
   }
   // 도곽 안에서 범례가 앉을 자리(도면 배치 영역 대비 %). 도면이 아니라 틀 기준이라, 여백·상단표
   // 높이·이미지 크기를 조절해도 범례가 페이지 위에서 움직이지 않는다.
-  function legendFramePctFor(d, area, geo){
+  // pad: 한 번도 옮기지 않은 범례가 앉는 모서리 여백(배치 px) — frameSpec.legendPad에서 온다.
+  function legendFramePctFor(d, area, geo, pad){
     const p = d && d.legendFramePct;
     if(p && typeof p.x==='number' && typeof p.y==='number') return p;
     // 도면 기준으로만 자리를 잡아 둔 예전 파일은, 지금 그려질 자리를 그대로 옮겨 온다 —
@@ -3143,7 +3390,63 @@
       return { x: (a.x + old.x/100*a.w - area.x)/area.w*100,
                y: (a.y + old.y/100*a.h - area.y)/area.h*100 };
     }
-    return { x: (area.w - geo.boxW - 12*geo.scale)/area.w*100, y: 12*geo.scale/area.h*100 };
+    return { x: (area.w - geo.boxW - pad)/area.w*100, y: pad/area.h*100 };
+  }
+  // 내보낼 때 범례(NOTE)가 가질 배율 — 도면이 아니라 "종이"에 딸린 절댓값이다. 작업 화면에서는
+  // 범례가 도면 위에 떠 있으므로 도면 폭을 기준으로 커지는 게 맞지만(overlayLegendGeometry의
+  // autoScale), 저장물에서 그 규칙을 쓰면 도면의 픽셀 수에 따라 범례가 커졌다 작아졌다 한다 —
+  // 같은 A4로 뽑아 놓고 보면 장마다 NOTE 상자 크기가 다르다.
+  //   크기의 근거는 frameSpec.legendFont(mm, 글자 높이)다. overlayLegendGeometry가 글자를
+  //   11.5*scale px로 잡으므로, mm로 적어 둔 글자 높이를 그 scale로 되돌려 넘긴다 — 상자의 다른
+  //   치수(줄 높이·여백·기호 반지름)도 모두 같은 scale에 비례하므로 상자 전체가 함께 정해진다.
+  //   도면별 손잡이 「범례 크기」(d.legendScale)는 그 위에 얹는 배수로 남는다(기본 1.5가 1배).
+  // pxPerMM은 그 저장물에서 1mm가 몇 px인지다 — 도곽 경로는 배치 단위(framePxPerMM),
+  // 도곽 없는 용지 경로는 300dpi 종이의 px/mm을 넘긴다. 어느 쪽이든 결과는 같은 물리 크기다.
+  const LEGEND_GEO_FONT_PX = 11.5; // overlayLegendGeometry의 "1배" 글자 크기
+  function legendSpecScale(d, pxPerMM){
+    return frameSpecMM('legendFont') * pxPerMM / LEGEND_GEO_FONT_PX
+         * (legendScaleFor(d) / DEFAULT_LEGEND_SCALE);
+  }
+  // 범례 자리를 mm로 읽고/쓴다. 저장되는 값은 지금까지와 같은 d.legendFramePct(도면 영역 대비
+  // %)이고, mm는 그 영역의 실제 크기로 환산한 값이다 — 영역 자체가 절대 치수(frameSpec)라 둘은
+  // 1:1로 오간다. 미리보기에서 끌면 % 쪽이 바뀌고 입력칸의 mm가 따라오며, mm를 적으면 그 반대다.
+  // 자리의 기준점은 "도면 영역(표제란 아래, 테두리 안쪽)의 왼쪽 위"이고, 재는 점은 범례 상자의
+  // 왼쪽 위 모서리다.
+  // 지금 저장물에서 범례 자리를 mm로 말할 수 있는가 — 그리는 쪽이 남겨 둔 기준을 그대로 본다.
+  // 미리보기를 한 번도 그리지 않았으면 기준이 아직 없으므로(null) 칸이 잠긴다.
+  function legendPosAnchor(d){
+    const a = d && d.__tbLegendAnchor;
+    if(!a || !a.pxPerMM || !(a.pxPerMM > 0) || !a.area || !(a.area.w > 0) || !(a.area.h > 0)) return null;
+    return a;
+  }
+  function legendPosMM(d){
+    const a = legendPosAnchor(d);
+    if(!a) return { x:null, y:null };
+    const p = d[a.field];
+    if(p && typeof p.x==='number' && typeof p.y==='number'){
+      return { x: p.x/100*a.area.w/a.pxPerMM, y: p.y/100*a.area.h/a.pxPerMM };
+    }
+    // 한 번도 옮긴 적이 없으면 "지금 그려진 자리"를 알려 준다.
+    const box = d && d.__tbLegendBox;
+    if(box) return { x:(box.x-a.area.x)/a.pxPerMM, y:(box.y-a.area.y)/a.pxPerMM };
+    return { x:null, y:null };
+  }
+  function setLegendPosMM(d, axis, v){
+    const a = legendPosAnchor(d);
+    if(!a || !Number.isFinite(v)) return;
+    const cur = legendPosMM(d);
+    const x = axis==='x' ? v : (cur.x || 0);
+    const y = axis==='y' ? v : (cur.y || 0);
+    d[a.field] = { x: x*a.pxPerMM/a.area.w*100, y: y*a.pxPerMM/a.area.h*100 };
+  }
+  // 도곽 기준으로 자리를 잡았다면, 작업 화면과 "도곽 없이 저장"이 쓰는 도면 기준 좌표도 같은
+  // 자리로 맞춰 둔다 — 어디서 보든 같은 자리에 있어야 하기 때문이다. 끌어 옮긴 뒤와 칸에 적어
+  // 넣은 뒤가 똑같이 동작하도록 한 곳에 모아 둔다(그린 직후에 불러야 값이 맞는다).
+  function syncLegendPctFromFrame(d){
+    if(!d || !d.__tbLegendAnchor || d.__tbLegendAnchor.field !== 'legendFramePct') return;
+    const b = d.__tbLegendBox, ar = d.__tbDrawArea;
+    if(!b || !ar || !(ar.w > 0) || !(ar.h > 0)) return;
+    d.legendPct = { x:(b.x-ar.x)/ar.w*100, y:(b.y-ar.y)/ar.h*100 };
   }
   // 범례 상자의 모양 — 배경(반투명 흰색·불투명 흰색·없음)과 테두리(있음·없음). 도면이 어두우면
   // 반투명 배경으로는 NOTE 글자가 묻히고, 반대로 도면이 비어 있는 자리에서는 테두리가 거슬린다.
@@ -3210,8 +3513,10 @@
   // 사용자가 슬라이더로 고른 legendScale 값 자체(도면에 저장되는 값)는 바꾸지 않고, 그릴 때만 줄인다.
   // 열 폭을 미리 예약하는 쪽(표제란 내보내기)과 실제로 그리는 쪽(drawOverlayLegend)이 항상 똑같은
   // 축소 결과를 쓰도록, 두 곳 모두 이 함수 하나만 호출한다.
-  function overlayLegendGeometryCapped(ctx, d, refW, maxW, maxH){
-    let geo = overlayLegendGeometry(ctx, d, refW);
+  // scaleHint: 배율을 부르는 쪽이 정해 넘긴다(아래 legendSpecScale 참고). 넘기지 않으면
+  // 예전처럼 refW/naturalW로 스스로 잡는다 — 작업 화면이 그 길을 쓴다.
+  function overlayLegendGeometryCapped(ctx, d, refW, maxW, maxH, scaleHint){
+    let geo = overlayLegendGeometry(ctx, d, refW, scaleHint);
     if(!geo) return null;
     if((maxW && geo.boxW>maxW) || (maxH && geo.boxH>maxH)){
       const shrink = Math.min(maxW ? maxW/geo.boxW : 1, maxH ? maxH/geo.boxH : 1);
@@ -3227,7 +3532,7 @@
   function drawOverlayLegend(ctx, d, w, h, opts){
     opts = opts || {};
     const refW = (typeof opts.refW==='number') ? opts.refW : w;
-    const geo = overlayLegendGeometryCapped(ctx, d, refW, opts.maxW, opts.maxH);
+    const geo = overlayLegendGeometryCapped(ctx, d, refW, opts.maxW, opts.maxH, opts.scale);
     if(!geo) return null;
     const { items, labels, scale, pad, padTop, rowH, titleH, swatchR, font, titleFont, boxW, boxH } = geo;
     let x, y;
@@ -3709,6 +4014,9 @@
                               : buildExportCanvasSimple(d, { superSample:false });
     canvasEl.width = off.width; canvasEl.height = off.height;
     canvasEl.getContext('2d').drawImage(off, 0, 0);
+    // 범례를 끌어 옮기는 중이면 그 자리(mm)가 입력칸에 바로 비치게 한다 — 끌기와 입력칸이
+    // 같은 값을 두 방향에서 만지는 통로이기 때문이다(legendPosMM 설명 참고).
+    syncFrameSpecValues();
   }
   function renderTbPreview(){
     const d = getActiveDrawing();
@@ -3812,34 +4120,107 @@
     { title:'크기', fields:[
       ['titleBarScale','상단표 높이'], ['fontScale','글자 크기'], ['lineScale','선 굵기'] ] },
   ];
+  // 배수 손잡이 옆에 "지금 몇 mm인지"를 함께 보인다 — 배수만으로는 실제 크기를 알 수 없었다.
+  const FRAME_MULT_SHOW = {
+    marginTop:'marginTop', marginBottom:'marginBottom', marginLeft:'marginLeft', marginRight:'marginRight',
+    gapTop:'gapTop', gapBottom:'gapBottom', gapLeft:'gapLeft', gapRight:'gapRight',
+    titleBarScale:'titleBarH', fontScale:'titleFont', lineScale:'lineFrame',
+  };
+  // ---------- 절대 치수(mm) 입력칸 ----------
+  // 세 요소를 "도면과 무관한 절댓값"으로 적어 넣는 칸들이다. legendX/legendY만은 도면마다
+  // 따로 두는 값(d.legendFramePct)이고, 나머지는 프로젝트 전체에 하나씩인 frameSpec 값이다.
+  const FRAME_SPEC_SECTIONS = [
+    { title:'① 도면틀 (mm)', hint:'여백은 용지 가장자리에서 테두리까지, 간격은 테두리에서 표·도면까지입니다.',
+      fields:[
+        ['marginTop','여백 위'], ['marginBottom','여백 아래'],
+        ['marginLeft','여백 왼쪽'], ['marginRight','여백 오른쪽'],
+        ['gapTop','간격 위'], ['gapBottom','간격 아래'],
+        ['gapLeft','간격 왼쪽'], ['gapRight','간격 오른쪽'],
+        ['lineFrame','테두리 굵기'], ['lineTable','표 선 굵기'],
+        ['lineBadge','배지 선 굵기'], ['lineDiv','구분선 굵기'] ] },
+    { title:'② 표제란 (mm)', hint:'도곽 안쪽 위에 붙는 상단 표입니다. 글자 크기는 표 높이와 따로 움직입니다.',
+      fields:[
+        ['titleBarH','표 높이'], ['titleFont','글자 크기'],
+        ['badgeH','배지 높이'], ['badgeW','배지 폭'],
+        ['badgePadX','배지 들여쓰기'], ['badgeGapX','배지↔값 간격'],
+        ['docTitleFont','도면 제목 글자'], ['imagePad','도면 둘레 여백'] ] },
+    { title:'③ 범례 (mm)', hint:'자리는 도면 영역(표제란 아래) 왼쪽 위에서 상자 왼쪽 위까지의 거리입니다. 이 두 값만 도면마다 따로 저장됩니다.',
+      fields:[
+        ['legendFont','글자 크기'], ['legendPad','기본 자리 여백'],
+        ['legendX','가로 자리'], ['legendY','세로 자리'] ] },
+  ];
+  const LEGEND_POS_KEYS = { legendX:'x', legendY:'y' };
   function buildFrameTunePanel(){
     const panel = document.getElementById('tbFramePanel');
     if(!panel || panel.dataset.built) return;
     panel.dataset.built = '1';
-    panel.innerHTML = FRAME_TUNE_SECTIONS.map(sec=>
-      '<div class="ft-sec"><h5>' + escapeHTML(sec.title) + '</h5><div class="ft-grid">' +
+    panel.innerHTML = FRAME_SPEC_SECTIONS.map(sec=>
+      '<div class="ft-sec ft-abs"><h5 title="' + escapeAttr(sec.hint) + '">' + escapeHTML(sec.title) +
+      '</h5><div class="ft-grid ft-num">' +
+      sec.fields.map(([key,label])=>{
+        const r = LEGEND_POS_KEYS[key] ? [-999, 999] : FRAME_SPEC_RANGE[key];
+        return '<label for="fs-'+key+'">' + escapeHTML(label) + '</label>' +
+          '<input type="number" id="fs-'+key+'" data-fs="'+key+'" step="0.1" ' +
+          'min="'+r[0]+'" max="'+r[1]+'" />';
+      }).join('') + '</div></div>').join('') +
+      '<div class="ft-sec ft-mult"><h5 title="절대 치수에 곱해지는 배수입니다. 최종 크기 = mm × 배수.">미세 조절 (배수)</h5>' +
+      FRAME_TUNE_SECTIONS.map(sec=>
+      '<div class="ft-subsec"><b>' + escapeHTML(sec.title) + '</b><div class="ft-grid">' +
       sec.fields.map(([key,label])=>{
         const r = FRAME_LAYOUT_RANGE[key];
         return '<label for="ft-'+key+'">' + escapeHTML(label) + '</label>' +
           '<input type="range" id="ft-'+key+'" data-fl="'+key+'" min="'+r[0]+'" max="'+r[1]+'" step="0.05">' +
           '<span class="ft-val" id="ftv-'+key+'"></span>';
-      }).join('') + '</div></div>').join('') +
-      '<div class="ft-foot"><span>수치는 <b>배수</b>이고 <b>1.0이 기본 도면틀</b>입니다. ' +
-      '범례와 도면 제목은 미리보기 위에서 <b>끌어</b> 옮깁니다.</span>' +
+      }).join('') + '</div></div>').join('') + '</div>' +
+      '<div class="ft-foot"><span>①②③은 <b>mm 절댓값</b>입니다 — 어떤 도면을 넣어도, 용지를 ' +
+      'A3로 바꿔도 이 크기 그대로 나옵니다(도면만 도면틀 안에 맞춰 들어갑니다). 손잡이는 그 위에 ' +
+      '곱해지는 <b>배수</b>로, <b>1.0이 적어 둔 값 그대로</b>입니다. 범례와 도면 제목은 미리보기 ' +
+      '위에서 <b>끌어</b> 옮길 수도 있습니다.</span>' +
       '<button type="button" id="btnFrameTitleReset">제목 자리 되돌리기</button>' +
       '<button type="button" id="btnFrameReset">기본값으로</button></div>';
     panel.addEventListener('input', e=>{
-      const key = e.target.dataset && e.target.dataset.fl;
-      if(!key) return;
-      const r = FRAME_LAYOUT_RANGE[key];
-      frameLayout[key] = clamp(parseFloat(e.target.value) || 0, r[0], r[1]);
+      const ds = e.target.dataset || {};
+      if(ds.fl){
+        const key = ds.fl;
+        const r = FRAME_LAYOUT_RANGE[key];
+        frameLayout[key] = clamp(parseFloat(e.target.value) || 0, r[0], r[1]);
+        saveFrameLayout();
+        markDirty();
+        syncFrameTuneValues();
+        if(isTbPreviewOpen()){ const d = getActiveDrawing(); if(d) drawTbPreviewCanvas(d); }
+        return;
+      }
+      if(!ds.fs) return;
+      // 치는 도중에는 빈 칸·"-"·"1."처럼 수가 아닌 상태를 지나간다 — 그때는 아무것도 하지 않고,
+      // 칸을 떠날 때(change) 다듬은 값을 되돌려 적는다.
+      const v = parseFloat(e.target.value);
+      if(!Number.isFinite(v)) return;
+      const axis = LEGEND_POS_KEYS[ds.fs];
+      if(axis){
+        const d = getActiveDrawing();
+        if(!d) return;
+        setLegendPosMM(d, axis, v);
+        markDirty();
+        // 다시 그린 뒤라야 범례 상자의 자리가 정해진다 — 끌어 옮겼을 때와 똑같이, 그린 결과로
+        // 도면 기준 좌표(legendPct)까지 맞춰 둔다.
+        if(isTbPreviewOpen()){ drawTbPreviewCanvas(d); syncLegendPctFromFrame(d); renderCanvas(); }
+        return;
+      }
+      const r = FRAME_SPEC_RANGE[ds.fs];
+      frameSpec[ds.fs] = clamp(v, r[0], r[1]);
       saveFrameLayout();
       markDirty();
       syncFrameTuneValues();
       if(isTbPreviewOpen()){ const d = getActiveDrawing(); if(d) drawTbPreviewCanvas(d); }
     });
+    // 칸을 떠나면 실제로 쓰인 값(범위 안으로 다듬은 값)을 보여 준다 — 적은 값과 결과가 다를 때
+    // 그 사실이 칸에 드러나야 한다.
+    panel.addEventListener('change', e=>{
+      if(e.target.dataset && e.target.dataset.fs) syncFrameSpecValues();
+    });
     document.getElementById('btnFrameReset').addEventListener('click', ()=>{
       frameLayout = Object.assign({}, FRAME_LAYOUT_DEFAULT);
+      frameSpec = Object.assign({}, FRAME_SPEC_DEFAULT);
       docTitlePct = null;
       saveFrameLayout(); markDirty();
       syncFrameTuneUI(); refreshTbPreviewIfOpen();
@@ -3856,7 +4237,31 @@
   function syncFrameTuneValues(){
     Object.keys(FRAME_LAYOUT_DEFAULT).forEach(key=>{
       const v = document.getElementById('ftv-'+key);
-      if(v) v.textContent = frameLayout[key].toFixed(2);
+      if(!v) return;
+      const show = FRAME_MULT_SHOW[key];
+      v.textContent = frameLayout[key].toFixed(2)
+        + (show ? ' · ' + frameSpecMM(show).toFixed(1) + 'mm' : '');
+    });
+  }
+  // 절대 치수 입력칸의 값을 지금 설정으로 맞춘다. 지금 글을 치고 있는 칸은 건드리지 않는다 —
+  // 값을 다시 넣으면 커서가 튀기 때문이다(미리보기 안 표제란 칸들과 같은 처리).
+  function syncFrameSpecValues(){
+    const d = getActiveDrawing();
+    document.querySelectorAll('#tbFramePanel input[data-fs]').forEach(inp=>{
+      if(document.activeElement === inp) return;
+      const key = inp.dataset.fs, axis = LEGEND_POS_KEYS[key];
+      let v;
+      if(axis){
+        // 범례 자리는 "종이 위 몇 mm"다. 도면틀도 용지도 고르지 않은 저장물에는 종이가 없어
+        // 기준이 서지 않으므로(legendPosAnchor), 그때는 칸을 잠그고 이유를 적어 둔다.
+        const anchored = !!(d && legendPosAnchor(d));
+        inp.disabled = !anchored;
+        inp.title = anchored ? '도면 영역 왼쪽 위에서 범례 상자 왼쪽 위까지의 거리(mm)입니다.'
+          : '「도면틀(도곽) 표시」를 켜거나 「용지 크기」를 고르면 범례 자리를 mm로 적을 수 있습니다. 둘 다 아니면 종이가 없어 기준이 서지 않습니다 — 그때는 미리보기 위에서 끌어 옮기세요.';
+        v = anchored ? legendPosMM(d)[axis] : null;
+      } else v = frameSpec[key];
+      inp.value = (v === null || v === undefined || !Number.isFinite(v))
+        ? '' : String(Math.round(v*100)/100);
     });
   }
   function syncFrameTuneUI(){
@@ -3866,6 +4271,7 @@
       if(s) s.value = String(frameLayout[key]);
     });
     syncFrameTuneValues();
+    syncFrameSpecValues();
   }
 
   // ---------- 인쇄 미리보기 안에서 범례(NOTE) 끌어 옮기기 ----------
@@ -3946,13 +4352,8 @@
       drag = null;
       cv.style.cursor = 'move';
       if(wasTitle) saveFrameLayout(); // 제목 자리는 도면틀 설정과 함께 남긴다
-      // 도곽 기준으로 옮겼다면, 작업 화면과 "도곽 없이 저장"이 쓰는 도면 기준 좌표(legendPct)도
-      // 방금 잡은 자리로 맞춰 둔다 — 어디서 보든 같은 자리에 있어야 하기 때문이다.
-      const d0 = getActiveDrawing();
-      if(field === 'legendFramePct' && d0 && d0.__tbLegendBox && d0.__tbDrawArea && d0.__tbDrawArea.w>0){
-        const b = d0.__tbLegendBox, a = d0.__tbDrawArea;
-        d0.legendPct = { x:(b.x-a.x)/a.w*100, y:(b.y-a.y)/a.h*100 };
-      }
+      // 도곽 기준으로 옮겼다면 도면 기준 좌표도 같은 자리로 맞춰 둔다(syncLegendPctFromFrame).
+      if(field === 'legendFramePct') syncLegendPctFromFrame(getActiveDrawing());
       renderCanvas(); // "작업 화면에도 표시"를 켜 뒀다면 그쪽 범례도 같은 자리로 맞춘다
     }
     cv.addEventListener('pointerup', endDrag);
@@ -3989,8 +4390,10 @@
     // 아래 값들은 예전에 만든 템플릿에는 없다 — 없는 것을 "비어 있음"으로 받아 지금 설정을
     // 지워 버리면 안 되므로, 담겨 있을 때에만 손댄다.
     const extras = [];
-    if(t.frameLayout){
+    if(t.frameLayout || t.frameSpec){
       frameLayout = sanitizeFrameLayout(t.frameLayout);
+      // 절대 치수가 없던 시절의 템플릿이면 기본값으로 — 프로젝트 파일 쪽과 같은 이유다.
+      frameSpec = sanitizeFrameSpec(t.frameSpec);
       docTitlePct = sanitizeDocTitlePct(t.docTitlePct);
       saveFrameLayout();
       syncFrameTuneUI();
@@ -4026,6 +4429,7 @@
       structureType: document.getElementById('structureTypeInput').value,
       docTitle: document.getElementById('docTitleInput').value,
       frameLayout: Object.assign({}, frameLayout),
+      frameSpec: Object.assign({}, frameSpec),
       docTitlePct: docTitlePct ? Object.assign({}, docTitlePct) : null,
       legend: {
         boxStyle: Object.assign({}, legendBoxStyle),
@@ -5998,8 +6402,14 @@
     // 커서 고정 보정에 전혀 영향을 주지 않는다.)
     const shell = document.getElementById('canvasShell');
     if(shell){
-      const extraLeft = Math.max(0, (wrap.clientWidth - cssW)/2);
-      const extraTop = Math.max(0, (wrap.clientHeight - cssH)/2);
+      // 가운데로 보내는 여백은 "둘레 여백을 뺀 안쪽"을 기준으로 잰다. clientWidth/Height에는 칸의
+      // padding이 포함돼 있어서, 위아래 여백이 서로 다르면(태블릿은 아래쪽에 떠 있는 조작바만큼
+      // 더 비워 둔다) 그 차이의 절반만큼 도면이 아래로 밀려 조작바에 겹쳤다.
+      const wcs = getComputedStyle(wrap);
+      const wPadX = (parseFloat(wcs.paddingLeft)||0) + (parseFloat(wcs.paddingRight)||0);
+      const wPadY = (parseFloat(wcs.paddingTop)||0) + (parseFloat(wcs.paddingBottom)||0);
+      const extraLeft = Math.max(0, (wrap.clientWidth - wPadX - cssW)/2);
+      const extraTop = Math.max(0, (wrap.clientHeight - wPadY - cssH)/2);
       shell.style.marginLeft = extraLeft+'px';
       shell.style.marginTop = extraTop+'px';
       // 여유 공간은 뷰포트의 "절반"까지만 둔다. 예전에는 뷰포트 전체 크기만큼 여백을 잡아서, 끝까지
@@ -9686,7 +10096,9 @@
     // (도곽이 있을 때와 같은 규칙). 도곽이 없으므로 여기서는 종이 = 캔버스 전체다.
     d.__tbDrawArea = { x:dx, y:dy, w:dw, h:dh };
     d.__tbLegendBox = isLegendEnabled() ? drawOverlayLegend(ctx, d, w, h) : null;
-    d.__tbLegendAnchor = { area:{ x:0, y:0, w, h }, field:'legendPct' };
+    // pxPerMM이 null인 것은 "이 저장물에는 종이가 없다"는 뜻이다 — 도면 픽셀이 곧 캔버스라
+    // mm로 말할 수 있는 기준이 없다. 「절대 치수」의 범례 자리 칸은 그때 잠긴다.
+    d.__tbLegendAnchor = { area:{ x:0, y:0, w, h }, field:'legendPct', pxPerMM:null };
     // 도곽이 없으면 도면 제목도 그리지 않는다 — 미리보기의 제목 끌기도 함께 꺼진다.
     d.__tbTitleBox = null; d.__tbFrameRect = null;
 
@@ -9734,8 +10146,11 @@
     drawMarkersInRect(ctx, d, dx, dy, dw, dh, markerRadiusNatural(d)*(dw/w));
     // 범례는 도면이 아니라 "종이" 기준이다 — 여기서는 종이 = 용지 한 장 전체다.
     d.__tbDrawArea = { x:dx, y:dy, w:dw, h:dh };
-    d.__tbLegendBox = isLegendEnabled() ? drawOverlayLegend(ctx, d, baseW, baseH) : null;
-    d.__tbLegendAnchor = { area:{ x:0, y:0, w:baseW, h:baseH }, field:'legendPct' };
+    // 범례는 도면이 아니라 종이 기준으로 큰다 — 도면틀을 켰을 때와 같은 크기로 나온다.
+    d.__tbLegendBox = isLegendEnabled()
+      ? drawOverlayLegend(ctx, d, baseW, baseH, { scale: legendSpecScale(d, baseW/paperWidthMM(pageKey)) }) : null;
+    d.__tbLegendAnchor = { area:{ x:0, y:0, w:baseW, h:baseH }, field:'legendPct',
+      pxPerMM: baseW/paperWidthMM(pageKey) };
     // 도곽이 없으면 도면 제목도 그리지 않는다 — 미리보기의 제목 끌기도 함께 꺼진다.
     d.__tbTitleBox = null; d.__tbFrameRect = null;
 
@@ -9776,40 +10191,36 @@
     const siteName = document.getElementById('siteNameInput').value.trim() || '-';
     const structureType = document.getElementById('structureTypeInput').value.trim() || '-';
 
-    // ---- 도곽 치수는 전부 frameLayout(미리보기 창의 「도면틀 조절」)에서 온다. 예전에 여기
-    // 박혀 있던 숫자(여백 162/108, 간격 32, 글자 1.43배, 선 굵기 3/2.2/1.6/1.4)는 그 "1배"의
-    // 기준자로만 남기고, 실제 값은 배수를 곱해 만든다.
-    const mTop    = frameAbs('marginTop');
-    const mBottom = frameAbs('marginBottom');
-    const mLeft   = frameAbs('marginLeft');
-    const mRight  = frameAbs('marginRight');
-    const gTop    = frameAbs('gapTop'),  gBottom = frameAbs('gapBottom');
-    const gLeft   = frameAbs('gapLeft'), gRight  = frameAbs('gapRight');
-    const contentMarginTop  = mTop + gTop,   contentMarginBottom = mBottom + gBottom;
-    const contentMarginLeft = mLeft + gLeft, contentMarginRight  = mRight + gRight;
-    const flFont = frameAbs('fontScale'), flLine = frameAbs('lineScale');
-    // 선 굵기 — 외곽 3 / 표 테두리 2.2 / 배지 1.6 / 가로 구분선 1.4 px 에 배율을 곱한다.
-    const lwFrame = 3*flLine, lwTb = 2.2*flLine;
-    const lwBadge = 1.6*flLine, lwDiv = 1.4*flLine;
+    // ---- 도곽·표제란·범례의 치수는 전부 frameSpec(절대 mm) × frameLayout(미세조절 배수)에서
+    // 온다. mm를 "배치 px"로 바꾸는 자는 고른 용지의 폭이라(framePxPerMM), 어떤 도면을 넣어도 —
+    // 그리고 A4를 A3로 바꾸어도 — 이 셋은 같은 자리에 같은 물리 크기로 나온다. 예전에는 여기서
+    // 여백·간격·선 굵기를 배수로만 만들고(frameAbs), 표제란 높이·글자·도면 둘레 여백은 종이
+    // 높이에서 파생시켰다 — 용지를 바꾸면 그 파생식과 142~220px 상한 탓에 비율이 달라졌다.
+    // 배치 셈은 frameGeometry() 한곳에 모여 있다(「절대 치수」 입력칸이 같은 값을 쓴다).
+    const G = frameGeometry();
+    const px = G.px;                       // 치수 이름 → 배치 px
+    const mTop = G.m.top, mBottom = G.m.bottom, mLeft = G.m.left, mRight = G.m.right;
+    const contentMarginTop  = G.cm.top,  contentMarginBottom = G.cm.bottom;
+    const contentMarginLeft = G.cm.left, contentMarginRight  = G.cm.right;
+    // 선 굵기 — 예전에는 외곽 3 / 표 테두리 2.2 / 배지 1.6 / 가로 구분선 1.4 px 에 배수를 곱했다.
+    const lwFrame = px('lineFrame'), lwTb = px('lineTable');
+    const lwBadge = px('lineBadge'), lwDiv = px('lineDiv');
 
     // ---- 페이지 전체 비율을 「용지 크기」에 맞춘다 ----
     // 「원본 비율」이면 지금까지처럼 A4 가로(297:210)다. A4 세로·A3를 고르면 그 비율로 종이를
     // 잡으므로, 저장할 때 도곽이 용지를 꽉 채운 채로 떨어진다(PNG·PDF 모두 여백이 더 붙지 않는다).
-    const pageRatio = exportPageRatio();
-    // 도면 폭을 기준으로 페이지 폭을 정하되, 너무 작은 도면도 인쇄용으로 충분한 크기가 되도록 최소값을 둔다.
-    const outerW = Math.max(w + contentMarginLeft + contentMarginRight, 1400);
-    const outerH = Math.round(outerW / pageRatio);
-    const contentW = outerW - contentMarginLeft - contentMarginRight;
+    // 종이(배치)의 크기는 도면과 무관하게 고정한다 — FRAME_LAYOUT_W 설명 참고.
+    const outerW = G.outerW, outerH = G.outerH;
+    const contentW = G.contentW;
 
     // ---- 상단 표제란 높이와 도면이 놓일 영역 — 캔버스를 만들기 전에 먼저 잡는다. 도면이 이 영역에
     // 맞춰 얼마나 줄어드는지(fitScale)를 알아야 종이의 픽셀 수를 그만큼 되돌려 줄 수 있기 때문이다.
-    const titleBarHForFont = clamp(outerH*0.135, 142, 220);
-    const titleBarH = titleBarHForFont * frameAbs('titleBarScale');
-    const contentY0 = contentMarginTop + titleBarH;
-    const contentAreaH = outerH - contentMarginTop - contentMarginBottom - titleBarH;
+    const titleBarH = G.titleBarH;
+    const contentY0 = G.contentY0;
+    const contentAreaH = G.contentAreaH;
     const drawAreaW = contentW;
     // 이미지가 표제란/범례/외곽 테두리에 딱 붙지 않도록 도면 배치 영역 안쪽으로 약간의 여백을 둔다.
-    const imageMargin = clamp(Math.min(drawAreaW, contentAreaH)*0.02, 10, 26);
+    const imageMargin = px('imagePad');
     const availW = Math.max(10, drawAreaW - imageMargin*2);
     const availH = Math.max(10, contentAreaH - imageMargin*2);
     // 페이지가 원본 도면보다 넓어도(작은 이미지를 인쇄용 최소 크기로 맞추는 경우 등) 원본 해상도 이상으로
@@ -9841,14 +10252,13 @@
     // 한 줄이 덜 칠해지면, 투명한 그 줄이 PDF(알파 없는 DeviceRGB)에서 검은 선으로 나온다.
     ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, off.width/ss, off.height/ss);
     // 도곽(외곽 테두리) 사각형 — 도면 제목의 좌표 기준이라 미리 정해 둔다(그리기는 맨 마지막).
-    const frameRect = { x: mLeft, y: mTop, w: outerW - mLeft - mRight, h: outerH - mTop - mBottom };
+    const frameRect = G.frameRect;
 
     // ---- 상단 표제란: 실무 도면 표제란처럼 "라벨 배지 + 값" 2행×2열 구성
     // (①용역명·②구분 한 줄, ③조사위치·④구조형식 한 줄), 눕히지 않은 정방향 글씨.
-    // 표 높이(titleBarScale)와 글자 크기(fontScale)는 서로 따로 논다 — 표만 납작하게 줄여도
-    // 글자는 그대로 남도록, 배지·글자는 "줄이기 전" 높이(titleBarHForFont/rowHForFont) 기준으로
-    // 계산한다. 다만 표를 아주 납작하게 줄이면 배지가 칸 밖으로 삐져나오므로 그때만 함께 조인다.
-    const rowHForFont = titleBarHForFont/2;
+    // 표 높이(titleBarH)와 글자·배지 크기(titleFont/badgeH/badgeW)는 서로 따로 논다 — 표만
+    // 납작하게 줄여도 글자는 그대로 남는다(예전에는 글자가 표 높이에서 파생돼 함께 줄었다).
+    // 다만 표를 아주 납작하게 줄이면 배지가 칸 밖으로 삐져나오므로 그때만 함께 조인다.
     const rowH = titleBarH/2, colW = contentW/2;
     const tbCells = [
       { r:0, c:0, label:'용 역 명', value: projName },
@@ -9856,27 +10266,21 @@
       { r:1, c:0, label:'조사위치', value: d.surveyLocation||'' },
       { r:1, c:1, label:'구조형식', value: structureType },
     ];
-    const badgeMarginX = clamp(colW*0.035, 9, 20);
-    // 배지 높이의 "1배" 기준은 표를 줄이기 전 높이(rowHForFont)에서 잡는다 — 그래야 표 높이만
-    // 줄이고 글자 크기는 그대로 두는 조절이 가능하다.
-    const badgeHBase = clamp(rowHForFont*0.52, 35, 62);
-    const TB_FONT_BASE_SCALE = 1.43; // 예전에 titleFontScale 로 박혀 있던 값 = 글자 크기 1배
+    const badgeMarginX = px('badgePadX');
     // 표제(라벨)와 표 내용(값)은 같은 크기·같은 굵기다. 굵게 하지 않는다 — 테두리를 가늘게 한
-    // 만큼 글자도 함께 가늘어야 도면이 정갈해 보인다.
-    // 예전에는 여기에 배지 높이로 만든 상한(badgeH*0.62)이 있어서 「글자 크기」를 1.1 남짓 위로
-    // 올려도 글자가 더 커지지 않고 멈췄다. 상한을 없애고, 대신 글자에 맞춰 배지가 커지게 한다 —
-    // 슬라이더를 올린 만큼 글자가 실제로 커진다.
-    const tbFontPx = Math.max(9, Math.round(
-      clamp(badgeHBase*0.44, 13.5, 22.5) * TB_FONT_BASE_SCALE * flFont));
+    // 만큼 글자도 함께 가늘어야 도면이 정갈해 보인다. 글자 높이는 적어 둔 mm 그대로이고(화면에
+    // 그릴 때만 정수 px로 반올림한다), 위아래 어떤 상한도 걸지 않는다.
+    const tbFontPx = Math.max(6, Math.round(px('titleFont')));
     const tbFont = `400 ${tbFontPx}px system-ui, -apple-system, "Segoe UI", sans-serif`;
-    // 배지는 글자를 담는 그릇이라 글자가 커지면 함께 커진다. 다만 줄어든 칸(rowH) 밖으로는 나가지 않게 조인다.
-    const badgeH = Math.min(Math.max(badgeHBase, tbFontPx*1.55), rowH*0.86);
+    // 배지는 글자를 담는 그릇이다 — 적어 둔 높이를 쓰되, 글자가 그보다 크면 글자에 맞춰 커지고,
+    // 줄어든 칸(rowH) 밖으로는 나가지 않게 조인다.
+    const badgeH = Math.min(Math.max(px('badgeH'), tbFontPx*1.55), rowH*0.86);
     // 라벨(네 글자)이 배지 밖으로 삐져나오지 않도록 실제 글자 폭을 재서 폭도 함께 넓힌다.
     const badgeW = (()=>{
       ctx.save(); ctx.font = tbFont;
       const labelW = tbCells.reduce((mx,c)=>Math.max(mx, ctx.measureText(c.label).width), 0);
       ctx.restore();
-      return Math.min(Math.max(clamp(colW*0.22, 102, 178), labelW + tbFontPx*1.5), colW*0.5);
+      return Math.min(Math.max(px('badgeW'), labelW + tbFontPx*1.5), colW*0.5);
     })();
 
     // 용역명·구분(1행) / 조사위치·구조형식(2행)을 나누던 세로 중앙선은 없앤다(가로 구분선만 유지) —
@@ -9898,7 +10302,7 @@
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.fillText(cell.label, badgeX+badgeW/2, badgeY+badgeH/2 + inkCenterShift(ctx, cell.label, cell.label, 0, tbFontPx));
 
-      const valueX0 = badgeX + badgeW + clamp(colW*0.03,10,22);
+      const valueX0 = badgeX + badgeW + px('badgeGapX');
       const valueMaxW = Math.max(20, cellX+colW - valueX0 - badgeMarginX);
       ctx.font = tbFont; ctx.fillStyle = '#0b0b0b';
       ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
@@ -9942,14 +10346,18 @@
     // 조절할 때마다 도면이 커졌다 작아졌다 하면서 범례가 페이지 위에서 따라 움직였다. 범례는
     // 도면에 붙은 것이 아니라 틀에 딸린 것이므로, 도면 제목과 같이 틀 기준으로 잡으면 도면틀을
     // 손봐도 자리가 그대로 남는다. 자리는 d.legendFramePct(이 영역 대비 %)에 저장한다.
-    const legendArea = { x: contentMarginLeft, y: contentY0, w: contentW, h: contentAreaH };
+    const legendArea = G.legendArea;
     d.__tbDrawArea = { x: drawX, y: drawY, w: drawW, h: drawH };
     if(isLegendEnabled()){
-      const geo = overlayLegendGeometryCapped(ctx, d, legendArea.w, legendArea.w*0.92, legendArea.h*0.92);
+      // 범례 배율은 적어 둔 글자 높이(mm)에서 온다 — 도면의 픽셀 수에도, 용지 크기에도 딸려
+      // 가지 않는다(legendSpecScale 참고).
+      const legendScale = legendSpecScale(d, G.u);
+      const geo = overlayLegendGeometryCapped(ctx, d, legendArea.w, legendArea.w*0.92, legendArea.h*0.92, legendScale);
       if(geo){
-        const pct = legendFramePctFor(d, legendArea, geo);
+        const pct = legendFramePctFor(d, legendArea, geo, px('legendPad'));
         const box = drawOverlayLegend(ctx, d, legendArea.w, legendArea.h, {
           refW: legendArea.w, maxW: legendArea.w*0.92, maxH: legendArea.h*0.92,
+          scale: legendScale,
           anchor: 'fixed',
           x: legendArea.x + pct.x/100*legendArea.w,
           y: legendArea.y + pct.y/100*legendArea.h });
@@ -9961,7 +10369,7 @@
       d.__tbLegendBox = null;
     }
     // 미리보기의 드래그가 쓰는 좌표 기준 — 어느 쪽 필드에 남길지까지 그리는 쪽이 정해 준다.
-    d.__tbLegendAnchor = { area: legendArea, field: 'legendFramePct' };
+    d.__tbLegendAnchor = { area: legendArea, field: 'legendFramePct', pxPerMM: G.u };
 
     // ---- 도곽 아랫줄의 도면 제목. 비워두면 defaultDocTitle()이 활성 프리셋 이름으로 채운다.
     // 기본 자리는 "아랫줄의 가운데"이고, 미리보기 창에서 끌어 옮기면 docTitlePct(도곽 안쪽 기준 %)에
@@ -9970,7 +10378,7 @@
     // 함수 자체는 남겨뒀다, 필요해지면 다시 붙이면 됨.)
     {
       const titleText = document.getElementById('docTitleInput').value.trim() || defaultDocTitle();
-      const titleFontPx = clamp(contentAreaH*0.032, 16, 32) * flFont;
+      const titleFontPx = px('docTitleFont');
       ctx.font = `400 ${Math.round(titleFontPx)}px system-ui, -apple-system, "Segoe UI", sans-serif`;
       ctx.fillStyle = '#000000';
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
@@ -11767,10 +12175,14 @@
     document.getElementById('docTitleInput').value = data.docTitle || '';
     // 도면틀 치수는 협력업체가 보낸 파일에서 올 수도 있는 값이라 그대로 믿지 않고 범위 안으로
     // 다듬어 받는다(sanitizeFrameLayout). 없는 예전 파일(v3 이하)은 지금 설정을 그대로 둔다.
-    if(data.frameLayout){
+    if(data.frameLayout || data.frameSpec){
       // v4 이하 파일의 배수는 기준자가 달랐다 — 저장 당시의 실제 크기를 유지하도록 환산해 받는다.
       const raw = (Number(data.version) >= 5) ? data.frameLayout : convertLegacyFrameLayout(data.frameLayout);
       frameLayout = sanitizeFrameLayout(raw);
+      // 절대 치수(v7부터). v6 이하 파일에는 없으므로 기본값으로 되돌려 받는다 — 그 기본값이 곧
+      // 그 시절 공식이 내던 치수라 저장 당시 모습대로 열리고, 반대로 지금 쓰던 절대 치수를 그냥
+      // 두면 파일에 적힌 배수와 섞여 엉뚱한 틀이 된다.
+      frameSpec = sanitizeFrameSpec(data.frameSpec);
       docTitlePct = sanitizeDocTitlePct(data.docTitlePct);
       saveFrameLayout();
       syncFrameTuneUI();
@@ -11873,6 +12285,8 @@
       // 도면틀 치수·제목 자리도 함께 담는다 — 같은 프로젝트를 다른 컴퓨터에서 열어도 저장되는
       // 도면 모습이 그대로여야 하기 때문이다(localStorage는 그 컴퓨터에만 남는다).
       frameLayout: Object.assign({}, frameLayout),
+      // 세 요소의 절대 치수(mm) — 이것이 저장되는 도면 모습의 근거라 반드시 함께 담는다.
+      frameSpec: Object.assign({}, frameSpec),
       docTitlePct: docTitlePct ? Object.assign({}, docTitlePct) : null,
       legendBoxStyle: Object.assign({}, legendBoxStyle),
       // 아이콘 크기도 함께 — 마커 좌표가 이 값을 기준으로 적힌 수치라, 둘을 같이 담아야 다시
@@ -11934,16 +12348,27 @@
     const d = getActiveDrawing(); if(!d) return null;
     const wrap = document.getElementById('canvasWrap');
     if(!wrap) return null;
-    // .canvas-wrap의 padding(24px) 양쪽 + 약간의 여유를 뺀 실제로 그릴 수 있는 크기 기준
-    const availW = wrap.clientWidth - 56, availH = wrap.clientHeight - 56;
+    // 실제로 그릴 수 있는 크기 = 칸 크기 − 둘레 여백 − 약간의 여유. 여백은 CSS에서 읽는다 —
+    // 데스크톱은 24px이지만 태블릿은 더 좁고, 아래쪽은 떠 있는 조작바 높이만큼 더 비워 두기
+    // 때문이다(예전에는 56px이 숫자로 박혀 있어, 맞춤을 해도 도면 아래가 그 바에 가렸다).
+    const cs = getComputedStyle(wrap);
+    const padX = (parseFloat(cs.paddingLeft)||0) + (parseFloat(cs.paddingRight)||0);
+    const padY = (parseFloat(cs.paddingTop)||0) + (parseFloat(cs.paddingBottom)||0);
+    const availW = wrap.clientWidth - padX - 8, availH = wrap.clientHeight - padY - 8;
     if(!(d.baseW>0 && d.baseH>0) || availW<=0 || availH<=0) return null;
     return clamp(Math.min(availW/d.baseW, availH/d.baseH), 0.1, 4);
   }
   // 화면 맞춤 + 가운데로 되돌리기. 스크롤로 도면을 화면 밖까지 밀어버렸을 때의 탈출구이기도 하다.
+  // 지금 보고 있는 배율이 「화면 맞춤」으로 맞춘 것인지. 도면 칸의 크기가 달라졌을 때
+  // (화면 회전·창 크기 조절·도구줄 줄 수 변화·「크게 보기」) 다시 맞출지 말지의 유일한 근거다.
+  // 사용자가 배율을 직접 고르거나 휠·손가락으로 당기면 false가 되고, 그때부터는 칸이 달라져도
+  // 그 배율을 건드리지 않는다 — 마킹하려고 당겨 둔 자리를 잃지 않게 하기 위함이다.
+  let zoomIsFit = false;
   function zoomToFit(){
     const z = computeFitZoom();
     if(z===null) return;
     zoom = z;
+    zoomIsFit = true;
     renderCanvas();
     updateZoomIndicator();
     recenterCanvas();
@@ -11962,10 +12387,75 @@
   }
   document.getElementById('zoomSelect').addEventListener('change', e=>{
     if(e.target.value === 'fit'){ zoomToFit(); return; }
-    zoom = parseFloat(e.target.value); renderCanvas(); updateZoomIndicator();
+    zoom = parseFloat(e.target.value); zoomIsFit = false; renderCanvas(); updateZoomIndicator();
     recenterCanvas();
   });
   document.getElementById('btnZoomFit').addEventListener('click', zoomToFit);
+
+  // ---------- 「크게 보기」(집중 모드) ----------
+  // 머리줄과 도구줄을 접어 도면 칸을 화면 끝까지 넓힌다. 태블릿에서 이 둘이 세로 200px
+  // (1024×768의 26%)을 쓰고 있어서, 접는 것만으로 도면이 1.3배 커진다. 접는 것은 "배치"뿐이라
+  // 마커 좌표·렌더링·내보내기는 전혀 영향을 받지 않는다.
+  const CANVAS_MAX_STORE_KEY = 'defectMarkerCanvasMax_v1';
+  function isCanvasMax(){ return document.body.classList.contains('canvas-max'); }
+  function syncCanvasMaxUI(){
+    const on = isCanvasMax();
+    const lab = document.getElementById('canvasMaxLabel');
+    if(lab) lab.textContent = on ? '크게 보기 끄기' : '크게 보기';
+    const fb = document.getElementById('btnFloatCanvasMax');
+    if(fb){
+      fb.classList.toggle('active', on);
+      fb.querySelector('use').setAttribute('href', on ? '#i-collapse' : '#i-expand');
+    }
+  }
+  function setCanvasMax(on){
+    on = !!on;
+    if(on === isCanvasMax()){ syncCanvasMaxUI(); return; }
+    // 넓어진 자리에 맞춰 배율을 다시 맞춘다 — 그것이 이 단추를 누른 이유다. 다만 도면 한 귀퉁이를
+    // 보려고 직접 당겨 둔 배율이라면 건드리지 않고 가운데만 다시 잡는다(zoomIsFit 설명 참고).
+    const wasFit = zoomIsFit;
+    document.body.classList.toggle('canvas-max', on);
+    try{ localStorage.setItem(CANVAS_MAX_STORE_KEY, on ? '1' : '0'); }catch(err){ /* 저장 실패해도 이번 세션은 그대로 동작 */ }
+    syncCanvasMaxUI();
+    // 접고 펴는 것은 레이아웃이 바뀌는 일이라, 칸 크기가 실제로 반영된 다음 프레임에 잰다.
+    requestAnimationFrame(()=>{
+      updateTabletEdgeTabTop();
+      if(getActiveDrawing()){ if(wasFit) zoomToFit(); else recenterCanvas(); }
+    });
+  }
+  // 도면 칸의 높이는 도구줄 줄 수에 따라 달라진다 — 첫 마커를 찍으면 안내 줄이 접히고(태블릿),
+  // 그리기 모드에 들어가면 한 줄이 늘어난다. "화면 맞춤"으로 보고 있던 중이라면 그렇게 넓어진
+  // 자리를 실제로 쓰도록 배율을 다시 맞춘다 — 예전에는 늘어난 만큼이 그대로 빈 여백이 되어,
+  // 도면을 크게 보려면 「화면 맞춤」을 한 번 더 눌러야 했다.
+  // 직접 확대해 둔 배율(맞춤보다 큼)은 건드리지 않고, 자르기 중에도 손대지 않는다(자르기 상자가
+  // 화면 좌표로 잡혀 있어 배율이 바뀌면 함께 흔들린다).
+  let refitRAF = null;
+  function scheduleRefitIfFitting(){
+    if(refitRAF) return;
+    refitRAF = requestAnimationFrame(()=>{
+      refitRAF = null;
+      if(cropMode) return;                      // 자르기 상자가 화면 좌표로 잡혀 있다
+      if(!zoomIsFit) return;                    // 직접 당겨 둔 배율 — 그대로 둔다
+      const d = getActiveDrawing(); if(!d) return;
+      const f = computeFitZoom();
+      if(f === null || Math.abs(zoom - f) < 0.002) return;   // 이미 맞아 있다
+      zoomToFit();
+    });
+  }
+  // 패드를 가로↔세로로 돌리면 도면 칸의 가로·세로가 통째로 바뀐다. 예전에는 돌린 뒤에도 배율이
+  // 그대로라 도면이 칸 밖으로 잘린 채 남았고(「화면 맞춤」을 손으로 다시 눌러야 했다), 데스크톱
+  // 에서 창을 줄일 때도 같았다. 맞춤으로 보고 있던 중에만 따라 맞춘다.
+  window.addEventListener('resize', scheduleRefitIfFitting);
+  if(window.visualViewport) window.visualViewport.addEventListener('resize', scheduleRefitIfFitting);
+  document.getElementById('btnCanvasMax').addEventListener('click', ()=> setCanvasMax(!isCanvasMax()));
+  document.getElementById('btnCanvasMaxExit').addEventListener('click', ()=> setCanvasMax(false));
+  document.getElementById('btnFloatCanvasMax').addEventListener('click', ()=> setCanvasMax(!isCanvasMax()));
+  // 지난번에 켜 둔 상태로 다시 연다 — 현장에서 늘 크게 쓰는 쪽이 많다. 접혀 있어도 도면 오른쪽
+  // 위의 되돌아가기 단추가 항상 보이므로 "단추가 사라졌다"가 되지 않는다.
+  try{
+    if(localStorage.getItem(CANVAS_MAX_STORE_KEY) === '1') document.body.classList.add('canvas-max');
+  }catch(err){ /* 못 읽으면 평소 모습으로 연다 */ }
+  syncCanvasMaxUI();
 
   // 캐드처럼 도면 위에서 마우스 휠로 확대/축소(휠 위치를 기준으로 확대되도록 스크롤 위치도 함께 보정).
   // canvas-wrap이 flex로 캔버스를 가운데 정렬하기 때문에(확대 전 캔버스가 뷰포트보다 작으면 스크롤이
@@ -11987,6 +12477,7 @@
     const fracY = beforeRect.height>0 ? (e.clientY - beforeRect.top) / beforeRect.height : 0.5;
 
     zoom = newZoom;
+    zoomIsFit = false;   // 휠로 직접 당긴 배율 — 칸이 달라져도 건드리지 않는다
     renderCanvas();
     updateZoomIndicator();
 
@@ -12515,6 +13006,9 @@
         setSelectMode(false); setMoveMode(false); setEraseMode(false);
         return;
       }
+      // 더 풀 것이 없으면 Esc는 「크게 보기」를 끈다 — 접힌 도구줄로 돌아오는 가장 빠른 길이다.
+      // 맨 마지막에 두는 이유: 고르던 것이나 모드가 있으면 그쪽을 먼저 푸는 편이 덜 놀랍다.
+      if(!isEditing && isCanvasMax()){ e.preventDefault(); setCanvasMax(false); return; }
       return;
     }
     if(isEditing) return;
@@ -12596,6 +13090,13 @@
     }
     if(code==='KeyQ'){
       e.preventDefault(); toggleCoordGuide(); return;
+    }
+    // 「크게 보기」는 Shift+F — 맨 F(화면 맞춤) 바로 옆자리이고, 둘 다 "도면을 크게 본다"는
+    // 같은 결의 조작이다. 끄는 것은 Esc로도 된다. 이 블록이 아래 F보다 먼저여야 Shift+F가
+    // "화면 맞춤"으로 먼저 소비되지 않는다.
+    if(code==='KeyF' && e.shiftKey){
+      if(!cropMode){ e.preventDefault(); setCanvasMax(!isCanvasMax()); }
+      return;
     }
     if(code==='KeyF'){
       if(!cropMode){ e.preventDefault(); zoomToFit(); }
@@ -13566,6 +14067,7 @@
     const fracX = beforeRect.width>0 ? (midX-beforeRect.left)/beforeRect.width : 0.5;
     const fracY = beforeRect.height>0 ? (midY-beforeRect.top)/beforeRect.height : 0.5;
     zoom = newZoom;
+    zoomIsFit = false;   // 두 손가락으로 직접 당긴 배율 — 위 휠 줌과 같은 이유
     renderCanvas(); updateZoomIndicator();
     const afterRect = canvas.getBoundingClientRect();
     const nowX = afterRect.left+fracX*afterRect.width, nowY = afterRect.top+fracY*afterRect.height;
@@ -13757,6 +14259,7 @@
       structureType: document.getElementById('structureTypeInput').value,
       docTitle: document.getElementById('docTitleInput').value,
       frameLayout: Object.assign({}, frameLayout),
+      frameSpec: Object.assign({}, frameSpec), // 위와 같은 이유 — 복구해 열어도 틀이 그대로여야 한다
       docTitlePct: docTitlePct ? Object.assign({}, docTitlePct) : null,
       legendBoxStyle: Object.assign({}, legendBoxStyle),
       iconSizeMult: iconSizeMult, // 복구해 열 때도 크기·자리가 그대로여야 한다(위 설명과 같은 이유)
@@ -14150,7 +14653,14 @@
     set frameLayout(v){ frameLayout = sanitizeFrameLayout(v); },
     get docTitlePct(){ return docTitlePct; },
     set docTitlePct(v){ docTitlePct = sanitizeDocTitlePct(v); },
-    FRAME_LAYOUT_DEFAULT, FRAME_LAYOUT_RANGE, FRAME_BASE, frameAbs,
+    FRAME_LAYOUT_DEFAULT, FRAME_LAYOUT_RANGE, FRAME_BASE, FRAME_LAYOUT_W, frameAbs,
+    // 세 요소의 절대 치수(mm) — 단위·기준은 FRAME_SPEC_DEFAULT 위의 설명 참고
+    get frameSpec(){ return frameSpec; },
+    set frameSpec(v){ frameSpec = sanitizeFrameSpec(v); },
+    FRAME_SPEC_DEFAULT, FRAME_SPEC_RANGE, FRAME_SPEC_MULT, FRAME_MM_PER_PX,
+    frameSpecMM, frameGeometry, framePxPerMM, paperWidthMM,
+    legendSpecScale, legendPosMM, setLegendPosMM, legendPosAnchor, syncLegendPctFromFrame,
+    sanitizeFrameSpec, syncFrameSpecValues,
     get legendBoxStyle(){ return legendBoxStyle; },
     set legendBoxStyle(v){ legendBoxStyle = sanitizeLegendBoxStyle(v); },
     imgScaleFor, IMG_SCALE_RANGE, PROJECT_FILE_VERSION, convertLegacyFrameLayout,
@@ -14166,6 +14676,9 @@
     buildExportCanvasTitleBlock, buildExportCanvasSimple, buildExportCanvasFor,
     PAPER_SIZES_PT, EXPORT_PAPER_DPI, PAPER_MARGIN_PT,
     exportPageSizeKey, exportPageRatio, paperPixelSize, layoutOnPaper,
+    isCanvasMax, setCanvasMax, computeFitZoom, zoomToFit,
+    get zoomIsFit(){ return zoomIsFit; },
+    get zoomValue(){ return zoom; },
     enterCropMode, exitCropMode, performCropApply, setCropRatio,
     cropRatioValue, cropRatioCanvas, cropRatioText, cropRectFromAction, applyCropRatioToRect,
     get cropMode(){ return cropMode; },

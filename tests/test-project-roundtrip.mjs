@@ -90,7 +90,7 @@ const text1 = await savedText();
 ok(!!text1, '프로젝트 파일이 저장됐다');
 writeFileSync(SAVED, text1, 'utf8');
 const json1 = JSON.parse(text1);
-eq(json1.version, 6, '파일 버전이 6이다(아이콘 크기가 담기는 버전)');
+eq(json1.version, 7, '파일 버전이 7이다(세 요소의 절대 치수가 담기는 버전)');
 eq(json1.iconSizeMult, 1.5, '파일에 아이콘 크기가 담겼다');
 
 /* 자동저장(복구) 쪽 스냅샷에도 같이 담겨야 한다 — 복구해 열어도 같은 모습이어야 하므로 */

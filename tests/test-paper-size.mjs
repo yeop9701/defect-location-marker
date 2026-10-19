@@ -139,8 +139,55 @@ for (const key of ['a4l','a4p','a3l','a3p']) {
   ok(g.fill >= 0.999 && g.x <= 1.01, '  → 용지를 꽉 채운다(둘레 여백 1px 미만)', g);
 }
 
+/* ── 3-2. 도곽의 자리가 도면에 따라 달라지지 않는다 ──────────────────────────
+   "이미지별로 도곽도 크기가 달라져서 위치가 변해"가 이 항목이다. 도곽 치수(여백·표제란·글자·
+   선 굵기)는 절대 px인데 종이가 `도면 폭 + 여백`이었던 탓에, 도면이 크면 도곽이 종이에서
+   차지하는 비율이 작아졌다 — 같은 A4로 뽑아 놓고 보면 장마다 도곽 자리가 달랐다.
+   여기서는 "값"이 아니라 저장된 A4 그림에서 바깥에서부터 처음 만나는 검은 점(= 도곽 테두리)을
+   직접 찾아, 도면이 무엇이든 같은 자리인지 본다. */
+console.log('\n══ 도곽 자리가 도면과 무관하다 ══');
+await setPage('a4l');
+await setTitleBlock(true);
+const frameInk = () => ev(`(()=>{
+  const d = __markerDbg.getActiveDrawing();
+  const cv = __markerDbg.buildExportCanvasFor(d, 'png', true);
+  const g = cv.getContext('2d', { willReadFrequently:true });
+  const W = cv.width, H = cv.height, dark = (a,i)=> a[i] < 150;
+  const row = g.getImageData(0, Math.round(H/2), W, 1).data;
+  const col = g.getImageData(Math.round(W/2), 0, 1, H).data;
+  let left=-1, right=-1, top=-1, bottom=-1;
+  for(let x=0;x<W;x++){ if(dark(row,x*4)){ left=x; break; } }
+  for(let x=W-1;x>=0;x--){ if(dark(row,x*4)){ right=x; break; } }
+  for(let y=0;y<H;y++){ if(dark(col,y*4)){ top=y; break; } }
+  for(let y=H-1;y>=0;y--){ if(dark(col,y*4)){ bottom=y; break; } }
+  const out = { W, H, left, right:W-1-right, top, bottom:H-1-bottom,
+                mm:+(left/W*297).toFixed(1),
+                // 범례(NOTE) 상자는 배치 단위로 남는다 — 종이 기준이면 도면이 달라도 같은 값이다
+                legendW: d.__tbLegendBox ? +d.__tbLegendBox.w.toFixed(1) : null };
+  cv.width=1; cv.height=1;
+  return out;
+})()`);
+const inks = [];
+for (const [dw, dh] of [[2400,1600], [1600,2400], [800,600], [3600,2000]]) {
+  await setDrawingSize(dw, dh);
+  const f = await frameInk();
+  console.log(`      ${dw}×${dh} 도면 → 도곽 왼쪽 ${f.left}px(${f.mm}mm) · 위 ${f.top}px · 오른쪽 ${f.right}px · 아래 ${f.bottom}px`);
+  inks.push(f);
+}
+for (const side of ['left', 'right', 'top', 'bottom']) {
+  const vals = inks.map(f => f[side]);
+  ok(Math.max(...vals) - Math.min(...vals) <= 1,
+     `도면 4종에서 도곽 ${({left:'왼쪽',right:'오른쪽',top:'위',bottom:'아래'})[side]} 여백이 같다(±1px)`, vals);
+}
+ok(inks[0].left > 0 && inks[0].left < inks[0].W*0.1, '도곽이 종이 가장자리에서 적당히 떨어져 있다', inks[0]);
+// 범례(NOTE)도 같은 병 — 예전에는 배율이 refW/naturalW라 도면의 픽셀 수에 따라 커졌다.
+const legendWs = inks.map(f => f.legendW);
+ok(legendWs.every(v => v !== null) && Math.max(...legendWs) - Math.min(...legendWs) <= 1,
+   '도면 4종에서 범례(NOTE) 상자 크기가 같다(종이 기준으로 큰다)', legendWs);
+
 /* ── 4. 「원본 비율」은 예전 그대로다 ── */
 console.log('\n══ 원본 비율(예전 동작) ══');
+await setDrawingSize(2400, 1600);   // 바로 위 항목이 도면을 갈아 끼운 채로 끝난다
 await setPage('original');
 ok((await ev('__markerDbg.exportPageSizeKey()')) === null, '용지를 고르지 않은 상태로 돌아간다');
 await setTitleBlock(false);
